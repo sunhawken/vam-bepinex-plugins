@@ -100,10 +100,19 @@ namespace VamPar2
                 string baseName = kv.Key.Substring(sep + 1);
                 string varPath = Path.Combine(dir, baseName);
 
-                if (File.Exists(varPath)) continue; // source still right beside its recovery files
+                // ".disabled" is just a renamed .var (VaM's "disable without deleting"
+                // convention) — same file content, so treat it as the same source.
+                if (File.Exists(varPath) || File.Exists(varPath + ".disabled")) continue;
 
                 string[] matches;
-                try { matches = Directory.GetFiles(root, baseName, SearchOption.AllDirectories); }
+                try
+                {
+                    string[] active   = Directory.GetFiles(root, baseName, SearchOption.AllDirectories);
+                    string[] disabled = Directory.GetFiles(root, baseName + ".disabled", SearchOption.AllDirectories);
+                    matches = new string[active.Length + disabled.Length];
+                    active.CopyTo(matches, 0);
+                    disabled.CopyTo(matches, active.Length);
+                }
                 catch { continue; }
 
                 if (matches.Length == 0)
