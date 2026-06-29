@@ -36,8 +36,14 @@ namespace VamPar2
             ReconcileMovedFiles(root);
 
             Logger.LogInfo("[Par2] Scanning AddonPackages...");
-            string[] files = Directory.GetFiles(root, "*.var", SearchOption.AllDirectories);
-            Logger.LogInfo($"[Par2] Found {files.Length} .var packages  redundancy={redundancyPct}%");
+            // .DISABLED packages are just .var files VaM disabled in-place (extension
+            // swapped, same content) — they need recovery sets too.
+            string[] varFiles      = Directory.GetFiles(root, "*.var", SearchOption.AllDirectories);
+            string[] disabledFiles = Directory.GetFiles(root, "*.DISABLED", SearchOption.AllDirectories);
+            string[] files = new string[varFiles.Length + disabledFiles.Length];
+            varFiles.CopyTo(files, 0);
+            disabledFiles.CopyTo(files, varFiles.Length);
+            Logger.LogInfo($"[Par2] Found {varFiles.Length} .var + {disabledFiles.Length} .DISABLED packages  redundancy={redundancyPct}%");
             int created = 0, skipped = 0, failed = 0;
             foreach (string path in files)
             {
@@ -100,18 +106,23 @@ namespace VamPar2
                 string baseName = kv.Key.Substring(sep + 1);
                 string varPath = Path.Combine(dir, baseName);
 
-                // ".disabled" is just a renamed .var (VaM's "disable without deleting"
-                // convention) — same file content, so treat it as the same source.
-                if (File.Exists(varPath) || File.Exists(varPath + ".disabled")) continue;
+                // VaM disables a package in-place by swapping ".var" for ".DISABLED"
+                // (same content, different extension) — treat both names as the same source.
+                string altName = SwapVarDisabledExtension(baseName);
+                string altPath = altName != null ? Path.Combine(dir, altName) : null;
+
+                if (File.Exists(varPath) || (altPath != null && File.Exists(altPath))) continue;
 
                 string[] matches;
                 try
                 {
-                    string[] active   = Directory.GetFiles(root, baseName, SearchOption.AllDirectories);
-                    string[] disabled = Directory.GetFiles(root, baseName + ".disabled", SearchOption.AllDirectories);
-                    matches = new string[active.Length + disabled.Length];
+                    string[] active = Directory.GetFiles(root, baseName, SearchOption.AllDirectories);
+                    string[] alt     = altName != null
+                        ? Directory.GetFiles(root, altName, SearchOption.AllDirectories)
+                        : new string[0];
+                    matches = new string[active.Length + alt.Length];
                     active.CopyTo(matches, 0);
-                    disabled.CopyTo(matches, active.Length);
+                    alt.CopyTo(matches, active.Length);
                 }
                 catch { continue; }
 
@@ -154,6 +165,16 @@ namespace VamPar2
 
             if (moved > 0 || missing > 0 || ambiguous > 0)
                 Logger.LogInfo($"[Par2] Reconcile: {moved} relocated, {missing} orphaned (source deleted), {ambiguous} ambiguous.");
+        }
+
+        // "Foo.var" <-> "Foo.DISABLED" — VaM's enable/disable naming convention.
+        private static string SwapVarDisabledExtension(string name)
+        {
+            if (name.EndsWith(".var", StringComparison.OrdinalIgnoreCase))
+                return name.Substring(0, name.Length - 4) + ".DISABLED";
+            if (name.EndsWith(".DISABLED", StringComparison.OrdinalIgnoreCase))
+                return name.Substring(0, name.Length - 9) + ".var";
+            return null;
         }
 
         private static void TryDelete(string path)
