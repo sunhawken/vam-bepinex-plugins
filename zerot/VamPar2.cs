@@ -36,14 +36,12 @@ namespace VamPar2
             ReconcileMovedFiles(root);
 
             Logger.LogInfo("[Par2] Scanning AddonPackages...");
-            // .DISABLED packages are just .var files VaM disabled in-place (extension
-            // swapped, same content) — they need recovery sets too.
-            string[] varFiles      = Directory.GetFiles(root, "*.var", SearchOption.AllDirectories);
-            string[] disabledFiles = Directory.GetFiles(root, "*.DISABLED", SearchOption.AllDirectories);
-            string[] files = new string[varFiles.Length + disabledFiles.Length];
-            varFiles.CopyTo(files, 0);
-            disabledFiles.CopyTo(files, varFiles.Length);
-            Logger.LogInfo($"[Par2] Found {varFiles.Length} .var + {disabledFiles.Length} .DISABLED packages  redundancy={redundancyPct}%");
+            // Recovery sets are only generated for active *.var packages. .DISABLED
+            // files are still recognized in ReconcileMovedFiles (same content under a
+            // renamed extension) so an existing recovery set follows it if it moves,
+            // but no *new* recovery set is created for a disabled package.
+            string[] files = Directory.GetFiles(root, "*.var", SearchOption.AllDirectories);
+            Logger.LogInfo($"[Par2] Found {files.Length} .var packages  redundancy={redundancyPct}%");
             int created = 0, skipped = 0, failed = 0;
             foreach (string path in files)
             {
