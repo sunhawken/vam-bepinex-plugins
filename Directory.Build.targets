@@ -1,0 +1,51 @@
+<Project>
+  <!-- Recovered project files record a decompiler's future language-version value. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Remove="BepInEx;0Harmony;0Harmony20;Assembly-CSharp;ICSharpCode.SharpZipLib;UnityEngine;UnityEngine.CoreModule;UnityEngine.PhysicsModule" />
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExDir)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony20">
+      <HintPath>$(BepInExDir)\0Harmony20.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(VaMManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>$(VaMManagedDir)\ICSharpCode.SharpZipLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(VaMManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Compile Include="$(MSBuildThisFileDirectory)BuildSupport\GlobalAliases.cs" Link="BuildSupport\GlobalAliases.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'AutoBulger'">
+    <Compile Remove="Saking55\AutoBulgerPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ports\AutoBulger.cs" Link="Saking55\AutoBulger.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'ExtraAutoGenitals'">
+    <Compile Remove="ExtraAutoGenitals.cs" />
+    <Compile Remove="LabiaAnimator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ports\ExtraAutoGenitals.cs" Link="ExtraAutoGenitals.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'MicAlwaysOn'">
+    <Compile Remove="MicAlwaysOn\*.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)zerot\MicAlwaysOn.cs" Link="MicAlwaysOn\MicAlwaysOn.cs" />
+  </ItemGroup>
+</Project>

@@ -17,7 +17,7 @@ internal static class Patch_MicStart
 {
     private static void Postfix(OVRLipSyncMicInput __instance)
     {
-        __instance.micControl = (micActivation)2;
+        __instance.micControl = (OVRLipSyncMicInput.micActivation)2;
         __instance.StartMicrophone();
     }
 }

@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <VaMDir Condition="'$(VaMDir)' == '' and '$(VAM_DIR)' != ''">$(VAM_DIR)</VaMDir>
+    <VaMDir Condition="'$(VaMDir)' == ''">T:\New folder</VaMDir>
+    <BepInExDir>$(VaMDir)\BepInEx\core</BepInExDir>
+    <VaMManagedDir>$(VaMDir)\VaM_Data\Managed</VaMManagedDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\</BaseOutputPath>
+  </PropertyGroup>
+
+  <Target Name="ValidateVaMReferences" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(BepInExDir)\BepInEx.dll')"
+           Text="BepInEx.dll was not found. Set VAM_DIR or pass -p:VaMDir=&quot;X:\path\to\VaM&quot;." />
+    <Error Condition="!Exists('$(VaMManagedDir)\Assembly-CSharp.dll')"
+           Text="VaM managed assemblies were not found. Set VAM_DIR or pass -p:VaMDir=&quot;X:\path\to\VaM&quot;." />
+  </Target>
+</Project>
