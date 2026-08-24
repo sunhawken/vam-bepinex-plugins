@@ -27,6 +27,16 @@ You can instead pass the location directly:
 
 Release DLLs are written beneath `artifacts/Release`. VaM and BepInEx binaries are referenced from the local installation and are not redistributed by this repository.
 
+### VPB performance patcher
+
+`utility/VPBPerformancePatcher` applies two targeted idle-cost fixes to VPB 0.30.55 while preserving immediate click and configuration-change updates: it removes a redundant every-frame gallery hierarchy scan and limits the idle quick-menu visual refresh to 4 Hz. The proprietary input DLL is not included.
+
+```powershell
+dotnet run --project utility/VPBPerformancePatcher -- `
+  'T:\New folder\BepInEx - Disabled\group1\VPB.original.0.30.55.dll' `
+  'T:\New folder\BepInEx\plugins\VPB.dll'
+```
+
 ## What each plugin does
 
 | Plugin | Purpose |
