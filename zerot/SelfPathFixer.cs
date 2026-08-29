@@ -54,11 +54,17 @@ public class SelfPathFixer : BaseUnityPlugin
     void Update()
     {
         // Drain the log queue — one message per frame to stay cheap
-        lock (_logLock)
+        // Explicit single-argument Monitor.Enter. The project targets net40, where `lock`
+        // compiles to Monitor.Enter(object, ref bool) - an overload VaM's Mono mscorlib does
+        // not have. Because this sits in Update(), that threw MissingMethodException every
+        // single frame (~49k per session) and cost roughly 40% of the frame rate.
+        Monitor.Enter(_logLock);
+        try
         {
             if (_logQueue.Count > 0)
                 Log.LogInfo(_logQueue.Dequeue());
         }
+        finally { Monitor.Exit(_logLock); }
 
         if (cfgHotkey.Value != KeyCode.None && Input.GetKeyDown(cfgHotkey.Value))
             StartCoroutine(StartAfterDelay(0f));
@@ -301,6 +307,9 @@ public class SelfPathFixer : BaseUnityPlugin
 
     static void Enqueue(Queue<string> q, object lk, string msg)
     {
-        lock (lk) q.Enqueue(msg);
+        // Same reason as Update(): avoid the net40 two-argument Monitor.Enter overload.
+        Monitor.Enter(lk);
+        try { q.Enqueue(msg); }
+        finally { Monitor.Exit(lk); }
     }
 }

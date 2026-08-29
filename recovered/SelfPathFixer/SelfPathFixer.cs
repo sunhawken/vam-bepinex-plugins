@@ -50,12 +50,21 @@ public class SelfPathFixer : BaseUnityPlugin
 	{
 		//IL_0046: Unknown result type (might be due to invalid IL or missing references)
 		//IL_0053: Unknown result type (might be due to invalid IL or missing references)
-		lock (_logLock)
+		// Explicit single-argument Monitor.Enter. This project targets net40, where `lock`
+		// compiles to Monitor.Enter(object, ref bool) - an overload VaM's Mono mscorlib does
+		// not have. Sitting in Update(), that threw MissingMethodException every frame
+		// (~49k per session) and cost roughly 40% of the frame rate.
+		Monitor.Enter(_logLock);
+		try
 		{
 			if (_logQueue.Count > 0)
 			{
 				Log.LogInfo((object)_logQueue.Dequeue());
 			}
+		}
+		finally
+		{
+			Monitor.Exit(_logLock);
 		}
 		if ((int)cfgHotkey.Value != 0 && Input.GetKeyDown(cfgHotkey.Value))
 		{
@@ -335,9 +344,15 @@ public class SelfPathFixer : BaseUnityPlugin
 
 	private static void Enqueue(Queue<string> q, object lk, string msg)
 	{
-		lock (lk)
+		// Same reason as Update(): avoid the net40 two-argument Monitor.Enter overload.
+		Monitor.Enter(lk);
+		try
 		{
 			q.Enqueue(msg);
+		}
+		finally
+		{
+			Monitor.Exit(lk);
 		}
 	}
 }
