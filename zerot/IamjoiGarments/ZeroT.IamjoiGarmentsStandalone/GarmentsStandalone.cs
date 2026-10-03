@@ -92,12 +92,6 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 
 	private float nextAutoBot;
 
-	private MVRScript autoBotScript;
-
-	private Atom autoBotScriptAtom;
-
-	private float autoBotNextLookup;
-
 	private float autoBotLastSeen = -100f;
 
 	private bool autoBotOff;
@@ -246,7 +240,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		}
 		if (cfgAutoBot.Value && realtimeSinceStartup >= nextAutoBot)
 		{
-			nextAutoBot = realtimeSinceStartup + 0.5f;
+			nextAutoBot = realtimeSinceStartup + 0.25f;
 			AutoBotTick(realtimeSinceStartup);
 		}
 		if (realtimeSinceStartup >= nextRescan)
@@ -583,20 +577,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 				autoBotInfo = "Auto Bot: no target female";
 				return;
 			}
-			// FindObjectsOfType walks every object in the scene; do it once per target and only retry every 3 s while missing.
-			MVRScript script = autoBotScript;
-			if ((Object)(object)script == (Object)null || (Object)(object)autoBotScriptAtom != (Object)(object)atom)
-			{
-				if (now < autoBotNextLookup && (Object)(object)autoBotScriptAtom == (Object)(object)atom)
-				{
-					return;
-				}
-				autoBotNextLookup = now + 3f;
-				script = FindPenetrationCounter(atom);
-				autoBotScript = script;
-				autoBotScriptAtom = atom;
-				autoBotTimes.Clear();
-			}
+			MVRScript script = FindPenetrationCounter(atom);
 			if ((Object)(object)script == (Object)null)
 			{
 				autoBotInfo = "Auto Bot: PenetrationCounter not found on " + atom.uid;
@@ -624,7 +605,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 			{
 				autoBotLastSeen = now;
 			}
-			bool active = now - autoBotLastSeen < 1.5f;
+			bool active = now - autoBotLastSeen < 1f;
 			if (active && !autoBotOff)
 			{
 				StartCategoryFade("Bottom", -1f);
@@ -668,7 +649,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		GUILayout.Label("VAR-style quick controls", wrapStyle, new GUILayoutOption[0]);
 		DrawHudPair("Top\nOff", "Top\nOn", new Color(0.75f, 0.18f, 0.18f), new Color(0.18f, 0.25f, 0.18f), "Top");
 		DrawHudPair("UTop\nOff", "UTop\nOn", new Color(0.7f, 0.35f, 0.1f), new Color(0.1f, 0.55f, 0.25f), "UnderTop");
-		bool autoBot = GUILayout.Toggle(cfgAutoBot.Value, "Auto Bot (PenetrationCounter)", new GUILayoutOption[1] { GUILayout.MinHeight(24f) });
+		bool autoBot = GUILayout.Toggle(cfgAutoBot.Value, "Auto Bot (PenCounter)", new GUILayoutOption[1] { GUILayout.MinHeight(24f) });
 		if (autoBot != cfgAutoBot.Value)
 		{
 			cfgAutoBot.Value = autoBot;
@@ -757,7 +738,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		{
 			RestoreClothingViaGeometry();
 		}
-		bool flag = GUILayout.Toggle(cfgShowItems.Value, "Show item controls", new GUILayoutOption[1] { GUILayout.MinHeight(24f) });
+		bool flag = GUILayout.Toggle(cfgShowItems.Value, "Show individual item controls", new GUILayoutOption[1] { GUILayout.MinHeight(24f) });
 		if (flag != cfgShowItems.Value)
 		{
 			cfgShowItems.Value = flag;
@@ -1096,6 +1077,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 				return;
 			}
 			JSONNode val3 = ((JSONNode)val2)["clothing"];
+			scanSelector = storableByID as DAZCharacterSelector;
 			List<ClothingItemInfo> list = new List<ClothingItemInfo>();
 			JSONArray val4 = (JSONArray)(object)((val3 is JSONArray) ? val3 : null);
 			if ((JSONNode)(object)val4 != (object)null)
@@ -1112,6 +1094,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 			{
 				list.Add(BuildClothingItemInfo(val3));
 			}
+			scanSelector = null;
 			scannedItems.Clear();
 			scannedItems.AddRange(list);
 			lastStorableCount = val.GetStorableIDs()?.Count ?? (-1);
@@ -1578,7 +1561,24 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		result.Raw = clothingItemLabel;
 		result.Label = fileBaseName;
 		result.Tokens = list.ToArray();
-		result.Category = ClassifyCategory(result.Tokens);
+		string[] itemTags = null;
+		string itemDisplay = null;
+		try
+		{
+			if ((Object)(object)scanSelector != (Object)null && !string.IsNullOrEmpty(clothingItemLabel))
+			{
+				DAZClothingItem clothingItem = scanSelector.GetClothingItem(clothingItemLabel);
+				if ((Object)(object)clothingItem != (Object)null)
+				{
+					itemTags = ((DAZDynamicItem)clothingItem).tagsArray;
+					itemDisplay = ((DAZDynamicItem)clothingItem).displayName;
+				}
+			}
+		}
+		catch
+		{
+		}
+		result.Category = ClassifyDetailed(fileBaseName, clothingItemLabel, itemTags, itemDisplay) ?? "Top";
 		return result;
 	}
 
@@ -1664,6 +1664,184 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		AddToken(list, NormalizeToken(label));
 		AddToken(list, NormalizeToken(raw));
 		return list;
+	}
+
+	private DAZCharacterSelector scanSelector;
+
+	private sealed class WordInfo
+	{
+		public int Cat;
+
+		public float W;
+	}
+
+	// 0 = Top, 1 = Bottom, 2 = UnderTop, 3 = UnderBottom
+	private static readonly string[] CategoryNames = new string[4] { "Top", "Bottom", "UnderTop", "UnderBottom" };
+
+	private static readonly int[] TieOrder = new int[4] { 3, 2, 0, 1 };
+
+	private static readonly Dictionary<string, WordInfo> WordTable = BuildWordTable();
+
+	// Long, unambiguous stems that may sit inside a longer name ("MiniSkirt01", "thighhighstockings").
+	private static readonly string[] SubstringKeys = new string[28]
+	{
+		"skirt", "legging", "trouser", "underwear", "bralette", "hoodie", "sweater", "blouse", "jacket", "corset",
+		"sandal", "sneaker", "stocking", "pantyhose", "bodysuit", "leotard", "swimsuit", "jumpsuit", "cardigan", "camisole",
+		"tshirt", "croptop", "tanktop", "bikinitop", "bikinibottom", "nipplecover", "gstring", "thighhigh"
+	};
+
+	private static readonly int[] SubstringCats = new int[28]
+	{
+		1, 1, 1, 3, 2, 0, 0, 0, 0, 0,
+		1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 2, 3, 2, 3, 1
+	};
+
+	private static void AddWords(Dictionary<string, WordInfo> table, int cat, float weight, string words)
+	{
+		string[] array = words.Split(' ');
+		for (int i = 0; i < array.Length; i++)
+		{
+			if (array[i].Length > 0 && !table.ContainsKey(array[i]))
+			{
+				table[array[i]] = new WordInfo { Cat = cat, W = weight };
+			}
+		}
+	}
+
+	private static Dictionary<string, WordInfo> BuildWordTable()
+	{
+		Dictionary<string, WordInfo> dictionary = new Dictionary<string, WordInfo>();
+		// explicit under-garments first so they win over the generic words they contain
+		AddWords(dictionary, 3, 3f, "panty panties pantie thong thongs gstring briefs brief underwear underpants underpant boxer boxers knicker knickers bikinibottom bikinibottoms lingeriebottom cheeky bloomers hipster garterbelt");
+		AddWords(dictionary, 3, 2f, "harness garter");
+		AddWords(dictionary, 2, 3f, "bra bras bralette brassiere bustier bikinitop sportsbra lingerietop pasties pastie nipplecover nipplecovers bandeau");
+		AddWords(dictionary, 2, 1f, "tape");
+		AddWords(dictionary, 0, 2f, "shirt shirts tshirt tee blouse top tank tanktop camisole cami crop croptop sweater hoodie jacket coat corset vest cardigan tunic polo jersey bodice blazer shrug poncho cape cloak robe kimono dress gown bodysuit leotard swimsuit jumpsuit romper catsuit onepiece overalls apron uniform halter tubetop babydoll");
+		AddWords(dictionary, 0, 1f, "sleeve sleeves gloves glove scarf tie necktie bowtie collar");
+		AddWords(dictionary, 1, 3f, "pantyhose thighhigh thighhighs overknee");
+		AddWords(dictionary, 1, 2f, "pants pant jeans jean trousers trouser leggings legging tights skirt miniskirt shorts hotpants capri culottes culotte kilt sarong chaps bottom bottoms stockings stocking socks sock hose shoe shoes boot boots heel heels sandal sandals sneaker sneakers slipper slippers loafers flats pumps footwear legwarmer legwarmers anklet shinguard marten alette soulcalibur");
+		AddWords(dictionary, 1, 1f, "short belt");
+		// body-region tags VaM clothing items carry
+		AddWords(dictionary, 0, 0.8f, "torso chest shoulders arms");
+		AddWords(dictionary, 1, 0.8f, "hips legs thighs feet ankles");
+		return dictionary;
+	}
+
+	private static List<string> SplitWords(string text)
+	{
+		List<string> list = new List<string>();
+		if (string.IsNullOrEmpty(text))
+		{
+			return list;
+		}
+		int start = 0;
+		for (int i = 0; i <= text.Length; i++)
+		{
+			bool boundary = i == text.Length;
+			if (!boundary)
+			{
+				char c = text[i];
+				if (!char.IsLetterOrDigit(c))
+				{
+					boundary = true;
+				}
+				else if (i > start)
+				{
+					char p = text[i - 1];
+					bool lowerToUpper = char.IsLower(p) && char.IsUpper(c);
+					bool letterDigit = char.IsLetter(p) != char.IsLetter(c);
+					bool acronym = char.IsUpper(p) && char.IsUpper(c) && i + 1 < text.Length && char.IsLower(text[i + 1]);
+					if (lowerToUpper || letterDigit || acronym)
+					{
+						string w = text.Substring(start, i - start).ToLowerInvariant();
+						if (w.Length > 0)
+						{
+							list.Add(w);
+						}
+						start = i;
+					}
+				}
+			}
+			if (boundary)
+			{
+				if (i > start)
+				{
+					string w2 = text.Substring(start, i - start).ToLowerInvariant();
+					if (w2.Length > 0)
+					{
+						list.Add(w2);
+					}
+				}
+				start = i + 1;
+			}
+		}
+		return list;
+	}
+
+	private static void AddWordScore(string word, float weight, float[] score, bool compound)
+	{
+		WordInfo info;
+		if (WordTable.TryGetValue(word, out info) || (word.Length > 3 && word.EndsWith("s") && WordTable.TryGetValue(word.Substring(0, word.Length - 1), out info)))
+		{
+			score[info.Cat] += info.W * weight;
+		}
+		else if (!compound)
+		{
+			for (int i = 0; i < SubstringKeys.Length; i++)
+			{
+				if (word.Length > SubstringKeys[i].Length && word.Contains(SubstringKeys[i]))
+				{
+					score[SubstringCats[i]] += 1.5f * weight;
+					break;
+				}
+			}
+		}
+	}
+
+	private static void ScoreText(string text, float weight, float[] score)
+	{
+		List<string> list = SplitWords(text);
+		for (int i = 0; i < list.Count; i++)
+		{
+			AddWordScore(list[i], weight, score, compound: false);
+			if (i + 1 < list.Count)
+			{
+				AddWordScore(list[i] + list[i + 1], weight, score, compound: true);
+			}
+		}
+	}
+
+	// Scores whole words (and adjacent-word compounds such as "bikini"+"top") from the item's file name, its package path, and
+	// the clothing item's own VaM tags / display name when available. Returns null when nothing matched (caller defaults to Top, as before).
+	private string ClassifyDetailed(string fileBaseName, string raw, string[] tags, string displayName)
+	{
+		float[] score = new float[4];
+		ScoreText(fileBaseName, 1f, score);
+		if (!string.IsNullOrEmpty(raw) && raw != fileBaseName)
+		{
+			ScoreText(raw, 0.6f, score);
+		}
+		ScoreText(displayName, 1.2f, score);
+		if (tags != null)
+		{
+			for (int i = 0; i < tags.Length; i++)
+			{
+				ScoreText(tags[i], 2f, score);
+			}
+		}
+		int best = -1;
+		float bestScore = 0f;
+		for (int j = 0; j < TieOrder.Length; j++)
+		{
+			int cat = TieOrder[j];
+			if (score[cat] > bestScore + 0.001f)
+			{
+				bestScore = score[cat];
+				best = cat;
+			}
+		}
+		return (best < 0) ? null : CategoryNames[best];
 	}
 
 	private string ClassifyCategory(string[] tokens)
