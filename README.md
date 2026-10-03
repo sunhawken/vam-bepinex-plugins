@@ -74,3 +74,11 @@ dotnet run --project utility/VPBPerformancePatcher -- `
 The 23 matching source projects are stored under `recovered/`. The older `zerot/`, `ports/`, and `utility/` folders contain historical or hand-maintained revisions.
 
 These projects are recovery snapshots. Review and test plugins in a disposable VaM setup before deployment.
+
+## Window restyle (2026-10)
+
+Every plugin window under `zerot/` (Orifice, FluidBridgeHelper, AnusPhysicsControl, CounterThrust, Iamjoi Garments, ProceduralSlaps, MoveControlsToBody, XRaySlap, DetachedUIPanel, PenetrationCounter, PenisPathAlignment, SmartWardrobe, ParticlePinnacle skin) was restyled to match `VpbRandomLook`: default skin, `Title ... S- S+ - x` row, resize arrow, 34 px collapsed bar, monitor-DPI scaling. Shared code is in `zerot/UiKit` (`RlChrome.cs` IMGUI, `RlUgui.cs` uGUI, helper scripts, `CecilStrip` which cuts a host class out of a bundled DLL). The big bundled plugins are split into a restyled host DLL plus an untouched "core" DLL (see `*Ui` project folders).
+
+`zerot/UiSim` renders those windows and flags clipped text without VaM or Unity; see its README.
+
+Built DLLs are attached to the GitHub Release instead of being committed; embedded third-party assets (`OrificeDynamics.Resources`, XRaySlap audio, ProceduralSlaps asset bundle) are not in git and must be copied out of the original DLL to rebuild those projects.

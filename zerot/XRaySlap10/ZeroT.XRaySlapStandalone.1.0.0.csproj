@@ -1,0 +1,86 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ZeroT.XRaySlapStandalone</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net35</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="ZeroT.XRaySlap.Resources.full.png" />
+    <None Remove="ZeroT.XRaySlap.Resources.half.png" />
+    <None Remove="ZeroT.XRaySlap.Resources.tip.png" />
+    <None Remove="ZeroT.XRaySlap.Resources.withBalls.png" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap01.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap02.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap03.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap04.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap05.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap06.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap07.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap08.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap09.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap10.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap11.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap12.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap13.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap14.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap15.wav" />
+    <None Remove="ZeroT.XRaySlap.Resources.SexSlap16.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.full.png" LogicalName="ZeroT.XRaySlap.Resources.full.png" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.half.png" LogicalName="ZeroT.XRaySlap.Resources.half.png" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.tip.png" LogicalName="ZeroT.XRaySlap.Resources.tip.png" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.withBalls.png" LogicalName="ZeroT.XRaySlap.Resources.withBalls.png" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap01.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap01.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap02.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap02.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap03.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap03.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap04.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap04.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap05.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap05.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap06.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap06.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap07.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap07.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap08.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap08.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap09.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap09.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap10.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap10.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap11.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap11.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap12.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap12.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap13.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap13.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap14.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap14.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap15.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap15.wav" />
+    <EmbeddedResource Include="ZeroT.XRaySlap.Resources.SexSlap16.wav" LogicalName="ZeroT.XRaySlap.Resources.SexSlap16.wav" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx" />
+    <Reference Include="Assembly-CSharp" />
+    <Reference Include="UnityEngine.PhysicsModule" />
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(VaMManagedDir)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\UiKit\RlUgui.cs" Link="UiKit\RlUgui.cs" />
+  </ItemGroup>
+</Project>

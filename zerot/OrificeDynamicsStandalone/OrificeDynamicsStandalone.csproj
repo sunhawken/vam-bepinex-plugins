@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Skynet.OrificeDynamicsStandalone.1.0.0</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net35</TargetFramework>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="OrificeDynamics.Resources" />
+    <EmbeddedResource Include="OrificeDynamics.Resources" LogicalName="OrificeDynamics.Resources" />
+    <Compile Include="..\UiKit\RlChrome.cs" Link="UiKit\RlChrome.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Core" />
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

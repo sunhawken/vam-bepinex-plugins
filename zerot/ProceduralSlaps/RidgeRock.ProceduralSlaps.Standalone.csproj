@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>RidgeRock.ProceduralSlaps.Standalone</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net35</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="ProceduralSlaps.skin-composite.assetbundle" />
+    <EmbeddedResource Include="ProceduralSlaps.skin-composite.assetbundle" LogicalName="ProceduralSlaps.skin-composite.assetbundle" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="UnityEngine.PhysicsModule" />
+    <Reference Include="Assembly-CSharp" />
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx" />
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\UiKit\RlChrome.cs" Link="UiKit\RlChrome.cs" />
+  </ItemGroup>
+</Project>
