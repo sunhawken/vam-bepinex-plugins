@@ -92,6 +92,12 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 
 	private float nextAutoBot;
 
+	private MVRScript autoBotScript;
+
+	private Atom autoBotScriptAtom;
+
+	private float autoBotNextLookup;
+
 	private float autoBotLastSeen = -100f;
 
 	private bool autoBotOff;
@@ -240,7 +246,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		}
 		if (cfgAutoBot.Value && realtimeSinceStartup >= nextAutoBot)
 		{
-			nextAutoBot = realtimeSinceStartup + 0.25f;
+			nextAutoBot = realtimeSinceStartup + 0.5f;
 			AutoBotTick(realtimeSinceStartup);
 		}
 		if (realtimeSinceStartup >= nextRescan)
@@ -577,7 +583,20 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 				autoBotInfo = "Auto Bot: no target female";
 				return;
 			}
-			MVRScript script = FindPenetrationCounter(atom);
+			// FindObjectsOfType walks every object in the scene; do it once per target and only retry every 3 s while missing.
+			MVRScript script = autoBotScript;
+			if ((Object)(object)script == (Object)null || (Object)(object)autoBotScriptAtom != (Object)(object)atom)
+			{
+				if (now < autoBotNextLookup && (Object)(object)autoBotScriptAtom == (Object)(object)atom)
+				{
+					return;
+				}
+				autoBotNextLookup = now + 3f;
+				script = FindPenetrationCounter(atom);
+				autoBotScript = script;
+				autoBotScriptAtom = atom;
+				autoBotTimes.Clear();
+			}
 			if ((Object)(object)script == (Object)null)
 			{
 				autoBotInfo = "Auto Bot: PenetrationCounter not found on " + atom.uid;
@@ -605,7 +624,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 			{
 				autoBotLastSeen = now;
 			}
-			bool active = now - autoBotLastSeen < 1f;
+			bool active = now - autoBotLastSeen < 1.5f;
 			if (active && !autoBotOff)
 			{
 				StartCategoryFade("Bottom", -1f);
