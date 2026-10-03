@@ -432,10 +432,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		}
 		GUILayout.BeginArea(ZeroT.UiKit.RlChrome.Body(windowRect.width, windowRect.height, num));
 		GUILayout.BeginVertical(new GUILayoutOption[0]);
-		List<CounterHost> list = IEnumerableExtension.ToList<CounterHost>((IEnumerable<CounterHost>)(from h in counters.Values
-			where h != null && (Object)(object)h.atom != (Object)null && (Object)(object)h.script != (Object)null
-			orderby ((Object)h.atom).name
-			select h));
+		List<CounterHost> list = GetCountersCached();
 		if (list.Count == 0)
 		{
 			GUILayout.Space(num2);
@@ -450,7 +447,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		}
 		selectedTracker = ClampIndex(selectedTracker, list.Count);
 		CounterHost counterHost = list[selectedTracker];
-		List<Atom> partners = GetPartners(counterHost.atom);
+		List<Atom> partners = GetPartnersCached(counterHost.atom);
 		selectedPartner = ClampIndex(selectedPartner, Math.Max(1, partners.Count));
 		GUILayout.BeginHorizontal(new GUILayoutOption[1] { GUILayout.Height(num4) });
 		if (GUILayout.Button("◀", new GUILayoutOption[1] { GUILayout.Width(num4) }))
@@ -583,6 +580,44 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 			}
 			MarkLayoutDirty();
 		}
+	}
+
+	// The window runs its draw function twice per frame; rebuilding these LINQ lists (and scanning every atom) each time
+	// allocated garbage and cost frame time. Refresh at most twice a second instead.
+	private List<CounterHost> cachedCounters = new List<CounterHost>();
+
+	private float cachedCountersUntil;
+
+	private List<Atom> cachedPartners = new List<Atom>();
+
+	private Atom cachedPartnersFor;
+
+	private float cachedPartnersUntil;
+
+	private List<CounterHost> GetCountersCached()
+	{
+		float now = Time.unscaledTime;
+		if (now >= cachedCountersUntil)
+		{
+			cachedCountersUntil = now + 0.5f;
+			cachedCounters = IEnumerableExtension.ToList<CounterHost>((IEnumerable<CounterHost>)(from h in counters.Values
+				where h != null && (Object)(object)h.atom != (Object)null && (Object)(object)h.script != (Object)null
+				orderby ((Object)h.atom).name
+				select h));
+		}
+		return cachedCounters;
+	}
+
+	private List<Atom> GetPartnersCached(Atom tracker)
+	{
+		float now = Time.unscaledTime;
+		if (now >= cachedPartnersUntil || (Object)(object)tracker != (Object)(object)cachedPartnersFor)
+		{
+			cachedPartnersUntil = now + 0.5f;
+			cachedPartnersFor = tracker;
+			cachedPartners = GetPartners(tracker);
+		}
+		return cachedPartners;
 	}
 
 	private List<Atom> GetPartners(Atom tracker)

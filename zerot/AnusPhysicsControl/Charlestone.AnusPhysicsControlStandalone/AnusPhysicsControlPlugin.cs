@@ -503,6 +503,10 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 			return;
 		}
 		_scanTimer = 0f;
+		if ((Object)(object)SuperController.singleton != (Object)null && SuperController.singleton.isLoading)
+		{
+			return;
+		}
 		try
 		{
 			ScanPersons();

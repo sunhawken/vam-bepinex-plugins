@@ -242,7 +242,7 @@ public sealed class XRaySlapStandalone : BaseUnityPlugin
 		}
 		if (Time.time >= nextPenetrationCheck)
 		{
-			nextPenetrationCheck = Time.time + 0.04f;
+			nextPenetrationCheck = Time.time + 0.06f;
 			UpdatePenetrationPairs();
 		}
 		UpdateOverlayAvailability();
@@ -513,6 +513,8 @@ public sealed class XRaySlapStandalone : BaseUnityPlugin
 		return true;
 	}
 
+	private readonly List<KeyValuePair<Atom, StandaloneXRayClient>> pairBuffer = new List<KeyValuePair<Atom, StandaloneXRayClient>>();
+
 	private void UpdatePenetrationPairs()
 	{
 		if (!cfgXrayEnabled.Value)
@@ -526,8 +528,13 @@ public sealed class XRaySlapStandalone : BaseUnityPlugin
 		}
 		float num = Mathf.Clamp(cfgRadius.Value, 0.015f, 0.2f);
 		float num2 = num * 1.55f;
-		KeyValuePair<Atom, StandaloneXRayClient>[] array = xrayClients.ToArray();
-		for (int i = 0; i < array.Length; i++)
+		pairBuffer.Clear();
+		foreach (KeyValuePair<Atom, StandaloneXRayClient> pairItem in xrayClients)
+		{
+			pairBuffer.Add(pairItem);
+		}
+		List<KeyValuePair<Atom, StandaloneXRayClient>> array = pairBuffer;
+		for (int i = 0; i < array.Count; i++)
 		{
 			KeyValuePair<Atom, StandaloneXRayClient> keyValuePair = array[i];
 			Atom key = keyValuePair.Key;
