@@ -5,3 +5,19 @@ artifacts/
 *.user
 *.suo
 build-output.log
+
+# UI restyle tooling: build outputs, copied inputs and binaries live in the GitHub Release, not in git
+*.dll
+*.pdb
+zerot/UiSim/in/
+zerot/UiSim/out/
+zerot/UiSim/bin_nostubs/
+zerot/UiSim/stubgen_bin/
+zerot/UiKit/staged/
+zerot/UiKit/CecilStrip/out/
+zerot/XRaySlap11/*.wav
+zerot/XRaySlap11/*.png
+zerot/XRaySlap10/*.wav
+zerot/XRaySlap10/*.png
+zerot/OrificeDynamicsStandalone/OrificeDynamics.Resources
+zerot/**/*.assetbundle
