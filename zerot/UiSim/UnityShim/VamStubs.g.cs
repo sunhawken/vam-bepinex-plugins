@@ -456,6 +456,7 @@ public delegate void SetStringCallback(string val);
 public partial class DAZCharacterSelector : global::JSONStorable {
   public global::DAZCharacterSelector.Gender gender { get; set; }
   public global::DAZCharacter selectedCharacter { get; set; }
+  public global::DAZClothingItem GetClothingItem(string itemId) { return default; }
   public bool RefreshRuntimeMorphs() { return default; }
   public DAZCharacterSelector() {}
 public enum Gender : int {
@@ -546,6 +547,11 @@ public partial class JSONStorableAction {
   public JSONStorableAction() {}
 public delegate void ActionCallback();
 }
+public partial class DAZDynamicItem : global::JSONStorableDynamic {
+  public string[] tagsArray { get; set; }
+  public string displayName;
+  public DAZDynamicItem() {}
+}
 public partial class DAZCharacterMaterialOptions : global::MaterialOptions {
   public global::DAZSkinV2 skin { get; set; }
   public DAZCharacterMaterialOptions() {}
@@ -602,9 +608,6 @@ public partial struct HSVColor {
 }
 public partial class DAZMorph {
   public DAZMorph() {}
-}
-public partial class DAZDynamicItem : global::JSONStorableDynamic {
-  public DAZDynamicItem() {}
 }
 public partial class UIDynamicSlider : global::UIDynamic {
   public UIDynamicSlider() {}

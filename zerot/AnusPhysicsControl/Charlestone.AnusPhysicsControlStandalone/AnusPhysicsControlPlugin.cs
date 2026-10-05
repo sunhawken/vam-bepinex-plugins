@@ -356,6 +356,8 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 
 	private ConfigEntry<bool> _visible;
 
+	private ConfigEntry<bool> _active;
+
 	private ConfigEntry<bool> _collapsed;
 
 	private ConfigEntry<bool> _autoDpi;
@@ -445,6 +447,7 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		_vulvaFirm = ((BaseUnityPlugin)this).Config.Bind<bool>("Global", "FirmVulvaLabiaPhysics", false, "Original package default: false, preserving vulva/labia physics.");
 		_vulvaSpring = ((BaseUnityPlugin)this).Config.Bind<float>("Global", "VulvaFirmnessSpring", 8000f, "Range: 0 to 20000.");
 		_vulvaDamper = ((BaseUnityPlugin)this).Config.Bind<float>("Global", "VulvaFirmnessDamper", 200f, "Range: 0 to 1000.");
+		_active = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn the plugin off completely (restores the original joint settings and stops scanning).");
 		_visible = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Visible", true, "F9 toggles the desktop window.");
 		_collapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember whether the desktop window is collapsed to its title bar.");
 		_windowX = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "WindowX", 30f, "Last desktop window position X.");
@@ -458,7 +461,7 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		LoadOverrides();
 		_expandedWidth = Clamp(_windowWidth.Value, 320f, 900f);
 		_expandedHeight = Clamp(_windowHeight.Value, 210f, 1000f);
-		_window = new Rect(Clamp(_windowX.Value, 0f, 10000f), Clamp(_windowY.Value, 0f, 10000f), (!_collapsed.Value) ? _expandedWidth : 300f, (!_collapsed.Value) ? _expandedHeight : 34f);
+		_window = new Rect(Clamp(_windowX.Value, 0f, 10000f), Clamp(_windowY.Value, 0f, 10000f), (!_collapsed.Value) ? _expandedWidth : 340f, (!_collapsed.Value) ? _expandedHeight : 34f);
 		_lastEffectiveScale = Clamp(_positionScale.Value, 0.65f, 3f);
 	}
 
@@ -503,6 +506,10 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 			return;
 		}
 		_scanTimer = 0f;
+		if (!_active.Value)
+		{
+			return;
+		}
 		if ((Object)(object)SuperController.singleton != (Object)null && SuperController.singleton.isLoading)
 		{
 			return;
@@ -778,7 +785,7 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 	{
 		float num = Mathf.Max(120f, virtualWidth - 12f);
 		float num2 = Mathf.Max(100f, virtualHeight - 20f);
-		_window.width = ((!_collapsed.Value) ? Mathf.Min(_expandedWidth, num) : Mathf.Min(300f, num));
+		_window.width = ((!_collapsed.Value) ? Mathf.Min(_expandedWidth, num) : Mathf.Min(340f, num));
 		_window.height = ((!_collapsed.Value) ? Mathf.Min(_expandedHeight, num2) : 34f);
 	}
 
@@ -896,7 +903,7 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 	{
 		float width = _window.width;
 		ZeroT.UiKit.RlChrome.Backdrop(width, _window.height);
-		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(width, "Anus Physics Control", _collapsed.Value);
+		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(width, "Anus Physics Control", _collapsed.Value, _active.Value);
 		if ((rlButtons & 1) != 0)
 		{
 			_scale.Value = Clamp(_scale.Value - 0.1f, 0.65f, 1.75f);
@@ -904,6 +911,18 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		if ((rlButtons & 2) != 0)
 		{
 			_scale.Value = Clamp(_scale.Value + 0.1f, 0.65f, 1.75f);
+		}
+		if ((rlButtons & 16) != 0)
+		{
+			_active.Value = !_active.Value;
+			if (_active.Value)
+			{
+				_scanTimer = 3f;
+			}
+			else
+			{
+				RestoreAll();
+			}
 		}
 		if ((rlButtons & 4) != 0)
 		{

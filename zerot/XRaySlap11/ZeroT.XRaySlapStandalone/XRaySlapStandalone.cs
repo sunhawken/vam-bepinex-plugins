@@ -225,6 +225,10 @@ public sealed class XRaySlapStandalone : BaseUnityPlugin
 		if (win != null)
 		{
 			win.Tick();
+			if (!win.Active)
+			{
+				return;
+			}
 		}
 		if ((Object)(object)overlayCamera != (Object)null && (Object)(object)linkedCamera != (Object)null)
 		{
@@ -617,6 +621,10 @@ public sealed class XRaySlapStandalone : BaseUnityPlugin
 
 	internal void HandleImpact(ImpactProbe probe, Collision collision)
 	{
+		if (win != null && !win.Active)
+		{
+			return;
+		}
 		if (!cfgSlapEnabled.Value || collision == null || (Object)(object)probe == (Object)null || (Object)(object)probe.atom == (Object)null || Time.time < globalImpactCooldown || (Object)(object)collision.rigidbody == (Object)null || collision.contacts == null || collision.contacts.Length == 0 || !rbOwners.TryGetValue(collision.rigidbody, out var value) || (Object)(object)value == (Object)null)
 		{
 			return;
@@ -793,6 +801,17 @@ public sealed class XRaySlapStandalone : BaseUnityPlugin
 		win.OnLayout = delegate(float w, float h)
 		{
 			RefreshLabels();
+		};
+		win.OnActiveChanged = delegate(bool on)
+		{
+			if (!on)
+			{
+				foreach (StandaloneXRayClient xc in xrayClients.Values)
+				{
+					xc?.ShutDown();
+				}
+				activeTargets.Clear();
+			}
 		};
 		win.Build("ZeroT XRay Slap Standalone UI");
 		canvas = win.Canvas;

@@ -25,6 +25,8 @@ public sealed class FluidBridgeHelperPlugin : BaseUnityPlugin
 
 	private ConfigEntry<bool> _rlShow;
 
+	private ConfigEntry<bool> _rlActive;
+
 	private ConfigEntry<bool> _collapsed;
 
 	private ConfigEntry<bool> _autoDpi;
@@ -90,6 +92,7 @@ public sealed class FluidBridgeHelperPlugin : BaseUnityPlugin
 	private void Awake()
 	{
 		_rlShow = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Show", true, "Show the in-game window.");
+		_rlActive = Config.Bind<bool>("General", "Active", true, "Turn the helper off completely (no scanning or VAR assistance).");
 		_collapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember the collapsed state.");
 		_autoDpi = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "AutoDPI", true, "Scale the overlay using Screen.dpi.");
 		_uiScale = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "UIScale", 1f, "Additional UI scale multiplier (0.65 to 2.5).");
@@ -105,6 +108,10 @@ public sealed class FluidBridgeHelperPlugin : BaseUnityPlugin
 
 	private void Update()
 	{
+		if (!_rlActive.Value)
+		{
+			return;
+		}
 		if (Time.realtimeSinceStartup >= _nextScan)
 		{
 			_nextScan = Time.realtimeSinceStartup + 3f;
@@ -191,7 +198,7 @@ public sealed class FluidBridgeHelperPlugin : BaseUnityPlugin
 	private void DrawWindow(int id)
 	{
 ZeroT.UiKit.RlChrome.Backdrop(_window.width, _window.height);
-		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(_window.width, "FluidBridge Helper", _collapsed.Value);
+		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(_window.width, "FluidBridge Helper", _collapsed.Value, _rlActive.Value);
 		if ((rlButtons & 1) != 0)
 		{
 			RlSetScale(_uiScale.Value - 0.1f);
@@ -199,6 +206,15 @@ ZeroT.UiKit.RlChrome.Backdrop(_window.width, _window.height);
 		if ((rlButtons & 2) != 0)
 		{
 			RlSetScale(_uiScale.Value + 0.1f);
+		}
+		if ((rlButtons & 16) != 0)
+		{
+			_rlActive.Value = !_rlActive.Value;
+			if (_rlActive.Value)
+			{
+				_nextScan = 0f;
+			}
+			Config.Save();
 		}
 		if ((rlButtons & 4) != 0)
 		{

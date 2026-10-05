@@ -699,10 +699,11 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 			}
 			lastEnabled = cfgEnabled.Value;
 		}
-		if ((Object)(object)SuperController.singleton == (Object)null)
+		if ((Object)(object)SuperController.singleton == (Object)null || !cfgEnabled.Value)
 		{
 			return;
 		}
+
 		float unscaledTime = Time.unscaledTime;
 		if (forceRetarget || unscaledTime >= nextPersonScanTime)
 		{
@@ -1255,7 +1256,7 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 
 	private float CollapsedWindowWidth()
 	{
-		return 300f;
+		return 340f;
 	}
 
 	private float CollapsedWindowHeight()
@@ -1287,7 +1288,7 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 	private void DrawWindow(int id)
 	{
 		ZeroT.UiKit.RlChrome.Backdrop(windowRect.width, windowRect.height);
-		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, "CounterThrust v4.2.4", collapsed);
+		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, "CounterThrust v4.2.4", collapsed, cfgEnabled.Value);
 		if ((rlButtons & 1) != 0)
 		{
 			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value - 0.1f, 0.65f, 2.5f);
@@ -1297,6 +1298,11 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 		{
 			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value + 0.1f, 0.65f, 2.5f);
 			ZeroT.UiKit.RlChrome.ResetDpi();
+		}
+		if ((rlButtons & 16) != 0)
+		{
+			cfgEnabled.Value = !cfgEnabled.Value;
+			((BaseUnityPlugin)this).Config.Save();
 		}
 		if ((rlButtons & 4) != 0)
 		{
@@ -1337,6 +1343,7 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 			NudgeAll();
 		}
 		GUILayout.EndHorizontal();
+
 		float value2 = cfgRetargetInterval.Value;
 		cfgRetargetInterval.Value = DrawSlider("Retarget interval (s)", value2, 0.5f, 2f, "0.00");
 		string value3 = cfgSourcePart.Value;

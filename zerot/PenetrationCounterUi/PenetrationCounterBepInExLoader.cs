@@ -72,6 +72,8 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 
 	private ConfigEntry<bool> cfgShowOnStart;
 
+	private ConfigEntry<bool> cfgActive;
+
 	private ConfigEntry<bool> cfgCollapsed;
 
 	private ConfigEntry<float> cfgWindowX;
@@ -118,6 +120,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 
 	private void BindConfig()
 	{
+		cfgActive = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn PenetrationCounter off completely: removes the counter scripts from every Person and stops scanning.");
 		cfgShowOnStart = ((BaseUnityPlugin)this).Config.Bind<bool>("Desktop GUI", "ShowOnStart", true, "Show the desktop-style overlay when VaM starts.");
 		cfgCollapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Desktop GUI", "Collapsed", false, "Remember whether the desktop window is collapsed to its title bar.");
 		cfgWindowX = ((BaseUnityPlugin)this).Config.Bind<float>("Desktop GUI", "WindowX", 40f, "Saved GUI X position in pixels.");
@@ -172,7 +175,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 			HandleResolutionChange();
 			SaveLayoutIfDue();
 			TryHookSuperController();
-			if (!(Time.unscaledTime < nextReconcileAt))
+			if (cfgActive.Value && !(Time.unscaledTime < nextReconcileAt))
 			{
 				nextReconcileAt = Time.unscaledTime + 0.75f;
 				ReconcilePeople();
@@ -408,7 +411,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		float num3 = Mathf.Clamp(30f * num, 22f, 64f);
 		float num4 = Mathf.Clamp(24f * num, 18f, 48f);
 		ZeroT.UiKit.RlChrome.Backdrop(windowRect.width, windowRect.height);
-		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, collapsed ? "PenetrationCounter v0.8.3" : "PenetrationCounter v0.8.3", collapsed, num, labelStyle, rlButtonStyle);
+		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, collapsed ? "PenetrationCounter v0.8.3" : "PenetrationCounter v0.8.3", collapsed, num, labelStyle, rlButtonStyle, cfgActive.Value);
 		if ((rlButtons & 1) != 0)
 		{
 			ChangeUiScale(-0.1f);
@@ -416,6 +419,10 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		if ((rlButtons & 2) != 0)
 		{
 			ChangeUiScale(0.1f);
+		}
+		if ((rlButtons & 16) != 0)
+		{
+			SetActive(!cfgActive.Value);
 		}
 		if ((rlButtons & 4) != 0)
 		{
@@ -427,7 +434,15 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		}
 		if (collapsed)
 		{
-			GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 118f * num), 26f * num));
+			GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 150f * num), 26f * num));
+			return;
+		}
+		if (!cfgActive.Value)
+		{
+			GUILayout.BeginArea(ZeroT.UiKit.RlChrome.Body(windowRect.width, windowRect.height, num));
+			GUILayout.Label("PenetrationCounter is off. Press On to attach the counters again.", smallStyle, new GUILayoutOption[0]);
+			GUILayout.EndArea();
+			GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 150f * num), 26f * num));
 			return;
 		}
 		GUILayout.BeginArea(ZeroT.UiKit.RlChrome.Body(windowRect.width, windowRect.height, num));
@@ -441,7 +456,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 			DrawFooter(num);
 			GUILayout.EndVertical();
 			GUILayout.EndArea();
-			GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 118f * num), 26f * num));
+			GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 150f * num), 26f * num));
 			DrawResizeGrip(num);
 			return;
 		}
@@ -522,7 +537,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		DrawFooter(num);
 		GUILayout.EndVertical();
 		GUILayout.EndArea();
-		GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 118f * num), 26f * num));
+		GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 150f * num), 26f * num));
 		DrawResizeGrip(num);
 	}
 
@@ -1018,6 +1033,25 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 			Logger.LogError((object)("Failed to attach PenetrationCounter to Person '" + (((Object)(object)atom != (Object)null) ? atom.uid : "<null>") + "': " + ex));
 			DestroyCounter(counterHost);
 		}
+	}
+
+	private void SetActive(bool on)
+	{
+		cfgActive.Value = on;
+		if (on)
+		{
+			nextReconcileAt = 0f;
+		}
+		else
+		{
+			foreach (CounterHost item in IEnumerableExtension.ToList<CounterHost>((IEnumerable<CounterHost>)counters.Values))
+			{
+				DestroyCounter(item);
+			}
+			counters.Clear();
+			cachedCountersUntil = 0f;
+		}
+		((BaseUnityPlugin)this).Config.Save();
 	}
 
 	private void DestroyCounter(CounterHost host)

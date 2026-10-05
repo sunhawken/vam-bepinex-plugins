@@ -13,6 +13,8 @@ namespace ZeroT.UiKit
 		internal const int Larger = 2;
 		internal const int Collapse = 4;
 		internal const int Close = 8;
+		internal const int Power = 16;
+		internal const float TitleRight = 150f;   // space the buttons take from the right edge (title label stops here)
 		internal const float TitleH = 28f;
 		internal const float Margin = 8f;
 		internal const float CollapsedH = 34f;
@@ -92,11 +94,15 @@ namespace ZeroT.UiKit
 		}
 
 		// Returns a bitmask of the buttons clicked this frame.
-		internal static int TitleRow(float w, string title, bool collapsed)
+		internal static int TitleRow(float w, string title, bool collapsed, bool active = true)
 		{
 			int result = 0;
-			GUI.Label(new Rect(Margin, 3f, w - 118f, 22f), title);
+			GUI.Label(new Rect(Margin, 3f, w - TitleRight, 22f), title);
 			float x = w - 112f;
+			if (GUI.Button(new Rect(x - 34f, 3f, 31f, 18f), active ? "On" : "Off"))
+			{
+				result |= Power;
+			}
 			if (GUI.Button(new Rect(x, 3f, 26f, 18f), "S-"))
 			{
 				result |= Smaller;
@@ -137,11 +143,15 @@ namespace ZeroT.UiKit
 		}
 
 		// Pixel-scaled variants for plugins that scale rects/fonts themselves instead of using GUI.matrix.
-		internal static int TitleRow(float w, string title, bool collapsed, float s, GUIStyle label, GUIStyle button)
+		internal static int TitleRow(float w, string title, bool collapsed, float s, GUIStyle label, GUIStyle button, bool active = true)
 		{
 			int result = 0;
-			GUI.Label(new Rect(Margin * s, 3f * s, w - 118f * s, 22f * s), title, label);
+			GUI.Label(new Rect(Margin * s, 3f * s, w - TitleRight * s, 22f * s), title, label);
 			float x = w - 112f * s;
+			if (GUI.Button(new Rect(x - 34f * s, 3f * s, 31f * s, 18f * s), active ? "On" : "Off", button))
+			{
+				result |= Power;
+			}
 			if (GUI.Button(new Rect(x, 3f * s, 26f * s, 18f * s), "S-", button))
 			{
 				result |= Smaller;

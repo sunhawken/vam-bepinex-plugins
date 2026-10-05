@@ -719,7 +719,7 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 	private void DrawWindow(int id)
 	{
 		ZeroT.UiKit.RlChrome.Backdrop(windowRect.width, windowRect.height);
-		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, cfgCollapsed.Value ? "PPA Standalone  v10.1.2" : "Penis Path Alignment  v10.1.2", cfgCollapsed.Value);
+		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, cfgCollapsed.Value ? "PPA Standalone  v10.1.2" : "Penis Path Alignment  v10.1.2", cfgCollapsed.Value, cfgEnabled.Value);
 		if ((rlButtons & 1) != 0)
 		{
 			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value - 0.1f, 0.75f, 1.75f);
@@ -729,6 +729,12 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 		{
 			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value + 0.1f, 0.75f, 1.75f);
 			ZeroT.UiKit.RlChrome.ResetDpi();
+		}
+		if ((rlButtons & 16) != 0)
+		{
+			cfgEnabled.Value = !cfgEnabled.Value;
+			forceSync = true;
+			((BaseUnityPlugin)this).Config.Save();
 		}
 		if ((rlButtons & 4) != 0)
 		{
@@ -741,7 +747,7 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 		}
 		if (cfgCollapsed.Value)
 		{
-			GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 118f), 26f));
+			GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(1f, windowRect.width - 150f), 26f));
 			return;
 		}
 		GUILayout.BeginArea(ZeroT.UiKit.RlChrome.Body(windowRect.width, windowRect.height));
@@ -821,7 +827,7 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 		GUILayout.EndVertical();
 		GUILayout.EndArea();
 		HandleResize();
-		GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(60f, windowRect.width - 118f), 26f));
+		GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(60f, windowRect.width - 150f), 26f));
 	}
 
 	private void DrawHoleButtons()
@@ -924,7 +930,7 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 			cfgWindowW.Value = windowRect.width;
 			cfgCollapsed.Value = true;
 			resizing = false;
-			windowRect.width = 300f;
+			windowRect.width = 340f;
 			windowRect.height = 34f;
 		}
 		else
@@ -972,9 +978,9 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 
 	private void ClampWindowToScreen(float sw, float sh)
 	{
-		float num = (cfgCollapsed.Value ? 300f : 430f);
+		float num = (cfgCollapsed.Value ? 340f : 430f);
 		float num2 = (cfgCollapsed.Value ? 34f : 360f);
-		windowRect.width = (cfgCollapsed.Value ? 300f : Mathf.Clamp(windowRect.width, num, Mathf.Max(num, sw)));
+		windowRect.width = (cfgCollapsed.Value ? 340f : Mathf.Clamp(windowRect.width, num, Mathf.Max(num, sw)));
 		windowRect.height = (cfgCollapsed.Value ? 34f : Mathf.Clamp(windowRect.height, num2, Mathf.Max(num2, sh)));
 		windowRect.x = Mathf.Clamp(windowRect.x, 0f, Mathf.Max(0f, sw - 90f));
 		windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, sh - 30f));

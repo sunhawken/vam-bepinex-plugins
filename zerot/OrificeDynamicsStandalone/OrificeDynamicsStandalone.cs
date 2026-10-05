@@ -29,6 +29,8 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 
 	private ConfigEntry<bool> _show;
 
+	private ConfigEntry<bool> _active;
+
 	private ConfigEntry<bool> _autoDpi;
 
 	private ConfigEntry<bool> _autoAttach;
@@ -89,6 +91,7 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 
 	private void Awake()
 	{
+		_active = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn Orifice Dynamics off completely: stops scanning/attaching and disables the attached scripts.");
 		_show = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Show", true, "Show the in-game Orifice Dynamics window.");
 		_collapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember the collapsed state.");
 		_autoDpi = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "AutoDPI", true, "Scale using the display DPI when available.");
@@ -198,7 +201,7 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 
 	private void Update()
 	{
-		if (Time.realtimeSinceStartup >= _nextScan)
+		if (_active.Value && Time.realtimeSinceStartup >= _nextScan)
 		{
 			_nextScan = Time.realtimeSinceStartup + 2.5f;
 			ScanPeople();
@@ -269,6 +272,7 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 				if ((Object)(object)val2 != (Object)null)
 				{
 					_instances[val.uid] = val2;
+					((Behaviour)val2).enabled = true;
 					_pending.Remove(val.uid);
 					if (_globalCollision.Value && IsStandalone(val2) && _collisionApplied.Add(((Object)val2).GetInstanceID()))
 					{
@@ -551,7 +555,7 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 	private void DrawWindow(int id)
 	{
 		ZeroT.UiKit.RlChrome.Backdrop(_window.width, _window.height);
-		int num = ZeroT.UiKit.RlChrome.TitleRow(_window.width, "Orifice Dynamics", _collapsed.Value);
+		int num = ZeroT.UiKit.RlChrome.TitleRow(_window.width, "Orifice Dynamics", _collapsed.Value, _active.Value);
 		if ((num & 1) != 0)
 		{
 			SetScale(_scale.Value - 0.1f);
@@ -559,6 +563,10 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 		if ((num & 2) != 0)
 		{
 			SetScale(_scale.Value + 0.1f);
+		}
+		if ((num & 16) != 0)
+		{
+			SetActive(!_active.Value);
 		}
 		if ((num & 4) != 0)
 		{
@@ -585,6 +593,23 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 		{
 			GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(0f, _window.width - 118f), 26f));
 		}
+	}
+
+	private void SetActive(bool on)
+	{
+		_active.Value = on;
+		foreach (KeyValuePair<string, MVRScript> instance in _instances)
+		{
+			if ((Object)(object)instance.Value != (Object)null)
+			{
+				((Behaviour)instance.Value).enabled = on;
+			}
+		}
+		if (on)
+		{
+			_nextScan = 0f;
+		}
+		((BaseUnityPlugin)this).Config.Save();
 	}
 
 	private void SetScale(float value)

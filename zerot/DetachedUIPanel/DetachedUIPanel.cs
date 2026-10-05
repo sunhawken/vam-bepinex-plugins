@@ -52,6 +52,8 @@ namespace DetachedUIPanelStandalone
 
 		private ConfigEntry<bool> showWindow;
 		private ConfigEntry<bool> savedCollapsed;
+		private ConfigEntry<bool> savedActive;
+		private Text powerLabel;
 		private ConfigEntry<float> savedScale;
 		private ConfigEntry<float> savedX;
 		private ConfigEntry<float> savedY;
@@ -118,6 +120,7 @@ namespace DetachedUIPanelStandalone
 		private void Awake()
 		{
 			showWindow = Config.Bind<bool>("Window", "Show", true, "Show the in-game Detached UI Panel window.");
+			savedActive = Config.Bind<bool>("General", "Active", true, "Turn the panel off completely: restores any detached UI and stops all work.");
 			savedCollapsed = Config.Bind<bool>("Window", "Collapsed", false, "Collapse the window to its title bar.");
 			savedScale = Config.Bind<float>("Window", "Scale", 1f, "Extra scale multiplier applied on top of DPI (S- / S+).");
 			savedX = Config.Bind<float>("Window", "X", 40f, "Saved horizontal position.");
@@ -146,7 +149,7 @@ namespace DetachedUIPanelStandalone
 
 		private void Update()
 		{
-			if (window == null)
+			if (window == null || !savedActive.Value)
 			{
 				return;
 			}
@@ -422,8 +425,22 @@ namespace DetachedUIPanelStandalone
 			title.rectTransform.anchorMin = new Vector2(0f, 1f);
 			title.rectTransform.anchorMax = new Vector2(1f, 1f);
 			title.rectTransform.offsetMin = new Vector2(Margin, -25f);
-			title.rectTransform.offsetMax = new Vector2(-112f, -3f);
+			title.rectTransform.offsetMax = new Vector2(-150f, -3f);
 
+			Button power = HeaderButton("Power", "On", delegate
+			{
+				savedActive.Value = !savedActive.Value;
+				if (!savedActive.Value)
+				{
+					selectionToken++;
+					Restore();
+					HidePopup();
+				}
+				ApplyGeometry();
+				Config.Save();
+			});
+			powerLabel = power.GetComponentInChildren<Text>();
+			PinTopRight(power.GetComponent<RectTransform>(), 115f, 3f, 31f, 18f);
 			Button smaller = HeaderButton("Scale down", "S-", delegate { SetScale(userScale - 0.1f); });
 			Button larger = HeaderButton("Scale up", "S+", delegate { SetScale(userScale + 0.1f); });
 			Button collapse = HeaderButton("Collapse or expand", "—", ToggleCollapse);
@@ -519,15 +536,20 @@ namespace DetachedUIPanelStandalone
 			lastScale = s;
 			canvas.scaleFactor = s;
 			ClampPosition(s);
-			float h = collapsed ? CollapsedH : winH;
+			bool shrunk = collapsed || !savedActive.Value;
+			float h = shrunk ? CollapsedH : winH;
 			window.sizeDelta = new Vector2(winW, h);
 			window.anchoredPosition = new Vector2(winX / s, -winY / s);
-			body.gameObject.SetActive(!collapsed);
+			body.gameObject.SetActive(!shrunk);
+			if (powerLabel != null)
+			{
+				powerLabel.text = savedActive.Value ? "On" : "Off";
+			}
 			if (collapseLabel != null)
 			{
 				collapseLabel.text = collapsed ? "+" : "—";
 			}
-			if (collapsed)
+			if (shrunk)
 			{
 				HidePopup();
 				return;

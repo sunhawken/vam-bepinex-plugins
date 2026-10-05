@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
@@ -13,6 +14,8 @@ namespace ZeroT.PpUiSkin
 	[BepInDependency("com.particlepinnacle.thighcompressorandvibrations", BepInDependency.DependencyFlags.SoftDependency)]
 	public sealed class PpUiSkinPlugin : BaseUnityPlugin
 	{
+		private object hostInstance;
+
 		private void Awake()
 		{
 			Type host = AccessTools.TypeByName("ParticlePinnacle.ParticlePinnacleStandalonePlugin");
@@ -27,8 +30,24 @@ namespace ZeroT.PpUiSkin
 				Logger.LogWarning("ParticlePinnacle host layout changed; UI skin not applied.");
 				return;
 			}
+			Hooks.ActiveCfg = Config.Bind<bool>("General", "Active", true, "Turn ParticlePinnacle off completely (disables its scripts).");
 			new Harmony("zerot.particlepinnacle.uiskin").Patch(onGui, new HarmonyMethod(typeof(Hooks).GetMethod("OnGuiPrefix")), null, null, null);
 			Logger.LogInfo("ParticlePinnacle window re-skinned.");
+		}
+
+		private void OnGUI()
+		{
+			if (hostInstance == null)
+			{
+				PluginInfo info;
+				if (Chainloader.PluginInfos.TryGetValue("com.particlepinnacle.thighcompressorandvibrations", out info) && info.Instance != null)
+				{
+					hostInstance = info.Instance;
+					Hooks.ApplyActive(hostInstance, Hooks.ActiveCfg.Value);
+				}
+				return;
+			}
+			Hooks.DrawSafe(hostInstance);
 		}
 	}
 
@@ -43,6 +62,8 @@ namespace ZeroT.PpUiSkin
 		private static MethodInfo mApply;
 		private static MethodInfo mSave;
 		private static BepInEx.Logging.ManualLogSource log;
+		internal static ConfigEntry<bool> ActiveCfg;
+		private static FieldInfo fControllers;
 		private static bool failed;
 		private static bool dragging;
 		private static bool resizing;
@@ -62,25 +83,55 @@ namespace ZeroT.PpUiSkin
 			fCua = host.GetField("_activateWhenTouchingCua", f);
 			mApply = host.GetMethod("ApplyTouchFiltersToNativeControllers", f);
 			mSave = host.GetMethod("SaveControlWindowLayout", f);
+			fControllers = host.GetField("_nativeControllers", f);
 			return fShow != null && fScale != null && fWin != null && fCollapsed != null && fPersons != null && fCua != null && mApply != null && mSave != null;
 		}
 
+		// The skin plugin draws the window itself; the host's own OnGUI is simply suppressed.
 		public static bool OnGuiPrefix(object __instance)
+		{
+			return failed;
+		}
+
+		internal static void DrawSafe(object host)
 		{
 			if (failed)
 			{
-				return true;
+				return;
 			}
 			try
 			{
-				Draw(__instance);
-				return false;
+				Draw(host);
 			}
 			catch (Exception e)
 			{
 				failed = true;
-				log.LogWarning("UI skin failed, falling back to the original window: " + e.Message);
-				return true;
+				log.LogWarning("UI skin failed: " + e.Message);
+			}
+		}
+
+		// Off = the host plugin and every thigh-compressor controller it created stop updating.
+		internal static void ApplyActive(object host, bool on)
+		{
+			UnityEngine.Behaviour hb = host as UnityEngine.Behaviour;
+			if (hb != null)
+			{
+				hb.enabled = on;
+			}
+			if (fControllers != null)
+			{
+				System.Collections.IDictionary d = fControllers.GetValue(host) as System.Collections.IDictionary;
+				if (d != null)
+				{
+					foreach (object c in d.Values)
+					{
+						UnityEngine.Behaviour cb = c as UnityEngine.Behaviour;
+						if (cb != null)
+						{
+							cb.enabled = on;
+						}
+					}
+				}
 			}
 		}
 
@@ -98,13 +149,13 @@ namespace ZeroT.PpUiSkin
 			Rect win = (Rect)fWin.GetValue(host);
 			bool collapsed = collapsedCfg.Value;
 			float s = ZeroT.UiKit.RlChrome.Dpi(win.x, win.y) * Mathf.Clamp(scaleCfg.Value, 0.65f, 2.5f);
-			float w = collapsed ? 300f : win.width;
+			float w = collapsed ? 340f : win.width;
 			float h = collapsed ? ZeroT.UiKit.RlChrome.CollapsedH : win.height;
 			Rect panel = new Rect(win.x, win.y, w * s, h * s);
 			GUI.Box(panel, "");
 
 			GUI.BeginGroup(panel);
-			int b = ZeroT.UiKit.RlChrome.TitleRow(panel.width, collapsed ? "ParticlePinnacle  52.0.1" : "ParticlePinnacle Filters", collapsed, s, GUI.skin.label, GUI.skin.button);
+			int b = ZeroT.UiKit.RlChrome.TitleRow(panel.width, collapsed ? "ParticlePinnacle  52.0.1" : "ParticlePinnacle Filters", collapsed, s, GUI.skin.label, GUI.skin.button, ActiveCfg.Value);
 			GUI.EndGroup();
 			if ((b & 1) != 0)
 			{
@@ -117,6 +168,13 @@ namespace ZeroT.PpUiSkin
 				scaleCfg.Value = Mathf.Clamp(scaleCfg.Value + 0.1f, 0.65f, 2.5f);
 				ZeroT.UiKit.RlChrome.ResetDpi();
 				mSave.Invoke(host, null);
+			}
+			if ((b & 16) != 0)
+			{
+				ActiveCfg.Value = !ActiveCfg.Value;
+				ActiveCfg.ConfigFile.Save();
+				ApplyActive(host, ActiveCfg.Value);
+				return;
 			}
 			if ((b & 4) != 0)
 			{
@@ -134,7 +192,7 @@ namespace ZeroT.PpUiSkin
 			}
 
 			float pad = ZeroT.UiKit.RlChrome.Margin * s;
-			if (!collapsed)
+			if (!collapsed && ActiveCfg.Value)
 			{
 				if (FilterButton(new Rect(panel.x + pad, panel.y + 31f * s, panel.width - 2f * pad, 28f * s), "Person targets", persons))
 				{
@@ -146,7 +204,7 @@ namespace ZeroT.PpUiSkin
 				}
 			}
 
-			Rect drag = new Rect(panel.x, panel.y, panel.width - 118f * s, 26f * s);
+			Rect drag = new Rect(panel.x, panel.y, panel.width - 150f * s, 26f * s);
 			Rect grip = new Rect(panel.xMax - 20f * s, panel.yMax - 20f * s, 18f * s, 18f * s);
 			if (!collapsed)
 			{

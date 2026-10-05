@@ -82,6 +82,8 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 
 	private ConfigEntry<bool> cfgShow;
 
+	private ConfigEntry<bool> cfgActive;
+
 	private ConfigEntry<bool> cfgCollapsed;
 
 	private ConfigEntry<bool> cfgAutoDpi;
@@ -176,6 +178,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 
 	private void Awake()
 	{
+		cfgActive = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn Garments off completely: no scanning, no auto bot, controls hidden.");
 		cfgShow = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Show", true, "Show the in-game Garments window.");
 		cfgCollapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember collapsed state.");
 		cfgAutoDpi = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "AutoDPI", true, "Scale from display DPI.");
@@ -187,7 +190,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		cfgShowItems = ((BaseUnityPlugin)this).Config.Bind<bool>("Options", "ShowIndividualItems", false, "Show per-clothing-item On/Off controls.");
 		cfgAutoBot = ((BaseUnityPlugin)this).Config.Bind<bool>("Options", "AutoBotFromPenetrationCounter", false, "Drive the Bot and UBot (bottom / under-bottom) HUD from PenetrationCounter: Off while the target is penetrated (vagina or anus), back On a few seconds after it stops.");
 		cfgTargetUid = ((BaseUnityPlugin)this).Config.Bind<string>("Target", "FemalePersonUID", "", "Remembered female Person target UID.");
-		window = new Rect(cfgX.Value, cfgY.Value, cfgCollapsed.Value ? 240f : Mathf.Max(220f, cfgWidth.Value), cfgCollapsed.Value ? 34f : Mathf.Max(140f, cfgHeight.Value));
+		window = new Rect(cfgX.Value, cfgY.Value, cfgCollapsed.Value ? 340f : Mathf.Max(290f, cfgWidth.Value), cfgCollapsed.Value ? 34f : Mathf.Max(140f, cfgHeight.Value));
 		nextPeopleScan = Time.realtimeSinceStartup + 1f;
 	}
 
@@ -232,6 +235,10 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 	private void Update()
 	{
 		float realtimeSinceStartup = Time.realtimeSinceStartup;
+		if (!cfgActive.Value)
+		{
+			return;
+		}
 		if (realtimeSinceStartup >= nextPeopleScan)
 		{
 			nextPeopleScan = realtimeSinceStartup + 2f;
@@ -459,7 +466,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		}
 		if (value != cfgCollapsed.Value)
 		{
-			window.width = (cfgCollapsed.Value ? 240f : Mathf.Max(220f, cfgWidth.Value));
+			window.width = (cfgCollapsed.Value ? 340f : Mathf.Max(290f, cfgWidth.Value));
 			window.height = (cfgCollapsed.Value ? 34f : Mathf.Max(140f, cfgHeight.Value));
 		}
 		ClampWindow();
@@ -473,7 +480,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 	{
 		float num = Mathf.Max(1f, window.width);
 		ZeroT.UiKit.RlChrome.Backdrop(num, window.height);
-		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(num, "Iamjoi Garments", cfgCollapsed.Value);
+		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(num, "Iamjoi Garments", cfgCollapsed.Value, cfgActive.Value);
 		if ((rlButtons & 1) != 0)
 		{
 			ChangeScale(0.85f);
@@ -481,6 +488,12 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		if ((rlButtons & 2) != 0)
 		{
 			ChangeScale(1.1764706f);
+		}
+		if ((rlButtons & 16) != 0)
+		{
+			cfgActive.Value = !cfgActive.Value;
+			nextPeopleScan = 0f;
+			((BaseUnityPlugin)this).Config.Save();
 		}
 		if ((rlButtons & 4) != 0)
 		{
@@ -491,8 +504,8 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 			cfgShow.Value = false;
 			((BaseUnityPlugin)this).Config.Save();
 		}
-		GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(0f, num - 118f), 26f));
-		if (!cfgCollapsed.Value)
+		GUI.DragWindow(new Rect(0f, 0f, Mathf.Max(0f, num - 150f), 26f));
+		if (!cfgCollapsed.Value && cfgActive.Value)
 		{
 			GUILayout.BeginArea(ZeroT.UiKit.RlChrome.Body(window.width, window.height));
 			mainScroll = GUILayout.BeginScrollView(mainScroll, false, true, new GUILayoutOption[1] { GUILayout.ExpandHeight(true) });
@@ -927,7 +940,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 			num = Mathf.Clamp(ZeroT.UiKit.RlChrome.Dpi(window.x * effectiveScale, window.y * effectiveScale), 0.75f, 2.5f);
 		}
 		float num3 = num * Mathf.Clamp(cfgScale.Value, 0.25f, 2.5f);
-		float num4 = (cfgCollapsed.Value ? 240f : 220f);
+		float num4 = (cfgCollapsed.Value ? 340f : 290f);
 		float num5 = (cfgCollapsed.Value ? 34f : 140f);
 		return Mathf.Max(0.1f, Mathf.Min(new float[3]
 		{
@@ -950,12 +963,12 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		{
 			if (cfgCollapsed.Value)
 			{
-				window.width = Mathf.Min(240f, num);
+				window.width = Mathf.Min(340f, num);
 				window.height = Mathf.Min(34f, num2);
 			}
 			else
 			{
-				window.width = Mathf.Clamp(window.width, Mathf.Min(220f, num), num);
+				window.width = Mathf.Clamp(window.width, Mathf.Min(290f, num), num);
 				window.height = Mathf.Clamp(window.height, Mathf.Min(140f, num2), num2);
 			}
 			window.x = Mathf.Clamp(window.x, 0f, Mathf.Max(0f, num - window.width));
@@ -976,7 +989,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 	{
 		if (!cfgCollapsed.Value)
 		{
-			cfgWidth.Value = Mathf.Max(220f, window.width);
+			cfgWidth.Value = Mathf.Max(290f, window.width);
 			cfgHeight.Value = Mathf.Max(140f, window.height);
 		}
 		cfgCollapsed.Value = !cfgCollapsed.Value;
@@ -994,7 +1007,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 	{
 		if (!cfgCollapsed.Value)
 		{
-			cfgWidth.Value = Mathf.Max(220f, window.width);
+			cfgWidth.Value = Mathf.Max(290f, window.width);
 			cfgHeight.Value = Mathf.Max(140f, window.height);
 		}
 		cfgX.Value = window.x;

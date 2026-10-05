@@ -13,6 +13,8 @@ namespace ZeroT.UiKit
 
 	internal delegate void RlLayout(float w, float h);
 
+	internal delegate void RlBool(bool value);
+
 	// uGUI twin of RlChrome: a screen-space window that looks and behaves like the VpbRandomLook IMGUI window
 	// (default dark box, "Title ... S- S+ - x" row, resize arrow bottom-right, 34px collapsed bar, monitor DPI,
 	// config keys Show/Collapsed/Scale/X/Y/Width/Height/DpiAware). The plugin builds its own body under Body.
@@ -52,6 +54,8 @@ namespace ZeroT.UiKit
 
 		private ConfigEntry<bool> show;
 		private ConfigEntry<bool> savedCollapsed;
+		private ConfigEntry<bool> savedActive;
+		private Text powerLabel;
 		private ConfigEntry<float> savedScale;
 		private ConfigEntry<float> savedX;
 		private ConfigEntry<float> savedY;
@@ -65,6 +69,9 @@ namespace ZeroT.UiKit
 		internal float H;
 		internal float UserScale = 1f;
 		internal bool Collapsed;
+		// Active == plugin switched on. When off the window shrinks to its title bar and the plugin is told to stop everything.
+		internal bool Active = true;
+		internal RlBool OnActiveChanged;
 
 		internal Canvas Canvas;
 		internal RectTransform Window;
@@ -96,6 +103,7 @@ namespace ZeroT.UiKit
 			ConfigFile c = owner.Config;
 			show = c.Bind<bool>(section, "Show", true, "Show the in-game window.");
 			savedCollapsed = c.Bind<bool>(section, "Collapsed", false, "Collapse the window to its title bar.");
+			savedActive = c.Bind<bool>("General", "Active", true, "Turn the plugin off completely (the window shrinks to its title bar).");
 			savedScale = c.Bind<float>(section, "Scale", 1f, "Extra scale multiplier applied on top of DPI (S- / S+).");
 			savedX = c.Bind<float>(section, "X", defX, "Saved horizontal position.");
 			savedY = c.Bind<float>(section, "Y", defY, "Saved vertical position.");
@@ -108,6 +116,7 @@ namespace ZeroT.UiKit
 			H = Mathf.Clamp(savedH.Value, minH, maxH);
 			UserScale = Mathf.Clamp(savedScale.Value, 0.65f, 2.5f);
 			Collapsed = savedCollapsed.Value;
+			Active = savedActive.Value;
 			show.SettingChanged += OnShowChanged;
 		}
 
@@ -183,8 +192,11 @@ namespace ZeroT.UiKit
 			t.rectTransform.anchorMin = new Vector2(0f, 1f);
 			t.rectTransform.anchorMax = new Vector2(1f, 1f);
 			t.rectTransform.offsetMin = new Vector2(Margin, -25f);
-			t.rectTransform.offsetMax = new Vector2(-112f, -3f);
+			t.rectTransform.offsetMax = new Vector2(-150f, -3f);
 
+			Button power = HeaderButton("Power", "On", delegate { SetPlugin(!Active); });
+			powerLabel = power.GetComponentInChildren<Text>();
+			PinTopRight(power.GetComponent<RectTransform>(), 115f, 3f, 31f, 18f);
 			Button smaller = HeaderButton("Scale down", "S-", delegate { SetScale(UserScale - 0.1f); });
 			Button larger = HeaderButton("Scale up", "S+", delegate { SetScale(UserScale + 0.1f); });
 			Button collapse = HeaderButton("Collapse or expand", "—", ToggleCollapse);
@@ -322,15 +334,20 @@ namespace ZeroT.UiKit
 			float w = W * s;
 			X = Mathf.Clamp(X, -(w - 60f), Mathf.Max(0f, (float)Screen.width - 60f));
 			Y = Mathf.Clamp(Y, 0f, Mathf.Max(0f, (float)Screen.height - 24f));
-			float h = Collapsed ? CollapsedH : H;
+			bool shrunk = Collapsed || !Active;
+			float h = shrunk ? CollapsedH : H;
 			Window.sizeDelta = new Vector2(W, h);
 			Window.anchoredPosition = new Vector2(X / s, -Y / s);
-			Body.gameObject.SetActive(!Collapsed);
+			Body.gameObject.SetActive(!shrunk);
+			if (powerLabel != null)
+			{
+				powerLabel.text = Active ? "On" : "Off";
+			}
 			if (collapseLabel != null)
 			{
 				collapseLabel.text = Collapsed ? "+" : "—";
 			}
-			if (Collapsed)
+			if (shrunk)
 			{
 				if (OnHidden != null)
 				{
@@ -360,6 +377,18 @@ namespace ZeroT.UiKit
 			{
 				W = Mathf.Clamp(W + pixelDelta.x / s, minW, maxW);
 				H = Mathf.Clamp(H - pixelDelta.y / s, minH, maxH);
+			}
+			Apply();
+		}
+
+		internal void SetPlugin(bool on)
+		{
+			Active = on;
+			savedActive.Value = on;
+			owner.Config.Save();
+			if (OnActiveChanged != null)
+			{
+				OnActiveChanged(on);
 			}
 			Apply();
 		}

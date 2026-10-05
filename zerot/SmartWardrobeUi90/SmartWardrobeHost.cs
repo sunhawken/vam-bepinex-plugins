@@ -99,6 +99,10 @@ public sealed class SmartWardrobeSkinnedHost : BaseUnityPlugin
 			return;
 		}
 		win.Tick();
+		if (!win.Active)
+		{
+			return;
+		}
 		if (((Object)(object)wardrobe != (Object)null || (Object)(object)patcher != (Object)null) && Time.unscaledTime >= layoutNext)
 		{
 			layoutNext = Time.unscaledTime + 0.5f;
@@ -169,6 +173,10 @@ public sealed class SmartWardrobeSkinnedHost : BaseUnityPlugin
 
 	private void AutoSelectOnlyPerson()
 	{
+		if (win != null && !win.Active)
+		{
+			return;
+		}
 		List<Atom> people = GetPeople();
 		if (people.Count == 1)
 		{
@@ -201,6 +209,22 @@ public sealed class SmartWardrobeSkinnedHost : BaseUnityPlugin
 		win.OnLayout = delegate(float w, float h)
 		{
 			UpdateNativeLayout();
+		};
+		win.OnActiveChanged = delegate(bool on)
+		{
+			generation++;
+			if (!on)
+			{
+				RemoveWardrobe();
+			}
+			else if ((Object)(object)selectedPerson != (Object)null)
+			{
+				((MonoBehaviour)this).StartCoroutine(AttachPerson(selectedPerson, ++generation));
+			}
+			else
+			{
+				AutoSelectOnlyPerson();
+			}
 		};
 		win.OnHidden = HideMenu;
 		win.OnClosed = HideMenu;

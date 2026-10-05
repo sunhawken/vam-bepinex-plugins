@@ -41,6 +41,8 @@ public sealed class Plugin : BaseUnityPlugin
 
 	private ConfigEntry<bool> cfgShow;
 
+	private ConfigEntry<bool> cfgActive;
+
 	private ConfigEntry<bool> cfgCollapsed;
 
 	private ConfigEntry<string> cfgTargetUid;
@@ -94,6 +96,7 @@ public sealed class Plugin : BaseUnityPlugin
 		cfgW = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "Width", 470f, "Expanded window width in VaM display pixels.");
 		cfgH = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "Height", 720f, "Expanded window height in VaM display pixels.");
 		cfgScale = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "UserScale", 1f, "Manual UI scale multiplied by detected display DPI scale.");
+		cfgActive = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn Procedural Slaps off completely: removes all per-person sensors and renderers and stops updating.");
 		cfgShow = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Show", true, "Show the in-game Procedural Slaps window.");
 		cfgCollapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Whether the standalone window is collapsed.");
 		cfgTargetUid = ((BaseUnityPlugin)this).Config.Bind<string>("Target", "UID", string.Empty, "Female Person atom UID selected for editing in the UI. All female Persons are targeted automatically.");
@@ -105,8 +108,28 @@ public sealed class Plugin : BaseUnityPlugin
 		Logger.LogInfo((object)"Procedural Slaps standalone loaded; automatic all-female scene targeting enabled.");
 	}
 
+	private void DisposeRuntimes()
+	{
+		foreach (TargetRuntime value in runtimes.Values)
+		{
+			value.Dispose();
+		}
+		runtimes.Clear();
+		selectedRuntime = null;
+		selectedProfile = null;
+		targetRefreshAt = 0f;
+	}
+
 	private void Update()
 	{
+		if (!cfgActive.Value)
+		{
+			if (runtimes.Count > 0)
+			{
+				DisposeRuntimes();
+			}
+			return;
+		}
 		if (!((Object)(object)SuperController.singleton == (Object)null))
 		{
 			if (!booted)
@@ -124,7 +147,7 @@ public sealed class Plugin : BaseUnityPlugin
 
 	private void LateUpdate()
 	{
-		if (!booted)
+		if (!booted || !cfgActive.Value)
 		{
 			return;
 		}
@@ -363,7 +386,7 @@ public sealed class Plugin : BaseUnityPlugin
 
 	private string WindowTitle()
 	{
-		return "Procedural Slaps — auto " + runtimes.Count + " female" + ((runtimes.Count != 1) ? "s" : string.Empty);
+		return "Slaps: auto " + runtimes.Count;
 	}
 
 	private float CollapsedHeight(float scale)
@@ -410,7 +433,7 @@ public sealed class Plugin : BaseUnityPlugin
 		float num3 = 26f * num;
 		float num5 = ((!collapsed) ? windowRect.height : CollapsedHeight(num));
 		ZeroT.UiKit.RlChrome.Backdrop(windowRect.width, num5);
-		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, WindowTitle(), collapsed, num, labelStyle, buttonStyle);
+		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, WindowTitle(), collapsed, num, labelStyle, buttonStyle, cfgActive.Value);
 		if ((rlButtons & 1) != 0)
 		{
 			ChangeUserScale(-0.1f);
@@ -418,6 +441,12 @@ public sealed class Plugin : BaseUnityPlugin
 		if ((rlButtons & 2) != 0)
 		{
 			ChangeUserScale(0.1f);
+		}
+		if ((rlButtons & 16) != 0)
+		{
+			cfgActive.Value = !cfgActive.Value;
+			uiDirty = true;
+			SaveUiState();
 		}
 		if ((rlButtons & 4) != 0)
 		{
@@ -431,7 +460,7 @@ public sealed class Plugin : BaseUnityPlugin
 			uiDirty = true;
 			SaveUiState();
 		}
-		if (!collapsed)
+		if (!collapsed && cfgActive.Value)
 		{
 			GUILayout.BeginArea(ZeroT.UiKit.RlChrome.Body(windowRect.width, num5, num));
 			DrawExpanded(num, num3);
