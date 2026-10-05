@@ -94,6 +94,12 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 
 	private float nextAutoBot;
 
+	private MVRScript autoBotScript;
+
+	private Atom autoBotScriptAtom;
+
+	private float autoBotNextLookup;
+
 	private float autoBotLastSeen = -100f;
 
 	private bool autoBotOff;
@@ -141,6 +147,8 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 	private string status = "Waiting for a female Person atom.";
 
 	private string exposedJson = "";
+
+	private bool showBigJson;
 
 	private readonly List<Atom> females = new List<Atom>();
 
@@ -247,7 +255,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		}
 		if (cfgAutoBot.Value && realtimeSinceStartup >= nextAutoBot)
 		{
-			nextAutoBot = realtimeSinceStartup + 0.25f;
+			nextAutoBot = realtimeSinceStartup + 0.5f;
 			AutoBotTick(realtimeSinceStartup);
 		}
 		if (realtimeSinceStartup >= nextRescan)
@@ -590,7 +598,19 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 				autoBotInfo = "Auto Bot: no target female";
 				return;
 			}
-			MVRScript script = FindPenetrationCounter(atom);
+			MVRScript script = autoBotScript;
+			if ((Object)(object)script == (Object)null || (Object)(object)autoBotScriptAtom != (Object)(object)atom)
+			{
+				if (now < autoBotNextLookup && (Object)(object)autoBotScriptAtom == (Object)(object)atom)
+				{
+					return;
+				}
+				autoBotNextLookup = now + 3f;
+				script = FindPenetrationCounter(atom);
+				autoBotScript = script;
+				autoBotScriptAtom = atom;
+				autoBotTimes.Clear();
+			}
 			if ((Object)(object)script == (Object)null)
 			{
 				autoBotInfo = "Auto Bot: PenetrationCounter not found on " + atom.uid;
@@ -618,7 +638,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 			{
 				autoBotLastSeen = now;
 			}
-			bool active = now - autoBotLastSeen < 1f;
+			bool active = now - autoBotLastSeen < 1.5f;
 			if (active && !autoBotOff)
 			{
 				StartCategoryFade("Bottom", -1f);
@@ -868,11 +888,22 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		{
 			exposedJson = "(Click Expose Current)";
 		}
-		exposedJson = GUILayout.TextArea(exposedJson, textAreaStyle, new GUILayoutOption[2]
+		if (exposedJson.Length > 6000 && !showBigJson)
 		{
-			GUILayout.MinHeight(150f),
-			GUILayout.ExpandHeight(false)
-		});
+			GUILayout.Label("Clothing JSON is large (" + exposedJson.Length + " characters), so the editor is hidden to keep the game responsive.", wrapStyle, new GUILayoutOption[0]);
+			if (GUILayout.Button("Show editor (may lag)", buttonStyle, new GUILayoutOption[1] { GUILayout.MinHeight(28f) }))
+			{
+				showBigJson = true;
+			}
+		}
+		else
+		{
+			exposedJson = GUILayout.TextArea(exposedJson, textAreaStyle, new GUILayoutOption[2]
+			{
+				GUILayout.MinHeight(150f),
+				GUILayout.ExpandHeight(false)
+			});
+		}
 		GUILayout.Label("Edit the JSON directly, then press Apply JSON. Content scrolls with the window instead of overlapping other controls.", wrapStyle, new GUILayoutOption[0]);
 	}
 
