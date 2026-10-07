@@ -13,8 +13,8 @@ using ZeroT.UiKit;
 namespace ZeroT.DecalMakerStandalone
 {
 	// Standalone helper for Chokaphi's DecalMaker 2 (.var). DecalMaker is a PERSON plugin, so this DLL carries the package,
-	// installs it when missing, adds the plugin to every Person atom by itself (no manual "Add plugin"), and shows the
-	// selected person's DecalMaker panel in a desktop window that matches the other restyled plugin windows.
+	// installs it when missing, shows the panel of the DecalMaker you attached to a person (it does not add a second instance unless
+	// AutoAddToPersons is switched on) and shows the selected person's DecalMaker panel in a desktop window that matches the other restyled plugin windows.
 	[BepInPlugin("com.zerot.decalmaker.standalone", "DecalMaker Standalone", "1.0.0")]
 	public sealed class DecalMakerStandalone : BaseUnityPlugin
 	{
@@ -59,7 +59,7 @@ namespace ZeroT.DecalMakerStandalone
 
 		private void Awake()
 		{
-			cfgAutoAdd = Config.Bind<bool>("General", "AutoAddToPersons", true, "Add the DecalMaker plugin to every Person atom automatically.");
+			cfgAutoAdd = Config.Bind<bool>("General", "AutoAddToPersons", false, "Off (default): only show the DecalMaker you attached to a person yourself. On: also add a new DecalMaker to every Person that has none.");
 			cfgFemalesOnly = Config.Bind<bool>("General", "FemalesOnly", false, "Only add DecalMaker to female Person atoms.");
 			cfgDelay = Config.Bind<float>("General", "AddDelaySeconds", 3f, "Wait this long after a Person appears before adding the plugin (lets VaM finish building it).");
 			win = new RlUguiWindow(this, "Decal Maker", "Window", 40f, 60f, 620f, 700f, 380f, 280f, 1600f, 1400f);
@@ -295,7 +295,7 @@ namespace ZeroT.DecalMakerStandalone
 			if (script == null)
 			{
 				Restore();
-				SetStatus(cfgAutoAdd.Value ? "Adding DecalMaker to " + target.uid + "..." : "DecalMaker is not on " + target.uid + " (auto-add is off).");
+				SetStatus(cfgAutoAdd.Value ? "Adding DecalMaker to " + target.uid + "..." : "No DecalMaker on " + target.uid + " - attach it in VaM, or pick another person.");
 				return;
 			}
 			RectTransform ui = script.UITransform as RectTransform;
