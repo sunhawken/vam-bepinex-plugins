@@ -132,7 +132,7 @@ namespace DetachedUIPanelStandalone
 			winY = savedY.Value;
 			winW = Mathf.Clamp(savedWidth.Value, MinW, MaxW);
 			winH = Mathf.Clamp(savedHeight.Value, MinH, MaxH);
-			userScale = Mathf.Clamp(savedScale.Value, 0.65f, 2.5f);
+			userScale = Mathf.Clamp(savedScale.Value, 0.3f, 2.5f);
 			collapsed = savedCollapsed.Value;
 			showWindow.SettingChanged += OnShowChanged;
 		}
@@ -282,12 +282,12 @@ namespace DetachedUIPanelStandalone
 
 		private float CurrentScale()
 		{
-			return DpiScale() * Mathf.Clamp(userScale, 0.65f, 2.5f);
+			return DpiScale() * Mathf.Clamp(userScale, 0.3f, 2.5f);
 		}
 
 		private void SetScale(float v)
 		{
-			userScale = Mathf.Clamp(v, 0.65f, 2.5f);
+			userScale = Mathf.Clamp(v, 0.3f, 2.5f);
 			cachedDpiScale = -1f;
 			ApplyGeometry();
 			Persist();

@@ -722,12 +722,12 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, cfgCollapsed.Value ? "PPA Standalone  v10.1.2" : "Penis Path Alignment  v10.1.2", cfgCollapsed.Value, cfgEnabled.Value);
 		if ((rlButtons & 1) != 0)
 		{
-			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value - 0.1f, 0.75f, 1.75f);
+			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value - 0.1f, 0.3f, 1.75f);
 			ZeroT.UiKit.RlChrome.ResetDpi();
 		}
 		if ((rlButtons & 2) != 0)
 		{
-			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value + 0.1f, 0.75f, 1.75f);
+			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value + 0.1f, 0.3f, 1.75f);
 			ZeroT.UiKit.RlChrome.ResetDpi();
 		}
 		if ((rlButtons & 16) != 0)
@@ -1015,7 +1015,7 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 		{
 			num = Mathf.Clamp(ZeroT.UiKit.RlChrome.Dpi(windowRect.x * guiScaleCached, windowRect.y * guiScaleCached), 0.85f, 2.25f);
 		}
-		return Mathf.Clamp(num * Mathf.Clamp(cfgUiScale.Value, 0.75f, 1.75f), 0.7f, 2.75f);
+		return Mathf.Clamp(num * Mathf.Clamp(cfgUiScale.Value, 0.3f, 1.75f), 0.3f, 2.75f);
 	}
 
 	private void EnsureStyles()

@@ -315,7 +315,7 @@ namespace ZeroT.VpbRandomLook
         {
             if (_showWindow == null || !_showWindow.Value) return;
 
-            float scale = DpiScale() * Mathf.Clamp(_scale.Value, 0.65f, 2.5f);
+            float scale = DpiScale() * Mathf.Clamp(_scale.Value, 0.3f, 2.5f);
             bool collapsed = _collapsed.Value;
 
             float w = _win.width * scale;
@@ -509,7 +509,7 @@ namespace ZeroT.VpbRandomLook
 
         private void SetScale(float v)
         {
-            _scale.Value = Mathf.Clamp(v, 0.65f, 2.5f);
+            _scale.Value = Mathf.Clamp(v, 0.3f, 2.5f);
             _cachedDpiScale = -1f;
             Config.Save();
         }

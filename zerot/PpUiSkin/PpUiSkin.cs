@@ -148,7 +148,7 @@ namespace ZeroT.PpUiSkin
 			ConfigEntry<bool> cua = (ConfigEntry<bool>)fCua.GetValue(host);
 			Rect win = (Rect)fWin.GetValue(host);
 			bool collapsed = collapsedCfg.Value;
-			float s = ZeroT.UiKit.RlChrome.Dpi(win.x, win.y) * Mathf.Clamp(scaleCfg.Value, 0.65f, 2.5f);
+			float s = ZeroT.UiKit.RlChrome.Dpi(win.x, win.y) * Mathf.Clamp(scaleCfg.Value, 0.3f, 2.5f);
 			float w = collapsed ? 340f : win.width;
 			float h = collapsed ? ZeroT.UiKit.RlChrome.CollapsedH : win.height;
 			Rect panel = new Rect(win.x, win.y, w * s, h * s);
@@ -159,13 +159,13 @@ namespace ZeroT.PpUiSkin
 			GUI.EndGroup();
 			if ((b & 1) != 0)
 			{
-				scaleCfg.Value = Mathf.Clamp(scaleCfg.Value - 0.1f, 0.65f, 2.5f);
+				scaleCfg.Value = Mathf.Clamp(scaleCfg.Value - 0.1f, 0.3f, 2.5f);
 				ZeroT.UiKit.RlChrome.ResetDpi();
 				mSave.Invoke(host, null);
 			}
 			if ((b & 2) != 0)
 			{
-				scaleCfg.Value = Mathf.Clamp(scaleCfg.Value + 0.1f, 0.65f, 2.5f);
+				scaleCfg.Value = Mathf.Clamp(scaleCfg.Value + 0.1f, 0.3f, 2.5f);
 				ZeroT.UiKit.RlChrome.ResetDpi();
 				mSave.Invoke(host, null);
 			}

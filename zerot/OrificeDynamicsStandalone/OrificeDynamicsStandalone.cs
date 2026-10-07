@@ -519,7 +519,7 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 	private float EffectiveScale()
 	{
 		float num = (!_autoDpi.Value) ? 1f : ZeroT.UiKit.RlChrome.Dpi(_window.x * _effectiveScale, _window.y * _effectiveScale);
-		return num * Mathf.Clamp(_scale.Value, 0.65f, 2.5f);
+		return num * Mathf.Clamp(_scale.Value, 0.3f, 2.5f);
 	}
 
 	private Vector2 LogicalMouse()
@@ -617,7 +617,7 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 
 	private void SetScale(float value)
 	{
-		_scale.Value = Mathf.Clamp(value, 0.65f, 2.5f);
+		_scale.Value = Mathf.Clamp(value, 0.3f, 2.5f);
 		ZeroT.UiKit.RlChrome.ResetDpi();
 		MarkDirty();
 	}

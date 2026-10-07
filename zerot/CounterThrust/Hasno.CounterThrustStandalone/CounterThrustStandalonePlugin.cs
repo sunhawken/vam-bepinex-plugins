@@ -1201,13 +1201,13 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 
 	private float GetGuiScale()
 	{
-		float num = Mathf.Clamp(cfgUiScale.Value, 0.6f, 2.5f);
+		float num = Mathf.Clamp(cfgUiScale.Value, 0.3f, 2.5f);
 		float num2 = 1f;
 		if (cfgAutoDpi.Value)
 		{
 			num2 = ZeroT.UiKit.RlChrome.Dpi(windowRect.x * guiScaleCached, windowRect.y * guiScaleCached);
 		}
-		return Mathf.Clamp(num2 * num, 0.6f, 3f);
+		return Mathf.Clamp(num2 * num, 0.3f, 3f);
 	}
 
 	private void EnsureStyles()
@@ -1294,12 +1294,12 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(windowRect.width, "CounterThrust v4.2.4", collapsed, cfgEnabled.Value);
 		if ((rlButtons & 1) != 0)
 		{
-			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value - 0.1f, 0.65f, 2.5f);
+			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value - 0.1f, 0.3f, 2.5f);
 			ZeroT.UiKit.RlChrome.ResetDpi();
 		}
 		if ((rlButtons & 2) != 0)
 		{
-			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value + 0.1f, 0.65f, 2.5f);
+			cfgUiScale.Value = Mathf.Clamp(cfgUiScale.Value + 0.1f, 0.3f, 2.5f);
 			ZeroT.UiKit.RlChrome.ResetDpi();
 		}
 		if ((rlButtons & 16) != 0)

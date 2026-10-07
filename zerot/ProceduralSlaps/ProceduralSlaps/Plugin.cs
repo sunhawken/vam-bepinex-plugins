@@ -101,7 +101,7 @@ public sealed class Plugin : BaseUnityPlugin
 		cfgCollapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Whether the standalone window is collapsed.");
 		cfgTargetUid = ((BaseUnityPlugin)this).Config.Bind<string>("Target", "UID", string.Empty, "Female Person atom UID selected for editing in the UI. All female Persons are targeted automatically.");
 		windowRect = new Rect(cfgX.Value, cfgY.Value, Mathf.Max(260f, cfgW.Value), Mathf.Max(180f, cfgH.Value));
-		userScale = Mathf.Clamp(cfgScale.Value, 0.55f, 2.25f);
+		userScale = Mathf.Clamp(cfgScale.Value, 0.3f, 2.25f);
 		collapsed = cfgCollapsed.Value;
 		targetInput = cfgTargetUid.Value ?? string.Empty;
 		fallbackSettings.Validate();
@@ -341,7 +341,7 @@ public sealed class Plugin : BaseUnityPlugin
 
 	private float EffectiveScale()
 	{
-		return Mathf.Clamp(userScale * DpiScale(), 0.65f, 3f);
+		return Mathf.Clamp(userScale * DpiScale(), 0.3f, 3f);
 	}
 
 	private void OnGUI()
@@ -617,7 +617,7 @@ public sealed class Plugin : BaseUnityPlugin
 	private void ChangeUserScale(float delta)
 	{
 		float num = EffectiveScale();
-		float num2 = Mathf.Clamp(userScale + delta, 0.55f, 2.25f);
+		float num2 = Mathf.Clamp(userScale + delta, 0.3f, 2.25f);
 		if (!(Mathf.Abs(num2 - userScale) < 0.001f))
 		{
 			userScale = num2;

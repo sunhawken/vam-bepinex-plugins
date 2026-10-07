@@ -462,7 +462,7 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		_expandedWidth = Clamp(_windowWidth.Value, 320f, 900f);
 		_expandedHeight = Clamp(_windowHeight.Value, 210f, 1000f);
 		_window = new Rect(Clamp(_windowX.Value, 0f, 10000f), Clamp(_windowY.Value, 0f, 10000f), (!_collapsed.Value) ? _expandedWidth : 340f, (!_collapsed.Value) ? _expandedHeight : 34f);
-		_lastEffectiveScale = Clamp(_positionScale.Value, 0.65f, 3f);
+		_lastEffectiveScale = Clamp(_positionScale.Value, 0.3f, 3f);
 	}
 
 	private void OnEnable()
@@ -801,7 +801,7 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		_resizeStartMouse = MouseScreenPosition();
 		_resizeStartWidth = _window.width;
 		_resizeStartHeight = _window.height;
-		_resizeScale = Mathf.Max(0.65f, EffectiveScale());
+		_resizeScale = Mathf.Max(0.3f, EffectiveScale());
 	}
 
 	private void UpdateWindowResize()
@@ -848,8 +848,8 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 	private float EffectiveScale()
 	{
 		float num = ((!_autoDpi.Value) ? 1f : Mathf.Clamp(_desktopDpi / 96f, 0.75f, 2.5f));
-		float num2 = Mathf.Max(0.65f, ((float)Screen.width - 12f) / 320f);
-		return Clamp(Clamp(_scale.Value, 0.65f, 1.75f) * num, 0.65f, Mathf.Min(3f, num2));
+		float num2 = Mathf.Max(0.3f, ((float)Screen.width - 12f) / 320f);
+		return Clamp(Clamp(_scale.Value, 0.3f, 1.75f) * num, 0.3f, Mathf.Min(3f, num2));
 	}
 
 	private void RefreshDesktopDpi()
@@ -906,11 +906,11 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		int rlButtons = ZeroT.UiKit.RlChrome.TitleRow(width, "Anus Physics Control", _collapsed.Value, _active.Value);
 		if ((rlButtons & 1) != 0)
 		{
-			_scale.Value = Clamp(_scale.Value - 0.1f, 0.65f, 1.75f);
+			_scale.Value = Clamp(_scale.Value - 0.1f, 0.3f, 1.75f);
 		}
 		if ((rlButtons & 2) != 0)
 		{
-			_scale.Value = Clamp(_scale.Value + 0.1f, 0.65f, 1.75f);
+			_scale.Value = Clamp(_scale.Value + 0.1f, 0.3f, 1.75f);
 		}
 		if ((rlButtons & 16) != 0)
 		{
@@ -1005,8 +1005,8 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 			SaveProfile(profile, flag4);
 		}
 		GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-		GUILayout.Label("Manual UI scale: " + Clamp(_scale.Value, 0.65f, 1.75f).ToString("0.00", Invariant), new GUILayoutOption[1] { GUILayout.Width(150f) });
-		float num = GUILayout.HorizontalSlider(_scale.Value, 0.65f, 1.75f, new GUILayoutOption[0]);
+		GUILayout.Label("Manual UI scale: " + Clamp(_scale.Value, 0.3f, 1.75f).ToString("0.00", Invariant), new GUILayoutOption[1] { GUILayout.Width(150f) });
+		float num = GUILayout.HorizontalSlider(_scale.Value, 0.3f, 1.75f, new GUILayoutOption[0]);
 		if (Mathf.Abs(num - _scale.Value) > 0.005f)
 		{
 			_scale.Value = num;

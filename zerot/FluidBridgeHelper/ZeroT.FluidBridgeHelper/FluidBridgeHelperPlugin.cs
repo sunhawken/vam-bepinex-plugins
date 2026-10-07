@@ -149,7 +149,7 @@ public sealed class FluidBridgeHelperPlugin : BaseUnityPlugin
 	private float GetScale()
 	{
 		float num = ((!_autoDpi.Value) ? 1f : ZeroT.UiKit.RlChrome.Dpi(_window.x * _effectiveScale, _window.y * _effectiveScale));
-		return num * Mathf.Clamp(_uiScale.Value, 0.65f, 2.5f);
+		return num * Mathf.Clamp(_uiScale.Value, 0.3f, 2.5f);
 	}
 
 	private void OnGUI()
@@ -245,7 +245,7 @@ ZeroT.UiKit.RlChrome.Backdrop(_window.width, _window.height);
 
 	private void RlSetScale(float value)
 	{
-		_uiScale.Value = Mathf.Clamp(value, 0.65f, 2.5f);
+		_uiScale.Value = Mathf.Clamp(value, 0.3f, 2.5f);
 		ZeroT.UiKit.RlChrome.ResetDpi();
 		MarkLayoutDirty();
 	}
@@ -354,7 +354,7 @@ ZeroT.UiKit.RlChrome.Backdrop(_window.width, _window.height);
 			((BaseUnityPlugin)this).Config.Save();
 		}
 		GUILayout.Label("Scale", new GUILayoutOption[1] { GUILayout.Width(48f) });
-		float num = GUILayout.HorizontalSlider(_uiScale.Value, 0.65f, 2.5f, new GUILayoutOption[0]);
+		float num = GUILayout.HorizontalSlider(_uiScale.Value, 0.3f, 2.5f, new GUILayoutOption[0]);
 		if (Mathf.Abs(num - _uiScale.Value) > 0.01f)
 		{
 			_uiScale.Value = num;

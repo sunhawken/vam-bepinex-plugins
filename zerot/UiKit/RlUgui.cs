@@ -114,7 +114,7 @@ namespace ZeroT.UiKit
 			Y = savedY.Value;
 			W = Mathf.Clamp(savedW.Value, minW, maxW);
 			H = Mathf.Clamp(savedH.Value, minH, maxH);
-			UserScale = Mathf.Clamp(savedScale.Value, 0.65f, 2.5f);
+			UserScale = Mathf.Clamp(savedScale.Value, 0.3f, 2.5f);
 			Collapsed = savedCollapsed.Value;
 			Active = savedActive.Value;
 			show.SettingChanged += OnShowChanged;
@@ -294,12 +294,12 @@ namespace ZeroT.UiKit
 
 		internal float Scale
 		{
-			get { return Dpi() * Mathf.Clamp(UserScale, 0.65f, 2.5f); }
+			get { return Dpi() * Mathf.Clamp(UserScale, 0.3f, 2.5f); }
 		}
 
 		internal void SetScale(float v)
 		{
-			UserScale = Mathf.Clamp(v, 0.65f, 2.5f);
+			UserScale = Mathf.Clamp(v, 0.3f, 2.5f);
 			cachedDpi = -1f;
 			Apply();
 			Persist();

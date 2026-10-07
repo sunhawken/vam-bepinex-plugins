@@ -286,13 +286,13 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 
 	private float CollapsedWindowWidth()
 	{
-		float num = AutomaticDpiScale() * Mathf.Clamp((cfgUserScale != null) ? cfgUserScale.Value : 1f, 0.5f, 2.5f);
+		float num = AutomaticDpiScale() * Mathf.Clamp((cfgUserScale != null) ? cfgUserScale.Value : 1f, 0.3f, 2.5f);
 		return Mathf.Clamp(300f * num, 240f, 600f);
 	}
 
 	private float CollapsedWindowHeight()
 	{
-		float num = AutomaticDpiScale() * Mathf.Clamp((cfgUserScale != null) ? cfgUserScale.Value : 1f, 0.5f, 2.5f);
+		float num = AutomaticDpiScale() * Mathf.Clamp((cfgUserScale != null) ? cfgUserScale.Value : 1f, 0.3f, 2.5f);
 		return Mathf.Clamp(34f * num, 28f, 76f);
 	}
 
@@ -325,7 +325,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 
 	private float EffectiveUiScale()
 	{
-		float num = AutomaticDpiScale() * Mathf.Clamp(cfgUserScale.Value, 0.5f, 2.5f);
+		float num = AutomaticDpiScale() * Mathf.Clamp(cfgUserScale.Value, 0.3f, 2.5f);
 		if (collapsed)
 		{
 			return Mathf.Clamp(num, 0.55f, 3f);
@@ -568,7 +568,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 
 	private void ChangeUiScale(float amount)
 	{
-		cfgUserScale.Value = Mathf.Clamp(cfgUserScale.Value + amount, 0.5f, 2.5f);
+		cfgUserScale.Value = Mathf.Clamp(cfgUserScale.Value + amount, 0.3f, 2.5f);
 		stylesReady = false;
 		if (collapsed)
 		{
