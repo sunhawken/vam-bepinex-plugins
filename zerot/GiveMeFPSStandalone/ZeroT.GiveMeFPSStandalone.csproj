@@ -9,6 +9,7 @@
   <ItemGroup>
     
     <Compile Include="..\UiKit\RlUgui.cs" Link="UiKit\RlUgui.cs" />
+    <Compile Include="..\UiKit\RlExternal.cs" Link="UiKit\RlExternal.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Core" />

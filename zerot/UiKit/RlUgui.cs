@@ -90,10 +90,24 @@ namespace ZeroT.UiKit
 		private double nextProbe;
 		private float lastScale = -1f;
 		private ConfigEntry<bool> external;
-		private ConfigEntry<int> extDisplay;
+		private ConfigEntry<string> extRect;
 		private bool onExternal;
 		private bool lastExternal;
-		private int lastDisplay = -1;
+		private RlExternalWindow ext;
+		private GameObject extCamObj;
+		private Camera extCam;
+		private RenderTexture extRt;
+		private Texture2D extTex;
+		private int extW;
+		private int extH;
+		private float nextFrame;
+		private float nextRectSave;
+		private string lastRect = "";
+		private bool extShown = true;
+		private GameObject resizeGrip;
+		private PointerEventData pressed;
+		private GameObject hovered;
+		private Vector2 lastPos;
 		private int screenW;
 		private int screenH;
 
@@ -114,8 +128,8 @@ namespace ZeroT.UiKit
 			savedY = c.Bind<float>(section, "Y", defY, "Saved vertical position.");
 			savedW = c.Bind<float>(section, "Width", defW, "Saved width.");
 			savedH = c.Bind<float>(section, "Height", defH, "Saved height.");
-			external = c.Bind<bool>(section, "ExternalWindow", false, "EXPERIMENTAL: draw this window on a second Unity display (a separate OS window) instead of over the game view. Needs a second monitor; falls back to the game view when none exists.");
-			extDisplay = c.Bind<int>(section, "ExternalDisplay", 2, "Display number used by ExternalWindow (2 = the second display).");
+			external = c.Bind<bool>(section, "ExternalWindow", false, "EXPERIMENTAL: show this window as a separate Windows window outside the game instead of over the game view.");
+			extRect = c.Bind<string>(section, "ExternalRect", "", "Last position and size of the external window (x,y,width,height).");
 			dpiAware = c.Bind<bool>(section, "DpiAware", true, "Scale with the monitor's DPI. Turn off if the window is the wrong size on a mixed-DPI setup.");
 			X = savedX.Value;
 			Y = savedY.Value;
@@ -135,6 +149,15 @@ namespace ZeroT.UiKit
 		internal void Dispose()
 		{
 			show.SettingChanged -= OnShowChanged;
+			if (ext != null)
+			{
+				ext.Close();
+				ext = null;
+			}
+			if (extCamObj != null)
+			{
+				UnityEngine.Object.Destroy(extCamObj);
+			}
 			if (Canvas != null)
 			{
 				UnityEngine.Object.Destroy(Canvas.gameObject);
@@ -237,6 +260,7 @@ namespace ZeroT.UiKit
 			RlPointer p = grip.gameObject.AddComponent<RlPointer>();
 			p.owner = this;
 			p.resize = true;
+			resizeGrip = grip.gameObject;
 		}
 
 		private Button HeaderButton(string name, string label, RlAction action)
@@ -306,53 +330,420 @@ namespace ZeroT.UiKit
 
 		private int ScreenW
 		{
-			get { return onExternal ? ExternalSize(true) : Screen.width; }
+			get { return onExternal && ext != null ? ext.ClientW : Screen.width; }
 		}
 
 		private int ScreenH
 		{
-			get { return onExternal ? ExternalSize(false) : Screen.height; }
+			get { return onExternal && ext != null ? ext.ClientH : Screen.height; }
 		}
 
-		private int ExternalSize(bool width)
-		{
-			try
-			{
-				Display d = Display.displays[Mathf.Clamp(extDisplay.Value - 1, 1, Display.displays.Length - 1)];
-				return Mathf.Max(200, width ? d.renderingWidth : d.renderingHeight);
-			}
-			catch
-			{
-				return width ? Screen.width : Screen.height;
-			}
-		}
+		// ---------------------------------------------------------------- external (separate Windows window)
 
 		private void ApplyDisplay()
 		{
 			lastExternal = external.Value;
-			lastDisplay = extDisplay.Value;
-			onExternal = false;
 			if (Canvas == null)
+			{
+				return;
+			}
+			if (external.Value)
+			{
+				OpenExternal();
+			}
+			else
+			{
+				CloseExternal();
+			}
+		}
+
+		private void OpenExternal()
+		{
+			if (ext != null)
 			{
 				return;
 			}
 			try
 			{
-				int idx = extDisplay.Value - 1;
-				if (external.Value && idx >= 1 && Display.displays.Length > idx)
+				int x = 120, y = 120, w = 436, h = 559;
+				string[] parts = (extRect.Value ?? "").Split(',');
+				if (parts.Length == 4)
 				{
-					Display.displays[idx].Activate();
-					Canvas.targetDisplay = idx;
-					onExternal = true;
-					cachedDpi = -1f;
-					return;
+					int px, py, pw, ph;
+					if (int.TryParse(parts[0], out px) && int.TryParse(parts[1], out py) && int.TryParse(parts[2], out pw) && int.TryParse(parts[3], out ph) && pw >= 120 && ph >= 120)
+					{
+						x = px;
+						y = py;
+						w = pw;
+						h = ph;
+					}
+				}
+				ext = new RlExternalWindow(title, x, y, w - 16, h - 39);
+				extCamObj = new GameObject("RlExternal camera");
+				UnityEngine.Object.DontDestroyOnLoad(extCamObj);
+				extCamObj.transform.position = new Vector3(2000f, 2000f, 2000f);
+				extCam = extCamObj.AddComponent<Camera>();
+				extCam.orthographic = true;
+				extCam.clearFlags = CameraClearFlags.SolidColor;
+				extCam.backgroundColor = new Color(0.08f, 0.08f, 0.08f, 1f);
+				extCam.nearClipPlane = 0.1f;
+				extCam.farClipPlane = 100f;
+				extCam.depth = -100f;
+				extCam.useOcclusionCulling = false;
+				extCam.enabled = false;
+				Canvas.renderMode = RenderMode.ScreenSpaceCamera;
+				Canvas.worldCamera = extCam;
+				Canvas.planeDistance = 10f;
+				// VaM's own input module must not hit-test this hidden canvas against the game mouse.
+				GraphicRaycaster gr = Canvas.GetComponent<GraphicRaycaster>();
+				if (gr != null)
+				{
+					gr.enabled = false;
+				}
+				onExternal = true;
+				cachedDpi = -1f;
+				extW = 0;
+				extH = 0;
+				nextFrame = 0f;
+			}
+			catch (Exception e)
+			{
+				UnityEngine.Debug.LogWarning("ExternalWindow could not start, staying in the game view: " + e.Message);
+				CloseExternal();
+			}
+		}
+
+		private void CloseExternal()
+		{
+			if (ext != null)
+			{
+				SaveExtRect();
+				ext.Close();
+				ext = null;
+			}
+			if (extCamObj != null)
+			{
+				UnityEngine.Object.Destroy(extCamObj);
+				extCamObj = null;
+				extCam = null;
+			}
+			if (extRt != null)
+			{
+				extRt.Release();
+				UnityEngine.Object.Destroy(extRt);
+				extRt = null;
+			}
+			if (extTex != null)
+			{
+				UnityEngine.Object.Destroy(extTex);
+				extTex = null;
+			}
+			pressed = null;
+			hovered = null;
+			bool was = onExternal;
+			onExternal = false;
+			if (Canvas != null)
+			{
+				Canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+				Canvas.worldCamera = null;
+				GraphicRaycaster gr = Canvas.GetComponent<GraphicRaycaster>();
+				if (gr != null)
+				{
+					gr.enabled = true;
+				}
+			}
+			if (was)
+			{
+				cachedDpi = -1f;
+				Apply();
+			}
+		}
+
+		private void SaveExtRect()
+		{
+			if (ext == null)
+			{
+				return;
+			}
+			string r = ext.RectString();
+			if (r.Length > 0 && r != lastRect && !ext.Minimized)
+			{
+				lastRect = r;
+				extRect.Value = r;
+			}
+		}
+
+		private void ApplyExternalLayout()
+		{
+			float s = Scale;
+			lastScale = s;
+			Canvas.scaleFactor = s;
+			float w = Mathf.Max(100f, (extW > 0 ? extW : ext.ClientW) / s);
+			float h = Mathf.Max(60f, (extH > 0 ? extH : ext.ClientH) / s);
+			Window.anchoredPosition = Vector2.zero;
+			Window.sizeDelta = new Vector2(w, h);
+			Body.gameObject.SetActive(Active);
+			if (resizeGrip != null)
+			{
+				resizeGrip.SetActive(false);
+			}
+			if (powerLabel != null)
+			{
+				powerLabel.text = Active ? "On" : "Off";
+			}
+			if (collapseLabel != null)
+			{
+				collapseLabel.text = "—";
+			}
+			if (Active)
+			{
+				if (OnLayout != null)
+				{
+					OnLayout(w, h);
+				}
+			}
+			else if (OnHidden != null)
+			{
+				OnHidden();
+			}
+		}
+
+		private void TickExternal()
+		{
+			if (ext == null)
+			{
+				return;
+			}
+			if (ext.Closed)
+			{
+				external.Value = false;
+				lastExternal = false;
+				owner.Config.Save();
+				CloseExternal();
+				return;
+			}
+			if (!ext.Created)
+			{
+				return;
+			}
+			bool vis = show.Value;
+			if (vis != extShown)
+			{
+				extShown = vis;
+				ext.SetVisible(vis);
+			}
+			if (!vis)
+			{
+				return;
+			}
+			int cw = ext.ClientW;
+			int ch = ext.ClientH;
+			if (extRt == null || cw != extW || ch != extH)
+			{
+				if (extRt != null)
+				{
+					extCam.targetTexture = null;
+					extRt.Release();
+					UnityEngine.Object.Destroy(extRt);
+				}
+				if (extTex != null)
+				{
+					UnityEngine.Object.Destroy(extTex);
+				}
+				extRt = new RenderTexture(cw, ch, 24, RenderTextureFormat.ARGB32);
+				extTex = new Texture2D(cw, ch, TextureFormat.RGBA32, false);
+				extCam.targetTexture = extRt;
+				extW = cw;
+				extH = ch;
+				Apply();
+				nextFrame = 0f;
+			}
+			RlExternalWindow.Mouse m;
+			while (ext.TryDequeue(out m))
+			{
+				HandleMouse(m);
+			}
+			if (Time.unscaledTime >= nextFrame && !ext.Minimized)
+			{
+				nextFrame = Time.unscaledTime + 0.05f;
+				Canvas.ForceUpdateCanvases();
+				extCam.Render();
+				RenderTexture prev = RenderTexture.active;
+				RenderTexture.active = extRt;
+				extTex.ReadPixels(new Rect(0f, 0f, cw, ch), 0, 0, false);
+				RenderTexture.active = prev;
+				ext.Submit(extTex.GetRawTextureData(), cw, ch);
+			}
+			if (Time.unscaledTime >= nextRectSave)
+			{
+				nextRectSave = Time.unscaledTime + 3f;
+				string before = extRect.Value;
+				SaveExtRect();
+				if (extRect.Value != before)
+				{
+					owner.Config.Save();
+				}
+			}
+		}
+
+		// Finds the topmost raycast-able graphic under a point of the external canvas.
+		private GameObject Hit(Vector2 pos)
+		{
+			Graphic best = null;
+			int bestDepth = -1;
+			Graphic[] all = Canvas.GetComponentsInChildren<Graphic>(false);
+			for (int i = 0; i < all.Length; i++)
+			{
+				Graphic g = all[i];
+				if (g == null || !g.raycastTarget || !g.gameObject.activeInHierarchy)
+				{
+					continue;
+				}
+				if (!RectTransformUtility.RectangleContainsScreenPoint(g.rectTransform, pos, extCam))
+				{
+					continue;
+				}
+				ICanvasRaycastFilter f = g as ICanvasRaycastFilter;
+				if (f != null && !f.IsRaycastLocationValid(pos, extCam))
+				{
+					continue;
+				}
+				if (g.depth >= bestDepth)
+				{
+					bestDepth = g.depth;
+					best = g;
+				}
+			}
+			return best != null ? best.gameObject : null;
+		}
+
+		private PointerEventData NewPointer(Vector2 pos, GameObject go)
+		{
+			PointerEventData pe = new PointerEventData(EventSystem.current);
+			pe.position = pos;
+			pe.button = PointerEventData.InputButton.Left;
+			RaycastResult rr = new RaycastResult();
+			rr.gameObject = go;
+			rr.module = Canvas.GetComponent<GraphicRaycaster>();
+			rr.screenPosition = pos;
+			pe.pointerCurrentRaycast = rr;
+			pe.pointerPressRaycast = rr;
+			return pe;
+		}
+
+		private void HandleMouse(RlExternalWindow.Mouse m)
+		{
+			if (EventSystem.current == null || extCam == null)
+			{
+				return;
+			}
+			Vector2 pos = new Vector2(m.X, extH - m.Y);
+			try
+			{
+				if (m.Kind == 0)
+				{
+					Vector2 delta = pos - lastPos;
+					lastPos = pos;
+					if (pressed != null)
+					{
+						pressed.position = pos;
+						pressed.delta = delta;
+						if (!pressed.dragging && pressed.pointerDrag != null && (pos - pressed.pressPosition).sqrMagnitude > 25f)
+						{
+							pressed.dragging = true;
+							pressed.eligibleForClick = false;
+							ExecuteEvents.Execute(pressed.pointerDrag, pressed, ExecuteEvents.beginDragHandler);
+						}
+						if (pressed.dragging && pressed.pointerDrag != null)
+						{
+							ExecuteEvents.Execute(pressed.pointerDrag, pressed, ExecuteEvents.dragHandler);
+						}
+					}
+					else
+					{
+						GameObject go = Hit(pos);
+						if (go != hovered)
+						{
+							if (hovered != null)
+							{
+								ExecuteEvents.ExecuteHierarchy(hovered, NewPointer(pos, hovered), ExecuteEvents.pointerExitHandler);
+							}
+							hovered = go;
+							if (go != null)
+							{
+								ExecuteEvents.ExecuteHierarchy(go, NewPointer(pos, go), ExecuteEvents.pointerEnterHandler);
+							}
+						}
+					}
+				}
+				else if (m.Kind == 1)
+				{
+					lastPos = pos;
+					GameObject go = Hit(pos);
+					if (go == null)
+					{
+						pressed = null;
+						return;
+					}
+					PointerEventData pe = NewPointer(pos, go);
+					pe.pressPosition = pos;
+					pe.clickCount = 1;
+					pe.eligibleForClick = true;
+					pe.useDragThreshold = true;
+					GameObject press = ExecuteEvents.ExecuteHierarchy(go, pe, ExecuteEvents.pointerDownHandler);
+					if (press == null)
+					{
+						press = ExecuteEvents.GetEventHandler<IPointerClickHandler>(go);
+					}
+					pe.pointerPress = press;
+					pe.rawPointerPress = go;
+					pe.pointerDrag = ExecuteEvents.GetEventHandler<IDragHandler>(go);
+					if (pe.pointerDrag != null)
+					{
+						ExecuteEvents.Execute(pe.pointerDrag, pe, ExecuteEvents.initializePotentialDrag);
+					}
+					pressed = pe;
+				}
+				else if (m.Kind == 2)
+				{
+					lastPos = pos;
+					PointerEventData pe = pressed;
+					pressed = null;
+					if (pe == null)
+					{
+						return;
+					}
+					pe.position = pos;
+					if (pe.pointerPress != null)
+					{
+						ExecuteEvents.Execute(pe.pointerPress, pe, ExecuteEvents.pointerUpHandler);
+					}
+					GameObject under = Hit(pos);
+					GameObject click = under != null ? ExecuteEvents.GetEventHandler<IPointerClickHandler>(under) : null;
+					if (pe.pointerPress != null && click == pe.pointerPress && pe.eligibleForClick && !pe.dragging)
+					{
+						ExecuteEvents.Execute(pe.pointerPress, pe, ExecuteEvents.pointerClickHandler);
+					}
+					if (pe.dragging && pe.pointerDrag != null)
+					{
+						ExecuteEvents.Execute(pe.pointerDrag, pe, ExecuteEvents.endDragHandler);
+					}
+				}
+				else if (m.Kind == 3)
+				{
+					GameObject go = Hit(lastPos);
+					if (go != null)
+					{
+						PointerEventData pe = NewPointer(lastPos, go);
+						pe.scrollDelta = new Vector2(0f, m.Wheel / 120f * 2f);
+						ExecuteEvents.ExecuteHierarchy(go, pe, ExecuteEvents.scrollHandler);
+					}
 				}
 			}
 			catch (Exception e)
 			{
-				UnityEngine.Debug.LogWarning("ExternalWindow failed, staying in the game view: " + e.Message);
+				UnityEngine.Debug.LogWarning("External window input failed: " + e.Message);
 			}
-			Canvas.targetDisplay = 0;
 		}
 
 		internal float Scale
@@ -376,10 +767,20 @@ namespace ZeroT.UiKit
 			{
 				return;
 			}
-			if (external.Value != lastExternal || extDisplay.Value != lastDisplay)
+			if (external.Value != lastExternal)
 			{
 				ApplyDisplay();
 				Apply();
+			}
+			if (onExternal)
+			{
+				TickExternal();
+				float se = Scale;
+				if (Mathf.Abs(se - lastScale) > 0.001f)
+				{
+					Apply();
+				}
+				return;
 			}
 			float s = Scale;
 			if (screenW != ScreenW || screenH != ScreenH || Mathf.Abs(s - lastScale) > 0.001f)
@@ -393,6 +794,15 @@ namespace ZeroT.UiKit
 			if (Window == null)
 			{
 				return;
+			}
+			if (onExternal)
+			{
+				ApplyExternalLayout();
+				return;
+			}
+			if (resizeGrip != null)
+			{
+				resizeGrip.SetActive(true);
 			}
 			screenW = ScreenW;
 			screenH = ScreenH;
@@ -443,6 +853,10 @@ namespace ZeroT.UiKit
 			{
 				return;
 			}
+			if (onExternal)
+			{
+				return;
+			}
 			float s = Scale;
 			if (!resize)
 			{
@@ -472,6 +886,10 @@ namespace ZeroT.UiKit
 
 		internal void ToggleCollapse()
 		{
+			if (onExternal)
+			{
+				return;
+			}
 			Collapsed = !Collapsed;
 			Apply();
 			Persist();
@@ -486,6 +904,7 @@ namespace ZeroT.UiKit
 			savedScale.Value = UserScale;
 			savedCollapsed.Value = Collapsed;
 			cachedDpi = -1f;
+			SaveExtRect();
 			owner.Config.Save();
 		}
 

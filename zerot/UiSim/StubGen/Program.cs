@@ -203,7 +203,7 @@ internal static class Program
 				if (!emittedProps.Add(prop.Name)) continue;
 				var acc = (n.methods.Any(x => prop.GetMethod != null && x.FullName == prop.GetMethod.FullName) ? "get; " : "") + (n.methods.Any(x => prop.SetMethod != null && x.FullName == prop.SetMethod.FullName) ? "set; " : "");
 				acc = "get; set; ";
-				string pinit = (!prop.PropertyType.IsValueType && prop.PropertyType.Name.Contains("Event") && !(prop.PropertyType is GenericParameter)) ? " = new " + Name(prop.PropertyType) + "();" : "";
+				string pinit = (!prop.PropertyType.IsValueType && prop.PropertyType.Name.Contains("Event") && !prop.PropertyType.Name.StartsWith("EventFunction") && !(prop.PropertyType is GenericParameter)) ? " = new " + Name(prop.PropertyType) + "();" : "";
 				sb.AppendLine("  public " + (m.IsStatic ? "static " : "") + Name(prop.PropertyType) + " " + prop.Name + " { " + acc + "}" + pinit);
 				continue;
 			}

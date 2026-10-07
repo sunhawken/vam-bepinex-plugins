@@ -204,8 +204,21 @@ public abstract partial class UnityEventBase {
 }
 namespace UnityEngine.EventSystems {
 public partial class PointerEventData : global::UnityEngine.EventSystems.BaseEventData {
+  public PointerEventData(global::UnityEngine.EventSystems.EventSystem eventSystem) {}
   public global::UnityEngine.EventSystems.PointerEventData.InputButton button { get; set; }
+  public bool dragging { get; set; }
+  public bool eligibleForClick { get; set; }
+  public global::UnityEngine.GameObject pointerDrag { get; set; }
+  public global::UnityEngine.GameObject pointerPress { get; set; }
   public global::UnityEngine.Vector2 position { get; set; }
+  public global::UnityEngine.Vector2 pressPosition { get; set; }
+  public int clickCount { get; set; }
+  public global::UnityEngine.Vector2 delta { get; set; }
+  public global::UnityEngine.EventSystems.RaycastResult pointerCurrentRaycast { get; set; }
+  public global::UnityEngine.EventSystems.RaycastResult pointerPressRaycast { get; set; }
+  public global::UnityEngine.GameObject rawPointerPress { get; set; }
+  public global::UnityEngine.Vector2 scrollDelta { get; set; }
+  public bool useDragThreshold { get; set; }
   public PointerEventData() {}
 public enum InputButton : int {
   Left = 0,
@@ -226,6 +239,45 @@ public partial interface IBeginDragHandler {
 public partial interface IDragHandler {
 }
 public partial interface IEndDragHandler {
+}
+public partial struct RaycastResult {
+  public global::UnityEngine.GameObject gameObject { get; set; }
+  public global::UnityEngine.EventSystems.BaseRaycaster module;
+  public global::UnityEngine.Vector2 screenPosition;
+}
+public static partial class ExecuteEvents {
+  public static bool Execute<T>(global::UnityEngine.GameObject target, global::UnityEngine.EventSystems.BaseEventData eventData, global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<T> functor) { return default; }
+  public static global::UnityEngine.GameObject ExecuteHierarchy<T>(global::UnityEngine.GameObject root, global::UnityEngine.EventSystems.BaseEventData eventData, global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<T> callbackFunction) { return default; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IBeginDragHandler> beginDragHandler { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IDragHandler> dragHandler { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IEndDragHandler> endDragHandler { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IInitializePotentialDragHandler> initializePotentialDrag { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IPointerClickHandler> pointerClickHandler { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IPointerDownHandler> pointerDownHandler { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IPointerEnterHandler> pointerEnterHandler { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IPointerExitHandler> pointerExitHandler { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IPointerUpHandler> pointerUpHandler { get; set; }
+  public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IScrollHandler> scrollHandler { get; set; }
+  public static global::UnityEngine.GameObject GetEventHandler<T>(global::UnityEngine.GameObject root) { return default; }
+public delegate void EventFunction<T1>(T1 handler, global::UnityEngine.EventSystems.BaseEventData eventData);
+}
+public abstract partial class BaseRaycaster : global::UnityEngine.EventSystems.UIBehaviour {
+  public BaseRaycaster() {}
+}
+public partial class BaseEventData : global::UnityEngine.EventSystems.AbstractEventData {
+  public BaseEventData() {}
+}
+public partial interface IPointerExitHandler {
+}
+public partial interface IPointerEnterHandler {
+}
+public partial interface IPointerClickHandler {
+}
+public partial interface IInitializePotentialDragHandler {
+}
+public partial interface IPointerUpHandler {
+}
+public partial interface IScrollHandler {
 }
 public partial class EventTrigger : global::UnityEngine.MonoBehaviour {
   public EventTrigger() {}
@@ -255,17 +307,6 @@ public enum EventTriggerType : int {
   Submit = 15,
   Cancel = 16,
 }
-public partial class BaseEventData : global::UnityEngine.EventSystems.AbstractEventData {
-  public BaseEventData() {}
-}
-public partial interface IPointerEnterHandler {
-}
-public partial interface IPointerExitHandler {
-}
-public partial interface IPointerClickHandler {
-}
-public partial interface IPointerUpHandler {
-}
 public partial interface IMoveHandler {
 }
 public partial interface ISelectHandler {
@@ -274,21 +315,14 @@ public partial interface IDeselectHandler {
 }
 public partial interface ISubmitHandler {
 }
-public partial interface IInitializePotentialDragHandler {
-}
-public partial interface IScrollHandler {
-}
-public abstract partial class BaseRaycaster : global::UnityEngine.EventSystems.UIBehaviour {
-  public BaseRaycaster() {}
+public abstract partial class AbstractEventData {
+  public AbstractEventData() {}
 }
 public partial interface IUpdateSelectedHandler {
 }
 public partial interface IDropHandler {
 }
 public partial interface ICancelHandler {
-}
-public abstract partial class AbstractEventData {
-  public AbstractEventData() {}
 }
 }
 public partial class SuperController : global::UnityEngine.MonoBehaviour {
@@ -666,11 +700,53 @@ public sealed partial class Rigidbody : global::UnityEngine.Component {
   public global::UnityEngine.Vector3 position { get; set; }
   public Rigidbody() {}
 }
+public partial class RenderTexture : global::UnityEngine.Texture {
+  public RenderTexture(int width, int height, int depth, global::UnityEngine.RenderTextureFormat format) {}
+  public static global::UnityEngine.RenderTexture active { get; set; }
+  public void Release() { }
+  public RenderTexture() {}
+}
+public sealed partial class RectTransformUtility {
+  public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam) { return default; }
+  public RectTransformUtility() {}
+}
+public partial interface ICanvasRaycastFilter {
+  bool IsRaycastLocationValid(global::UnityEngine.Vector2 sp, global::UnityEngine.Camera eventCamera);
+}
 public partial class Renderer : global::UnityEngine.Component {
   public global::UnityEngine.Material[] materials { get; set; }
   public bool enabled { get; set; }
   public global::UnityEngine.Material[] sharedMaterials { get; set; }
   public Renderer() {}
+}
+public enum RenderTextureFormat : int {
+  ARGB32 = 0,
+  Depth = 1,
+  ARGBHalf = 2,
+  Shadowmap = 3,
+  RGB565 = 4,
+  ARGB4444 = 5,
+  ARGB1555 = 6,
+  Default = 7,
+  ARGB2101010 = 8,
+  DefaultHDR = 9,
+  ARGB64 = 10,
+  ARGBFloat = 11,
+  RGFloat = 12,
+  RGHalf = 13,
+  RFloat = 14,
+  RHalf = 15,
+  R8 = 16,
+  ARGBInt = 17,
+  RGInt = 18,
+  RInt = 19,
+  BGRA32 = 20,
+  RGB111110Float = 22,
+  RG32 = 23,
+  RGBAUShort = 24,
+  RG16 = 25,
+  BGRA10101010_XR = 26,
+  BGR101010_XR = 27,
 }
 public partial class Collider : global::UnityEngine.Component {
   public global::UnityEngine.Rigidbody attachedRigidbody { get; set; }
@@ -792,9 +868,6 @@ public sealed partial class Sprite : global::UnityEngine.Object {
 public sealed partial class SphereCollider : global::UnityEngine.Collider {
   public SphereCollider() {}
 }
-public sealed partial class RectTransformUtility {
-  public RectTransformUtility() {}
-}
 public partial class AsyncOperation : global::UnityEngine.YieldInstruction {
   public AsyncOperation() {}
 }
@@ -822,8 +895,6 @@ public partial class YieldInstruction {
   public YieldInstruction() {}
 }
 public partial interface ISerializationCallbackReceiver {
-}
-public partial interface ICanvasRaycastFilter {
 }
 }
 namespace MeshVR {
