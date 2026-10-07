@@ -20,13 +20,13 @@ namespace ZeroT.UiKit
 	// config keys Show/Collapsed/Scale/X/Y/Width/Height/DpiAware). The plugin builds its own body under Body.
 	internal sealed class RlUguiWindow
 	{
-		internal static readonly Color PanelCol = new Color(0.17f, 0.17f, 0.17f, 0.94f);
+		internal static readonly Color PanelCol = new Color(0.04f, 0.04f, 0.04f, 0.72f);
 		internal static readonly Color BorderCol = new Color(0.40f, 0.40f, 0.40f, 1f);
 		internal static readonly Color ButtonN = new Color(0.31f, 0.31f, 0.31f, 1f);
 		internal static readonly Color ButtonH = new Color(0.40f, 0.40f, 0.40f, 1f);
 		internal static readonly Color ButtonP = new Color(0.22f, 0.22f, 0.22f, 1f);
 		internal static readonly Color TextCol = new Color(0.90f, 0.90f, 0.90f, 1f);
-		internal static readonly Color ViewCol = new Color(0.09f, 0.09f, 0.09f, 0.96f);
+		internal static readonly Color ViewCol = new Color(0f, 0f, 0f, 0.45f);
 
 		internal const float CollapsedH = 34f;
 		internal const float Margin = 8f;
