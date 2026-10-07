@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
+using SimpleJSON;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -38,6 +40,14 @@ namespace ZeroT.ScenePerformanceStandalone
 		private string pluginUid = "";
 		private float readyAt = -1f;
 		private float nextTick;
+
+		// saved settings (so they do not have to be set again after every scene load)
+		private string settingsPath;
+		private MVRScript persistScript;
+		private float restoreAt = -1f;
+		private bool persistReady;
+		private bool loadingSeen;
+		private string lastSaved = "";
 		private bool created;
 		private int creationAttempts;
 
@@ -215,9 +225,21 @@ namespace ZeroT.ScenePerformanceStandalone
 		private void Tick()
 		{
 			SuperController sc = SuperController.singleton;
-			if (sc == null || sc.isLoading)
+			if (sc == null)
 			{
 				return;
+			}
+			if (sc.isLoading)
+			{
+				loadingSeen = true;
+				return;
+			}
+			if (loadingSeen)
+			{
+				// a scene just finished loading: put the saved settings back once the plugin has settled
+				loadingSeen = false;
+				persistReady = false;
+				restoreAt = Time.unscaledTime + 2f;
 			}
 			if (readyAt < 0f)
 			{
@@ -283,7 +305,166 @@ namespace ZeroT.ScenePerformanceStandalone
 			{
 				Attach(ui);
 			}
+			PersistTick();
 			SetStatus("ScenePerformance is running" + (created ? " (loaded by this plugin)" : " (already loaded by VaM)") + ".");
+		}
+
+		// ------------------------------------------------------------------ saved settings
+
+		private static readonly string[] Transient = { "Status", "Never Pause List", "Character" };
+
+		private string SettingsPath()
+		{
+			if (settingsPath == null)
+			{
+				settingsPath = Path.Combine(Paths.ConfigPath, "ZeroT.ScenePerformance.settings.json");
+			}
+			return settingsPath;
+		}
+
+		private static bool IsTransient(string name)
+		{
+			if (name.StartsWith("header"))
+			{
+				return true;
+			}
+			for (int i = 0; i < Transient.Length; i++)
+			{
+				if (Transient[i] == name)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		private string Capture()
+		{
+			JSONClass root = new JSONClass();
+			JSONClass bools = new JSONClass();
+			JSONClass floats = new JSONClass();
+			JSONClass strings = new JSONClass();
+			JSONClass choosers = new JSONClass();
+			foreach (string n in script.GetBoolParamNames())
+			{
+				JSONStorableBool p = script.GetBoolJSONParam(n);
+				if (p != null && p.isStorable && !IsTransient(n)) bools[n] = p.val ? "true" : "false";
+			}
+			foreach (string n in script.GetFloatParamNames())
+			{
+				JSONStorableFloat p = script.GetFloatJSONParam(n);
+				if (p != null && p.isStorable && !IsTransient(n)) floats[n] = p.val.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+			}
+			foreach (string n in script.GetStringParamNames())
+			{
+				JSONStorableString p = script.GetStringJSONParam(n);
+				if (p != null && p.isStorable && !IsTransient(n)) strings[n] = p.val;
+			}
+			foreach (string n in script.GetStringChooserParamNames())
+			{
+				JSONStorableStringChooser p = script.GetStringChooserJSONParam(n);
+				if (p != null && p.isStorable && !IsTransient(n)) choosers[n] = p.val;
+			}
+			root["bools"] = bools;
+			root["floats"] = floats;
+			root["strings"] = strings;
+			root["choosers"] = choosers;
+			return root.ToString();
+		}
+
+		private void RestoreSettings()
+		{
+			string path = SettingsPath();
+			if (!File.Exists(path))
+			{
+				return;
+			}
+			try
+			{
+				JSONClass root = JSON.Parse(File.ReadAllText(path)) as JSONClass;
+				if (root == null)
+				{
+					return;
+				}
+				JSONClass bools = root["bools"] as JSONClass;
+				JSONClass floats = root["floats"] as JSONClass;
+				JSONClass strings = root["strings"] as JSONClass;
+				JSONClass choosers = root["choosers"] as JSONClass;
+				int applied = 0;
+				if (bools != null)
+				{
+					foreach (string n in new List<string>(bools.Keys))
+					{
+						JSONStorableBool p = script.GetBoolJSONParam(n);
+						if (p != null && !IsTransient(n) && p.val != bools[n].AsBool) { p.val = bools[n].AsBool; applied++; }
+					}
+				}
+				if (floats != null)
+				{
+					foreach (string n in new List<string>(floats.Keys))
+					{
+						JSONStorableFloat p = script.GetFloatJSONParam(n);
+						float v = floats[n].AsFloat;
+						if (p != null && !IsTransient(n) && Mathf.Abs(p.val - v) > 1e-6f) { p.val = v; applied++; }
+					}
+				}
+				if (strings != null)
+				{
+					foreach (string n in new List<string>(strings.Keys))
+					{
+						JSONStorableString p = script.GetStringJSONParam(n);
+						if (p != null && !IsTransient(n) && p.val != strings[n].Value) { p.val = strings[n].Value; applied++; }
+					}
+				}
+				if (choosers != null)
+				{
+					foreach (string n in new List<string>(choosers.Keys))
+					{
+						JSONStorableStringChooser p = script.GetStringChooserJSONParam(n);
+						if (p != null && !IsTransient(n) && p.val != choosers[n].Value) { p.val = choosers[n].Value; applied++; }
+					}
+				}
+				Logger.LogInfo("Restored " + applied + " saved ScenePerformance setting(s).");
+			}
+			catch (Exception e)
+			{
+				Logger.LogWarning("Restoring ScenePerformance settings failed: " + e.Message);
+			}
+		}
+
+		private void PersistTick()
+		{
+			float now = Time.unscaledTime;
+			if (persistScript != script)
+			{
+				persistScript = script;
+				persistReady = false;
+				restoreAt = now + 1.5f;
+			}
+			try
+			{
+				if (!persistReady)
+				{
+					if (now < restoreAt)
+					{
+						return;
+					}
+					RestoreSettings();
+					persistReady = true;
+					lastSaved = Capture();
+					return;
+				}
+				string cur = Capture();
+				if (cur != lastSaved)
+				{
+					File.WriteAllText(SettingsPath(), cur);
+					lastSaved = cur;
+				}
+			}
+			catch (Exception e)
+			{
+				Logger.LogWarning("Saving ScenePerformance settings failed: " + e.Message);
+			}
 		}
 
 		private void Update()
