@@ -52,7 +52,7 @@ namespace UnityEngine
 	}
 	public partial class AudioClip { public static AudioClip Create(string n, int len, int ch, int freq, bool stream) => new AudioClip(); public bool SetData(float[] d, int off) => true; }
 	public partial struct Color { public static Color red => new Color(1, 0, 0, 1); public static Color green => new Color(0, 1, 0, 1); public static Color blue => new Color(0, 0, 1, 1); public static Color yellow => new Color(1, .92f, .016f, 1); }
-	public partial class GameObject { public int layer { get; set; } }
+	public partial class GameObject { public int layer { get; set; } public static GameObject Find(string name) => null; }
 	public partial struct Quaternion
 	{
 		public static Quaternion Euler(float x, float y, float z) => identity;
