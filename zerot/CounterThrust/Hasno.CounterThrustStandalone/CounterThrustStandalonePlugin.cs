@@ -1227,6 +1227,7 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 		}
 	}
 
+	private readonly ZeroT.UiKit.RlChrome.WindowHome homeRect = new ZeroT.UiKit.RlChrome.WindowHome();
 	private void OnGUI()
 	{
 		if (cfgGuiVisible != null && cfgGuiVisible.Value)
@@ -1237,6 +1238,7 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 			GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(guiScaleCached, guiScaleCached, 1f));
 			float num = (float)Screen.width / guiScaleCached;
 			float num2 = (float)Screen.height / guiScaleCached;
+			homeRect.Begin(ref windowRect);
 			if (collapsed)
 			{
 				windowRect.width = CollapsedWindowWidth();
@@ -1249,6 +1251,7 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 			}
 			windowRect.x = Mathf.Clamp(windowRect.x, 0f, Mathf.Max(0f, num - 80f));
 			windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, num2 - CollapsedWindowHeight()));
+			homeRect.End(ref windowRect);
 			windowRect = GUI.Window(windowId, windowRect, (GUI.WindowFunction)DrawWindow, string.Empty, GUIStyle.none);
 			GUI.matrix = matrix;
 		}

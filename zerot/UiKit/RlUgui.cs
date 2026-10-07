@@ -331,13 +331,14 @@ namespace ZeroT.UiKit
 			float s = Scale;
 			lastScale = s;
 			Canvas.scaleFactor = s;
-			float w = W * s;
-			X = Mathf.Clamp(X, -(w - 60f), Mathf.Max(0f, (float)Screen.width - 60f));
-			Y = Mathf.Clamp(Y, 0f, Mathf.Max(0f, (float)Screen.height - 24f));
+			// X/Y stay the remembered position; only the displayed copy is kept on screen, so shrinking or moving the
+			// VaM window never permanently pushes the plugin window away from its spot.
+			float dispX, dispY;
+			VisiblePosition(s, out dispX, out dispY);
 			bool shrunk = Collapsed || !Active;
 			float h = shrunk ? CollapsedH : H;
 			Window.sizeDelta = new Vector2(W, h);
-			Window.anchoredPosition = new Vector2(X / s, -Y / s);
+			Window.anchoredPosition = new Vector2(dispX / s, -dispY / s);
 			Body.gameObject.SetActive(!shrunk);
 			if (powerLabel != null)
 			{
@@ -361,6 +362,13 @@ namespace ZeroT.UiKit
 			}
 		}
 
+		private void VisiblePosition(float s, out float x, out float y)
+		{
+			float w = W * s;
+			x = Mathf.Clamp(X, -(w - 60f), Mathf.Max(0f, (float)Screen.width - 60f));
+			y = Mathf.Clamp(Y, 0f, Mathf.Max(0f, (float)Screen.height - 24f));
+		}
+
 		internal void Drag(Vector2 pixelDelta, bool resize)
 		{
 			if (Window == null)
@@ -370,6 +378,7 @@ namespace ZeroT.UiKit
 			float s = Scale;
 			if (!resize)
 			{
+				VisiblePosition(s, out X, out Y);
 				X += pixelDelta.x;
 				Y -= pixelDelta.y;
 			}

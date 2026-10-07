@@ -19,6 +19,33 @@ namespace ZeroT.UiKit
 		internal const float Margin = 8f;
 		internal const float CollapsedH = 34f;
 
+		// Remembers where the user last put a window. A clamp that only moved it because the VaM window shrank is
+		// undone when there is room again, so resizing or moving the VaM window never loses the plugin's spot.
+		internal sealed class WindowHome
+		{
+			private Rect home;
+			private Rect last;
+			private bool has;
+
+			internal void Begin(ref Rect w)
+			{
+				if (has && w == last)
+				{
+					w = home;
+				}
+				else
+				{
+					home = w;
+				}
+			}
+
+			internal void End(ref Rect w)
+			{
+				last = w;
+				has = true;
+			}
+		}
+
 		[StructLayout(LayoutKind.Sequential)]
 		private struct POINT
 		{

@@ -9,6 +9,7 @@
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\UiKit\RlChrome.cs" Link="UiKit\RlChrome.cs" />
     <Reference Include="BepInEx" />
     <Reference Include="Assembly-CSharp" />
     <Reference Include="UnityEngine" />

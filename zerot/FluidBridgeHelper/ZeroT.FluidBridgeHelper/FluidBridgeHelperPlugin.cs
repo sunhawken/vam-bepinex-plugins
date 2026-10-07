@@ -885,14 +885,17 @@ ZeroT.UiKit.RlChrome.Backdrop(_window.width, _window.height);
 		MarkLayoutDirty();
 	}
 
+	private readonly ZeroT.UiKit.RlChrome.WindowHome _home = new ZeroT.UiKit.RlChrome.WindowHome();
 	private void ClampWindow()
 	{
+		_home.Begin(ref _window);
 		float num = (float)Screen.width / Mathf.Max(0.01f, _effectiveScale);
 		float num2 = (float)Screen.height / Mathf.Max(0.01f, _effectiveScale);
 		_window.width = Mathf.Min(Mathf.Max(340f, _window.width), Mathf.Max(340f, num));
 		_window.height = ((!_collapsed.Value) ? Mathf.Min(Mathf.Max(315f, _window.height), Mathf.Max(315f, num2)) : 34f);
 		_window.x = Mathf.Clamp(_window.x, 0f, Mathf.Max(0f, num - Mathf.Min(80f, _window.width)));
 		_window.y = Mathf.Clamp(_window.y, 0f, Mathf.Max(0f, num2 - Mathf.Min(30f, _window.height)));
+		_home.End(ref _window);
 	}
 
 	private void MarkLayoutDirty()

@@ -527,8 +527,10 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 		return new Vector2(Input.mousePosition.x / _effectiveScale, ((float)Screen.height - Input.mousePosition.y) / _effectiveScale);
 	}
 
+	private readonly ZeroT.UiKit.RlChrome.WindowHome _home = new ZeroT.UiKit.RlChrome.WindowHome();
 	private void ClampWindow()
 	{
+		_home.Begin(ref _window);
 		float num = (float)Screen.width / Mathf.Max(0.01f, _effectiveScale);
 		float num2 = (float)Screen.height / Mathf.Max(0.01f, _effectiveScale);
 		if (!(num <= 0f) && !(num2 <= 0f))
@@ -538,6 +540,7 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 			_window.x = Mathf.Clamp(_window.x, 0f, Mathf.Max(0f, num - _window.width));
 			_window.y = Mathf.Clamp(_window.y, 0f, Mathf.Max(0f, num2 - _window.height));
 		}
+		_home.End(ref _window);
 	}
 
 	private void EnsureStyles()

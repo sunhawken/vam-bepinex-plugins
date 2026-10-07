@@ -976,14 +976,17 @@ public sealed class PenisPathAlignmentSkinnedPlugin : BaseUnityPlugin
 		}
 	}
 
+	private readonly ZeroT.UiKit.RlChrome.WindowHome _home = new ZeroT.UiKit.RlChrome.WindowHome();
 	private void ClampWindowToScreen(float sw, float sh)
 	{
+		_home.Begin(ref windowRect);
 		float num = (cfgCollapsed.Value ? 340f : 430f);
 		float num2 = (cfgCollapsed.Value ? 34f : 360f);
 		windowRect.width = (cfgCollapsed.Value ? 340f : Mathf.Clamp(windowRect.width, num, Mathf.Max(num, sw)));
 		windowRect.height = (cfgCollapsed.Value ? 34f : Mathf.Clamp(windowRect.height, num2, Mathf.Max(num2, sh)));
 		windowRect.x = Mathf.Clamp(windowRect.x, 0f, Mathf.Max(0f, sw - 90f));
 		windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, sh - 30f));
+		_home.End(ref windowRect);
 	}
 
 	private void SaveWindowLayout()

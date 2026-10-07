@@ -986,8 +986,10 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		return new Vector2(Input.mousePosition.x / effectiveScale, ((float)Screen.height - Input.mousePosition.y) / effectiveScale);
 	}
 
+	private readonly ZeroT.UiKit.RlChrome.WindowHome _home = new ZeroT.UiKit.RlChrome.WindowHome();
 	private void ClampWindow()
 	{
+		_home.Begin(ref window);
 		float num = (float)Screen.width / Mathf.Max(0.01f, effectiveScale);
 		float num2 = (float)Screen.height / Mathf.Max(0.01f, effectiveScale);
 		if (!(num <= 0f) && !(num2 <= 0f))
@@ -1005,6 +1007,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 			window.x = Mathf.Clamp(window.x, 0f, Mathf.Max(0f, num - window.width));
 			window.y = Mathf.Clamp(window.y, 0f, Mathf.Max(0f, num2 - window.height));
 		}
+		_home.End(ref window);
 	}
 
 	private void ChangeScale(float factor)

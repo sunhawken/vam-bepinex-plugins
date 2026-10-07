@@ -329,12 +329,15 @@ namespace ZeroT.VpbRandomLook
         }
 
         /// <summary>Keep at least a title bar's worth of window on screen so it can never be lost.</summary>
+        private readonly ZeroT.UiKit.RlChrome.WindowHome _home = new ZeroT.UiKit.RlChrome.WindowHome();
         private void ClampToDisplay(float w, float h)
         {
+            _home.Begin(ref _win);
             float maxX = Mathf.Max(0f, Screen.width - 60f);
             float maxY = Mathf.Max(0f, Screen.height - 24f);
             _win.x = Mathf.Clamp(_win.x, -(w - 60f), maxX);
             _win.y = Mathf.Clamp(_win.y, 0f, maxY);
+            _home.End(ref _win);
         }
 
         private void DrawWindow(Rect panel, float s, bool collapsed)

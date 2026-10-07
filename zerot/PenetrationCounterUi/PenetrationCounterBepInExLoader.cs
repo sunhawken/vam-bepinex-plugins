@@ -252,8 +252,10 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		}
 	}
 
+	private readonly ZeroT.UiKit.RlChrome.WindowHome _home = new ZeroT.UiKit.RlChrome.WindowHome();
 	private void SanitizeWindowRect(bool recoverOffScreen)
 	{
+		_home.Begin(ref windowRect);
 		float num = (collapsed ? CollapsedWindowWidth() : 220f);
 		float num2 = (collapsed ? CollapsedWindowHeight() : 130f);
 		float num3 = Mathf.Max(num, (float)Screen.width - 8f);
@@ -279,6 +281,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		}
 		windowRect.x = Mathf.Clamp(windowRect.x, 0f, Mathf.Max(0f, (float)Screen.width - 64f));
 		windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, (float)Screen.height - 28f));
+		_home.End(ref windowRect);
 	}
 
 	private float CollapsedWindowWidth()

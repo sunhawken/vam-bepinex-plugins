@@ -634,8 +634,10 @@ public sealed class Plugin : BaseUnityPlugin
 		}
 	}
 
+	private readonly ZeroT.UiKit.RlChrome.WindowHome _home = new ZeroT.UiKit.RlChrome.WindowHome();
 	private void ClampWindow(float scale)
 	{
+		_home.Begin(ref windowRect);
 		float num = 2f;
 		float num2 = Mathf.Max(40f, (float)Screen.width - num * 2f);
 		float num3 = Mathf.Max(40f, (float)Screen.height - num * 2f);
@@ -646,6 +648,7 @@ public sealed class Plugin : BaseUnityPlugin
 		float num6 = ((!collapsed) ? windowRect.height : Mathf.Min(CollapsedHeight(scale), num3));
 		windowRect.x = Mathf.Clamp(windowRect.x, num, Mathf.Max(num, (float)Screen.width - windowRect.width - num));
 		windowRect.y = Mathf.Clamp(windowRect.y, num, Mathf.Max(num, (float)Screen.height - num6 - num));
+		_home.End(ref windowRect);
 	}
 
 	private void SaveUiState()
