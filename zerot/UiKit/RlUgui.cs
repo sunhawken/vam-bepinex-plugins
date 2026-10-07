@@ -89,6 +89,11 @@ namespace ZeroT.UiKit
 		private float cachedDpi = -1f;
 		private double nextProbe;
 		private float lastScale = -1f;
+		private ConfigEntry<bool> external;
+		private ConfigEntry<int> extDisplay;
+		private bool onExternal;
+		private bool lastExternal;
+		private int lastDisplay = -1;
 		private int screenW;
 		private int screenH;
 
@@ -109,6 +114,8 @@ namespace ZeroT.UiKit
 			savedY = c.Bind<float>(section, "Y", defY, "Saved vertical position.");
 			savedW = c.Bind<float>(section, "Width", defW, "Saved width.");
 			savedH = c.Bind<float>(section, "Height", defH, "Saved height.");
+			external = c.Bind<bool>(section, "ExternalWindow", false, "EXPERIMENTAL: draw this window on a second Unity display (a separate OS window) instead of over the game view. Needs a second monitor; falls back to the game view when none exists.");
+			extDisplay = c.Bind<int>(section, "ExternalDisplay", 2, "Display number used by ExternalWindow (2 = the second display).");
 			dpiAware = c.Bind<bool>(section, "DpiAware", true, "Scale with the monitor's DPI. Turn off if the window is the wrong size on a mixed-DPI setup.");
 			X = savedX.Value;
 			Y = savedY.Value;
@@ -164,6 +171,7 @@ namespace ZeroT.UiKit
 			Canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 			Canvas.overrideSorting = true;
 			Canvas.sortingOrder = 30000;
+			ApplyDisplay();
 			root.SetActive(show.Value);
 
 			Window = NewRect("Window", root.transform);
@@ -243,6 +251,10 @@ namespace ZeroT.UiKit
 
 		private float Dpi()
 		{
+			if (onExternal)
+			{
+				return 1f;
+			}
 			if (!dpiAware.Value)
 			{
 				return 1f;
@@ -292,6 +304,57 @@ namespace ZeroT.UiKit
 			return cachedDpi;
 		}
 
+		private int ScreenW
+		{
+			get { return onExternal ? ExternalSize(true) : Screen.width; }
+		}
+
+		private int ScreenH
+		{
+			get { return onExternal ? ExternalSize(false) : Screen.height; }
+		}
+
+		private int ExternalSize(bool width)
+		{
+			try
+			{
+				Display d = Display.displays[Mathf.Clamp(extDisplay.Value - 1, 1, Display.displays.Length - 1)];
+				return Mathf.Max(200, width ? d.renderingWidth : d.renderingHeight);
+			}
+			catch
+			{
+				return width ? Screen.width : Screen.height;
+			}
+		}
+
+		private void ApplyDisplay()
+		{
+			lastExternal = external.Value;
+			lastDisplay = extDisplay.Value;
+			onExternal = false;
+			if (Canvas == null)
+			{
+				return;
+			}
+			try
+			{
+				int idx = extDisplay.Value - 1;
+				if (external.Value && idx >= 1 && Display.displays.Length > idx)
+				{
+					Display.displays[idx].Activate();
+					Canvas.targetDisplay = idx;
+					onExternal = true;
+					cachedDpi = -1f;
+					return;
+				}
+			}
+			catch (Exception e)
+			{
+				UnityEngine.Debug.LogWarning("ExternalWindow failed, staying in the game view: " + e.Message);
+			}
+			Canvas.targetDisplay = 0;
+		}
+
 		internal float Scale
 		{
 			get { return Dpi() * Mathf.Clamp(UserScale, 0.3f, 2.5f); }
@@ -313,8 +376,13 @@ namespace ZeroT.UiKit
 			{
 				return;
 			}
+			if (external.Value != lastExternal || extDisplay.Value != lastDisplay)
+			{
+				ApplyDisplay();
+				Apply();
+			}
 			float s = Scale;
-			if (screenW != Screen.width || screenH != Screen.height || Mathf.Abs(s - lastScale) > 0.001f)
+			if (screenW != ScreenW || screenH != ScreenH || Mathf.Abs(s - lastScale) > 0.001f)
 			{
 				Apply();
 			}
@@ -326,8 +394,8 @@ namespace ZeroT.UiKit
 			{
 				return;
 			}
-			screenW = Screen.width;
-			screenH = Screen.height;
+			screenW = ScreenW;
+			screenH = ScreenH;
 			float s = Scale;
 			lastScale = s;
 			Canvas.scaleFactor = s;
@@ -365,8 +433,8 @@ namespace ZeroT.UiKit
 		private void VisiblePosition(float s, out float x, out float y)
 		{
 			float w = W * s;
-			x = Mathf.Clamp(X, -(w - 60f), Mathf.Max(0f, (float)Screen.width - 60f));
-			y = Mathf.Clamp(Y, 0f, Mathf.Max(0f, (float)Screen.height - 24f));
+			x = Mathf.Clamp(X, -(w - 60f), Mathf.Max(0f, (float)ScreenW - 60f));
+			y = Mathf.Clamp(Y, 0f, Mathf.Max(0f, (float)ScreenH - 24f));
 		}
 
 		internal void Drag(Vector2 pixelDelta, bool resize)
