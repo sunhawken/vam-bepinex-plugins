@@ -83,6 +83,14 @@ public partial class GraphicRaycaster : global::UnityEngine.EventSystems.BaseRay
 public partial class VerticalLayoutGroup : global::UnityEngine.UI.HorizontalOrVerticalLayoutGroup {
   public VerticalLayoutGroup() {}
 }
+public partial class Toggle : global::UnityEngine.UI.Selectable {
+  public bool isOn { get; set; }
+  public global::UnityEngine.UI.Toggle.ToggleEvent onValueChanged;
+  public Toggle() {}
+public partial class ToggleEvent : global::UnityEngine.Events.UnityEvent<bool> {
+  public ToggleEvent() {}
+}
+}
 public partial class Slider : global::UnityEngine.UI.Selectable {
   public global::UnityEngine.UI.Slider.SliderEvent onValueChanged { get; set; } = new global::UnityEngine.UI.Slider.SliderEvent();
   public float value { get; set; }
@@ -94,14 +102,6 @@ public partial class Slider : global::UnityEngine.UI.Selectable {
   public Slider() {}
 public partial class SliderEvent : global::UnityEngine.Events.UnityEvent<float> {
   public SliderEvent() {}
-}
-}
-public partial class Toggle : global::UnityEngine.UI.Selectable {
-  public bool isOn { get; set; }
-  public global::UnityEngine.UI.Toggle.ToggleEvent onValueChanged;
-  public Toggle() {}
-public partial class ToggleEvent : global::UnityEngine.Events.UnityEvent<bool> {
-  public ToggleEvent() {}
 }
 }
 public partial class LayoutElement : global::UnityEngine.EventSystems.UIBehaviour {
@@ -326,14 +326,18 @@ public partial interface ICancelHandler {
 }
 }
 public partial class SuperController : global::UnityEngine.MonoBehaviour {
+  public void AddCanvas(global::UnityEngine.Canvas c) { }
   public bool freezeAnimation { get; set; }
   public bool isLoading { get; set; }
   public static global::SuperController singleton { get; set; }
   public global::Atom GetAtomByUid(string uid) { return default; }
   public global::System.Collections.Generic.List<global::Atom> GetAtoms() { return new global::System.Collections.Generic.List<global::Atom>(); }
   public global::System.Collections.Generic.List<string> GetAtomUIDs() { return new global::System.Collections.Generic.List<string>(); }
+  public global::Atom GetSelectedAtom() { return default; }
   public static void LogError(string err) { }
   public static void LogMessage(string msg) { }
+  public void RemoveCanvas(global::UnityEngine.Canvas c) { }
+  public global::UnityEngine.UI.Toggle freezeAnimationToggle;
   public global::UnityEngine.Transform hiResScreenshotPreview;
   public bool isOpenVR;
   public bool isOVR;
@@ -341,6 +345,7 @@ public partial class SuperController : global::UnityEngine.MonoBehaviour {
   public global::UnityEngine.Transform loadingUI;
   public global::UnityEngine.Camera MonitorCenterCamera;
   public global::SuperController.OnAtomAdded onAtomAddedHandlers;
+  public global::SuperController.OnAtomRemoved onAtomRemovedHandlers;
   public global::SuperController.OnAtomUIDsChanged onAtomUIDsChangedHandlers;
   public global::SuperController.OnSceneLoaded onSceneLoadedHandlers;
   public global::UnityEngine.Camera OVRCenterCamera;
@@ -355,12 +360,16 @@ public delegate void OnAtomRemoved(global::Atom atom);
 public delegate void OnSceneLoaded();
 }
 public partial class Atom : global::JSONStorable {
+  public bool collisionEnabled { get; set; }
   public global::FreeControllerV3[] freeControllers { get; set; }
+  public bool on { get; set; }
   public global::UnityEngine.Rigidbody[] rigidbodies { get; set; }
   public string uid { get; set; }
   public global::JSONStorable GetStorableByID(string storeid) { return default; }
+  public global::System.Collections.Generic.List<string> GetStorableIDs() { return new global::System.Collections.Generic.List<string>(); }
   public bool RegisterAdditionalStorable(global::JSONStorable js) { return default; }
   public void UnregisterAdditionalStorable(global::JSONStorable js) { }
+  public bool destroyed;
   public string type;
   public Atom() {}
 }
@@ -369,25 +378,41 @@ public partial class MVRPluginManager : global::JSONStorable {
   public void RemovePluginWithUID(string uid) { }
   public global::UnityEngine.Transform configurableButtonPrefab;
   public global::UnityEngine.Transform configurableColorPickerPrefab;
+  public global::UnityEngine.Transform configurableFilterablePopupPrefab;
+  public global::UnityEngine.Transform configurablePopupPrefab;
   public global::UnityEngine.Transform configurableScrollablePopupPrefab;
   public global::UnityEngine.Transform configurableSliderPrefab;
   public global::UnityEngine.Transform configurableSpacerPrefab;
   public global::UnityEngine.Transform configurableTextFieldPrefab;
   public global::UnityEngine.Transform configurableTogglePrefab;
   public global::UnityEngine.Transform pluginContainer;
+  public global::UnityEngine.RectTransform scriptUIParent;
+  public global::UnityEngine.Transform scriptUIPrefab;
   public MVRPluginManager() {}
 }
 public partial class JSONStorable : global::UnityEngine.MonoBehaviour {
+  public virtual void CallAction(string actionName) { }
+  public string storeId { get; set; }
+  public global::JSONStorableAction GetAction(string name) { return default; }
   public global::JSONStorableBool GetBoolJSONParam(string name) { return default; }
+  public global::JSONStorableFloat GetFloatJSONParam(string name) { return default; }
+  public virtual global::SimpleJSON.JSONClass GetJSON(bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
   public global::JSONStorableStringChooser GetStringChooserJSONParam(string name) { return default; }
+  public global::JSONStorableString GetStringJSONParam(string name) { return default; }
+  public global::System.Collections.Generic.List<string> GetStringParamNames() { return new global::System.Collections.Generic.List<string>(); }
+  public virtual void InitUI() { }
+  public virtual void LateRestoreFromJSON(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool setMissingToDefault = default) { }
   public void RegisterAction(global::JSONStorableAction action) { }
   public void RegisterBool(global::JSONStorableBool param) { }
   public void RegisterFloat(global::JSONStorableFloat param) { }
   public void RegisterStringChooser(global::JSONStorableStringChooser param) { }
+  public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, global::SimpleJSON.JSONArray presetAtoms = default, bool setMissingToDefault = default) { }
   public virtual void SetBoolParamValue(string param, bool value) { }
   public virtual void SetFloatParamValue(string param, float value) { }
   public virtual void SetStringChooserParamValue(string param, string value) { }
   public global::Atom containingAtom;
+  public bool exclude;
+  public bool onlyStoreIfActive;
   public string overrideId;
   public global::UnityEngine.Transform UITransform;
   public JSONStorable() {}
@@ -399,8 +424,26 @@ public partial class MVRScript : global::JSONStorable {
   public global::UIDynamicSlider CreateSlider(global::JSONStorableFloat jsf, bool rightSide = default) { return default; }
   public global::UIDynamicTextField CreateTextField(global::JSONStorableString jss, bool rightSide = default) { return default; }
   public global::UIDynamicToggle CreateToggle(global::JSONStorableBool jsb, bool rightSide = default) { return default; }
+  public void ForceAwake() { }
+  public virtual void Init() { }
+  public global::MVRPluginManager manager;
+  public global::JSONStorableString pluginLabelJSON;
+}
+public partial class DAZPhysicsMeshSoftVerticesGroup {
+  public float jointDamperNormal { get; set; }
+  public float jointSpringNormal { get; set; }
+  public global::System.Collections.Generic.List<global::DAZPhysicsMeshSoftVerticesSet> softVerticesSets { get; set; }
+  public string name;
+  public DAZPhysicsMeshSoftVerticesGroup() {}
+}
+public partial class DAZPhysicsMesh : global::PhysicsSimulatorJSONStorable {
+  public global::System.Collections.Generic.List<global::DAZPhysicsMeshColliderGroup> colliderGroups { get; set; }
+  public global::DAZSkinV2 skin { get; set; }
+  public global::System.Collections.Generic.List<global::DAZPhysicsMeshSoftVerticesGroup> softVerticesGroups { get; set; }
+  public DAZPhysicsMesh() {}
 }
 public partial class FreeControllerV3 : global::PhysicsSimulatorJSONStorable {
+  public bool globalCollisionEnabled { get; set; }
   public FreeControllerV3() {}
 public enum PositionState : int {
   On = 0,
@@ -424,10 +467,21 @@ public enum RotationState : int {
   Comply = 8,
 }
 }
-public partial class MVRPlugin {
-  public global::JSONStorableUrl pluginURLJSON;
-  public string uid;
-  public MVRPlugin() {}
+public partial class DAZCharacter : global::JSONStorableDynamic {
+  public global::DAZSkinV2 skin { get; set; }
+  public bool isMale;
+  public DAZCharacter() {}
+}
+public static partial class IEnumerableExtension {
+  public static global::System.Collections.Generic.List<T> ToList<T>(global::System.Collections.Generic.IEnumerable<T> collection) { return new global::System.Collections.Generic.List<T>(); }
+}
+public partial class JSONStorableFloat : global::JSONStorableParam {
+  public JSONStorableFloat(string paramName, float startingValue, global::JSONStorableFloat.SetJSONFloatCallback callback, float minValue, float maxValue, bool constrain = default, bool interactable = default) {}
+  public JSONStorableFloat(string paramName, float startingValue, float minValue, float maxValue, bool constrain = default, bool interactable = default) {}
+  public float val { get; set; }
+  public JSONStorableFloat() {}
+public delegate void SetJSONFloatCallback(global::JSONStorableFloat jf);
+public delegate void SetFloatCallback(float val);
 }
 public partial class JSONStorableString : global::JSONStorableParam {
   public JSONStorableString(string paramName, string startingValue) {}
@@ -435,8 +489,86 @@ public partial class JSONStorableString : global::JSONStorableParam {
   public JSONStorableString() {}
 public delegate void SetStringCallback(string val);
 }
-public partial class JSONStorableUrl : global::JSONStorableString {
-  public JSONStorableUrl() {}
+public partial class DAZCharacterSelector : global::JSONStorable {
+  public global::DAZCharacterSelector.Gender gender { get; set; }
+  public global::DAZCharacter selectedCharacter { get; set; }
+  public global::DAZClothingItem GetClothingItem(string itemId) { return default; }
+  public bool RefreshRuntimeMorphs() { return default; }
+  public DAZCharacterSelector() {}
+public enum Gender : int {
+  None = 0,
+  Male = 1,
+  Female = 2,
+  Both = 3,
+}
+}
+public partial class DAZSkinV2 : global::GPUTools.Skinner.Scripts.Providers.PreCalcMeshProvider {
+  public void FlushBuffers() { }
+  public bool useSmoothing { get; set; }
+  public bool wasInit { get; set; }
+  public global::DAZMesh dazMesh;
+  public global::UnityEngine.Vector3 drawOffset;
+  public global::UnityEngine.Material[] GPUmaterials;
+  public bool[] materialsEnabled;
+  public global::UnityEngine.Vector3[] rawSkinnedVerts;
+  public global::UnityEngine.ComputeBuffer rawVertsBuffer;
+  public global::DAZSkinV2.SkinMethod skinMethod;
+  public global::UnityEngine.ComputeBuffer smoothedVertsBuffer;
+  public global::DAZBone[] strongestDAZBone;
+  public DAZSkinV2() {}
+public enum SkinMethod : int {
+  CPU = 0,
+  GPU = 1,
+  CPUAndGPU = 2,
+}
+}
+public partial class DAZMesh : global::MVR.ObjectAllocator {
+  public string[] materialNames { get; set; }
+  public int numBaseVertices { get; set; }
+  public global::UnityEngine.Vector2[] UV { get; set; }
+  public global::UnityEngine.Mesh uvMappedMesh { get; set; }
+  public int[] UVTriangles { get; set; }
+  public global::System.Collections.Generic.Dictionary<int, int> uvVertToBaseVert { get; set; }
+  public bool wasInit { get; set; }
+  public global::UnityEngine.Material[] materials;
+  public DAZMesh() {}
+}
+public partial class AutoCollider : global::PhysicsSimulator {
+  public bool createSoftCollider { get; set; }
+  public global::DAZSkinV2 skin { get; set; }
+  public global::UnityEngine.Collider hardCollider;
+  public global::UnityEngine.Collider jointCollider;
+  public int targetVertex;
+  public AutoCollider() {}
+}
+public partial class DAZPhysicsMeshSoftVerticesSet {
+  public global::UnityEngine.Collider jointCollider;
+  public global::UnityEngine.Collider jointCollider2;
+  public int targetVertex;
+  public DAZPhysicsMeshSoftVerticesSet() {}
+}
+public partial class DAZPhysicsMeshColliderGroup {
+  public global::DAZPhysicsMeshCapsuleCollider[] colliders;
+  public DAZPhysicsMeshColliderGroup() {}
+}
+public partial class DAZPhysicsMeshCapsuleCollider {
+  public global::UnityEngine.CapsuleCollider collider;
+  public int frontVertex;
+  public DAZPhysicsMeshCapsuleCollider() {}
+}
+public partial class DAZBone : global::JSONStorable {
+  public DAZBone() {}
+}
+public partial class DAZClothingItem : global::DAZDynamicItem {
+  public DAZClothingItem() {}
+}
+public partial class DAZHairGroup : global::DAZDynamicItem {
+  public DAZHairGroup() {}
+}
+public partial class MVRPlugin {
+  public global::JSONStorableUrl pluginURLJSON;
+  public string uid;
+  public MVRPlugin() {}
 }
 public partial class JSONStorableBool : global::JSONStorableParam {
   public JSONStorableBool(string paramName, bool startingValue) {}
@@ -444,6 +576,14 @@ public partial class JSONStorableBool : global::JSONStorableParam {
   public JSONStorableBool() {}
 public delegate void SetBoolCallback(bool val);
 public delegate void SetJSONBoolCallback(global::JSONStorableBool jb);
+}
+public partial class JSONStorableUrl : global::JSONStorableString {
+  public JSONStorableUrl() {}
+}
+public partial class JSONStorableAction {
+  public JSONStorableAction(string n, global::JSONStorableAction.ActionCallback callback) {}
+  public JSONStorableAction() {}
+public delegate void ActionCallback();
 }
 public partial class JSONStorableStringChooser : global::JSONStorableParam {
   public JSONStorableStringChooser(string paramName, global::System.Collections.Generic.List<string> choicesList, string startingValue, string displayName, global::JSONStorableStringChooser.SetStringCallback callback) {}
@@ -456,11 +596,6 @@ public delegate void SetJSONStringCallback(global::JSONStorableStringChooser js)
 public partial class UIDynamicButton : global::UIDynamic {
   public global::UnityEngine.UI.Button button;
   public UIDynamicButton() {}
-}
-public partial class JSONStorableAction {
-  public JSONStorableAction(string n, global::JSONStorableAction.ActionCallback callback) {}
-  public JSONStorableAction() {}
-public delegate void ActionCallback();
 }
 public partial class UIDynamicToggle : global::UIDynamic {
   public global::UnityEngine.UI.Toggle toggle;
@@ -505,14 +640,6 @@ public enum PhysicsRate : int {
   _288 = 9,
 }
 }
-public partial class JSONStorableFloat : global::JSONStorableParam {
-  public JSONStorableFloat(string paramName, float startingValue, global::JSONStorableFloat.SetJSONFloatCallback callback, float minValue, float maxValue, bool constrain = default, bool interactable = default) {}
-  public JSONStorableFloat(string paramName, float startingValue, float minValue, float maxValue, bool constrain = default, bool interactable = default) {}
-  public float val { get; set; }
-  public JSONStorableFloat() {}
-public delegate void SetJSONFloatCallback(global::JSONStorableFloat jf);
-public delegate void SetFloatCallback(float val);
-}
 public partial class UIDynamicSlider : global::UIDynamic {
   public void ConfigureQuickButtons(float m1v, float m2v, float m3v, float m4v, float p1v, float p2v, float p3v, float p4v) { }
   public bool autoSetQuickButtons { get; set; }
@@ -522,33 +649,12 @@ public partial class UIDynamicSlider : global::UIDynamic {
   public global::UnityEngine.UI.Slider slider;
   public UIDynamicSlider() {}
 }
-public partial class DAZCharacterSelector : global::JSONStorable {
-  public global::DAZCharacterSelector.Gender gender { get; set; }
-  public global::DAZCharacter selectedCharacter { get; set; }
-  public DAZCharacterSelector() {}
-public enum Gender : int {
-  None = 0,
-  Male = 1,
-  Female = 2,
-  Both = 3,
-}
-}
-public partial class DAZCharacter : global::JSONStorableDynamic {
-  public bool isMale;
-  public DAZCharacter() {}
-}
 public partial class UIDynamic : global::UnityEngine.MonoBehaviour {
   public float height { get; set; }
   public UIDynamic() {}
 }
-public partial class DAZHairGroup : global::DAZDynamicItem {
-  public DAZHairGroup() {}
-}
 public partial class HairSimControl : global::PhysicsSimulatorJSONStorable {
   public HairSimControl() {}
-}
-public partial class DAZClothingItem : global::DAZDynamicItem {
-  public DAZClothingItem() {}
 }
 public partial class ClothSimControl : global::PhysicsSimulatorJSONStorable {
   public ClothSimControl() {}
@@ -559,15 +665,14 @@ public partial class UIDynamicPopup : global::UIDynamic {
 public partial class UIDynamicTextField : global::UIDynamic {
   public UIDynamicTextField() {}
 }
+public partial class DAZDynamicItem : global::JSONStorableDynamic {
+  public string[] tagsArray { get; set; }
+  public string displayName;
+  public DAZDynamicItem() {}
+}
 public partial class DAZCharacterMaterialOptions : global::MaterialOptions {
   public global::DAZSkinV2 skin { get; set; }
   public DAZCharacterMaterialOptions() {}
-}
-public partial class DAZSkinV2 : global::GPUTools.Skinner.Scripts.Providers.PreCalcMeshProvider {
-  public void FlushBuffers() { }
-  public global::UnityEngine.Material[] GPUmaterials;
-  public bool[] materialsEnabled;
-  public DAZSkinV2() {}
 }
 public partial class MaterialOptions : global::JSONStorable {
   public MaterialOptions() {}
@@ -600,9 +705,6 @@ public partial struct HSVColor {
 }
 public partial class DAZMorph {
   public DAZMorph() {}
-}
-public partial class DAZDynamicItem : global::JSONStorableDynamic {
-  public DAZDynamicItem() {}
 }
 public partial class UIDynamicColorPicker : global::UIDynamic {
   public UIDynamicColorPicker() {}
@@ -643,8 +745,6 @@ public partial class TriggerActionTransition : global::TriggerAction {
 public partial class TriggerActionTransitionUI : global::TriggerActionUI {
   public TriggerActionTransitionUI() {}
 }
-public static partial class IEnumerableExtension {
-}
 public partial class ImageLoaderThreaded : global::UnityEngine.MonoBehaviour {
   public ImageLoaderThreaded() {}
 public delegate void ImageLoaderCallback(global::ImageLoaderThreaded.QueuedImage qi);
@@ -654,9 +754,6 @@ public partial class QueuedImage {
 }
 public partial class LineDrawer {
   public LineDrawer() {}
-}
-public partial class AutoCollider : global::PhysicsSimulator {
-  public AutoCollider() {}
 }
 public partial class MVRScriptUI : global::UIProvider {
   public MVRScriptUI() {}
@@ -668,6 +765,9 @@ public partial class JSONStorableDynamic : global::UnityEngine.MonoBehaviour {
   public JSONStorableDynamic() {}
 }
 public partial interface RenderSuspend {
+}
+public partial class PhysicsSimulator : global::ScaleChangeReceiver {
+  public PhysicsSimulator() {}
 }
 public partial class GenerateTabbedUI : global::UnityEngine.MonoBehaviour {
   public GenerateTabbedUI() {}
@@ -683,9 +783,6 @@ public abstract partial class TriggerAction {
 public partial class TriggerActionUI : global::UIProvider {
   public TriggerActionUI() {}
 }
-public partial class PhysicsSimulator : global::ScaleChangeReceiver {
-  public PhysicsSimulator() {}
-}
 public partial class UIProvider : global::UnityEngine.MonoBehaviour {
   public UIProvider() {}
 }
@@ -696,28 +793,47 @@ public partial class ScaleChangeReceiver : global::UnityEngine.MonoBehaviour {
   public ScaleChangeReceiver() {}
 }
 namespace UnityEngine {
-public sealed partial class Rigidbody : global::UnityEngine.Component {
-  public global::UnityEngine.Vector3 position { get; set; }
-  public Rigidbody() {}
-}
 public partial class RenderTexture : global::UnityEngine.Texture {
   public RenderTexture(int width, int height, int depth, global::UnityEngine.RenderTextureFormat format) {}
+  public RenderTexture(int width, int height, int depth, global::UnityEngine.RenderTextureFormat format, global::UnityEngine.RenderTextureReadWrite readWrite) {}
+  public bool Create() { return default; }
+  public void GenerateMips() { }
   public static global::UnityEngine.RenderTexture active { get; set; }
   public void Release() { }
+  public bool autoGenerateMips { get; set; }
+  public bool useMipMap { get; set; }
   public RenderTexture() {}
 }
-public sealed partial class RectTransformUtility {
-  public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam) { return default; }
-  public RectTransformUtility() {}
+public sealed partial class GL {
+  public static void Begin(int mode) { }
+  public static void Clear(bool clearDepth, bool clearColor, global::UnityEngine.Color backgroundColor) { }
+  public static void Color(global::UnityEngine.Color c) { }
+  public static void End() { }
+  public static bool sRGBWrite { get; set; }
+  public static void LoadOrtho() { }
+  public static void PopMatrix() { }
+  public static void PushMatrix() { }
+  public static void TexCoord2(float x, float y) { }
+  public static void Vertex3(float x, float y, float z) { }
+  public GL() {}
 }
-public partial interface ICanvasRaycastFilter {
-  bool IsRaycastLocationValid(global::UnityEngine.Vector2 sp, global::UnityEngine.Camera eventCamera);
+public sealed partial class Rigidbody : global::UnityEngine.Component {
+  public void AddForce(global::UnityEngine.Vector3 force, global::UnityEngine.ForceMode mode) { }
+  public bool detectCollisions { get; set; }
+  public bool isKinematic { get; set; }
+  public float mass { get; set; }
+  public global::UnityEngine.Vector3 position { get; set; }
+  public global::UnityEngine.Vector3 worldCenterOfMass { get; set; }
+  public global::UnityEngine.Vector3 GetPointVelocity(global::UnityEngine.Vector3 worldPoint) { return default; }
+  public Rigidbody() {}
 }
-public partial class Renderer : global::UnityEngine.Component {
-  public global::UnityEngine.Material[] materials { get; set; }
+public partial class Collider : global::UnityEngine.Component {
+  public global::UnityEngine.Rigidbody attachedRigidbody { get; set; }
+  public global::UnityEngine.Bounds bounds { get; set; }
   public bool enabled { get; set; }
-  public global::UnityEngine.Material[] sharedMaterials { get; set; }
-  public Renderer() {}
+  public bool isTrigger { get; set; }
+  public global::UnityEngine.PhysicMaterial sharedMaterial { get; set; }
+  public Collider() {}
 }
 public enum RenderTextureFormat : int {
   ARGB32 = 0,
@@ -748,9 +864,133 @@ public enum RenderTextureFormat : int {
   BGRA10101010_XR = 26,
   BGR101010_XR = 27,
 }
-public partial class Collider : global::UnityEngine.Component {
-  public global::UnityEngine.Rigidbody attachedRigidbody { get; set; }
-  public Collider() {}
+public enum ForceMode : int {
+  Force = 0,
+  Acceleration = 5,
+  Impulse = 1,
+  VelocityChange = 2,
+}
+public partial class Collision {
+  public global::UnityEngine.Collider collider { get; set; }
+  public global::UnityEngine.ContactPoint[] contacts { get; set; }
+  public global::UnityEngine.Vector3 impulse { get; set; }
+  public global::UnityEngine.Vector3 relativeVelocity { get; set; }
+  public global::UnityEngine.Rigidbody rigidbody { get; set; }
+  public Collision() {}
+}
+public partial struct ContactPoint {
+  public global::UnityEngine.Vector3 normal { get; set; }
+  public global::UnityEngine.Vector3 point { get; set; }
+  public global::UnityEngine.Collider thisCollider { get; set; }
+}
+public sealed partial class PhysicMaterial : global::UnityEngine.Object {
+  public float dynamicFriction { get; set; }
+  public global::UnityEngine.PhysicMaterialCombine frictionCombine { get; set; }
+  public PhysicMaterial() {}
+}
+public sealed partial class SphereCollider : global::UnityEngine.Collider {
+  public float radius { get; set; }
+  public SphereCollider() {}
+}
+public sealed partial class CapsuleCollider : global::UnityEngine.Collider {
+  public int direction { get; set; }
+  public float radius { get; set; }
+  public CapsuleCollider() {}
+}
+public partial struct Bounds {
+  public global::UnityEngine.Vector3 center { get; set; }
+  public global::UnityEngine.Vector3 extents { get; set; }
+}
+public sealed partial class AssetBundle : global::UnityEngine.Object {
+  public T LoadAsset<T>(string name) { return default; }
+  public static global::UnityEngine.AssetBundle LoadFromMemory(byte[] binary) { return default; }
+  public void Unload(bool unloadAllLoadedObjects) { }
+  public AssetBundle() {}
+}
+public sealed partial class Shader : global::UnityEngine.Object {
+  public static global::UnityEngine.Shader Find(string name) { return default; }
+  public bool isSupported { get; set; }
+  public Shader() {}
+}
+public partial class Material : global::UnityEngine.Object {
+  public Material(global::UnityEngine.Shader shader) {}
+  public Material(global::UnityEngine.Material source) {}
+  public global::UnityEngine.Texture GetTexture(string name) { return default; }
+  public global::UnityEngine.Vector2 GetTextureOffset(string name) { return default; }
+  public global::UnityEngine.Vector2 GetTextureScale(string name) { return default; }
+  public bool HasProperty(string name) { return default; }
+  public global::UnityEngine.Shader shader { get; set; }
+  public void SetFloat(string name, float value) { }
+  public bool SetPass(int pass) { return default; }
+  public void SetTexture(string name, global::UnityEngine.Texture value) { }
+  public void SetTextureOffset(string name, global::UnityEngine.Vector2 value) { }
+  public void SetTextureScale(string name, global::UnityEngine.Vector2 value) { }
+  public void SetVector(string name, global::UnityEngine.Vector4 value) { }
+  public Material() {}
+}
+public partial struct Color32 {
+  public Color32(byte r, byte g, byte b, byte a) {}
+  public byte a;
+  public byte b;
+  public byte g;
+  public byte r;
+}
+public sealed partial class QualitySettings : global::UnityEngine.Object {
+  public static global::UnityEngine.ColorSpace activeColorSpace { get; set; }
+  public QualitySettings() {}
+}
+public sealed partial class Mesh : global::UnityEngine.Object {
+  public int subMeshCount { get; set; }
+  public int[] GetTriangles(int submesh) { return new int[0]; }
+  public Mesh() {}
+}
+public sealed partial class ComputeBuffer {
+  public int count { get; set; }
+  public ComputeBuffer() {}
+}
+public sealed partial class SystemInfo {
+  public static bool supportsAsyncGPUReadback { get; set; }
+  public SystemInfo() {}
+}
+public enum PhysicMaterialCombine : int {
+  Average = 0,
+  Minimum = 2,
+  Multiply = 1,
+  Maximum = 3,
+}
+public enum RenderTextureReadWrite : int {
+  Default = 0,
+  Linear = 1,
+  sRGB = 2,
+}
+public enum TextureWrapMode : int {
+  Repeat = 0,
+  Clamp = 1,
+  Mirror = 2,
+  MirrorOnce = 3,
+}
+public enum FilterMode : int {
+  Point = 0,
+  Bilinear = 1,
+  Trilinear = 2,
+}
+public enum ColorSpace : int {
+  Uninitialized = -1,
+  Gamma = 0,
+  Linear = 1,
+}
+public sealed partial class RectTransformUtility {
+  public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam) { return default; }
+  public RectTransformUtility() {}
+}
+public partial interface ICanvasRaycastFilter {
+  bool IsRaycastLocationValid(global::UnityEngine.Vector2 sp, global::UnityEngine.Camera eventCamera);
+}
+public partial class Renderer : global::UnityEngine.Component {
+  public global::UnityEngine.Material[] materials { get; set; }
+  public bool enabled { get; set; }
+  public global::UnityEngine.Material[] sharedMaterials { get; set; }
+  public Renderer() {}
 }
 public partial struct Ray {
   public Ray(global::UnityEngine.Vector3 origin, global::UnityEngine.Vector3 direction) {}
@@ -776,31 +1016,9 @@ public sealed partial class AudioSource : global::UnityEngine.AudioBehaviour {
   public bool spatialize { get; set; }
   public AudioSource() {}
 }
-public partial class Collision {
-  public global::UnityEngine.ContactPoint[] contacts { get; set; }
-  public global::UnityEngine.Vector3 relativeVelocity { get; set; }
-  public global::UnityEngine.Rigidbody rigidbody { get; set; }
-  public Collision() {}
-}
-public partial struct ContactPoint {
-  public global::UnityEngine.Vector3 normal { get; set; }
-  public global::UnityEngine.Vector3 point { get; set; }
-}
 public sealed partial class Random {
   public static int Range(int min, int max) { return default; }
   public Random() {}
-}
-public partial class Material : global::UnityEngine.Object {
-  public Material(global::UnityEngine.Shader shader) {}
-  public Material(global::UnityEngine.Material source) {}
-  public bool HasProperty(string name) { return default; }
-  public global::UnityEngine.Shader shader { get; set; }
-  public void SetFloat(string name, float value) { }
-  public Material() {}
-}
-public sealed partial class Shader : global::UnityEngine.Object {
-  public static global::UnityEngine.Shader Find(string name) { return default; }
-  public Shader() {}
 }
 public sealed partial class MeshFilter : global::UnityEngine.Component {
   public global::UnityEngine.Mesh sharedMesh { get; set; }
@@ -808,9 +1026,6 @@ public sealed partial class MeshFilter : global::UnityEngine.Component {
 }
 public partial class MeshRenderer : global::UnityEngine.Renderer {
   public MeshRenderer() {}
-}
-public sealed partial class Mesh : global::UnityEngine.Object {
-  public Mesh() {}
 }
 public sealed partial class TextMesh : global::UnityEngine.Component {
   public TextMesh() {}
@@ -835,28 +1050,11 @@ public enum PrimitiveType : int {
   Plane = 4,
   Quad = 5,
 }
-public sealed partial class CapsuleCollider : global::UnityEngine.Collider {
-  public CapsuleCollider() {}
-}
 public sealed partial class BoxCollider : global::UnityEngine.Collider {
   public BoxCollider() {}
 }
 public sealed partial class MaterialPropertyBlock {
   public MaterialPropertyBlock() {}
-}
-public sealed partial class AssetBundle : global::UnityEngine.Object {
-  public AssetBundle() {}
-}
-public enum TextureWrapMode : int {
-  Repeat = 0,
-  Clamp = 1,
-  Mirror = 2,
-  MirrorOnce = 3,
-}
-public enum FilterMode : int {
-  Point = 0,
-  Bilinear = 1,
-  Trilinear = 2,
 }
 public enum SendMessageOptions : int {
   RequireReceiver = 0,
@@ -864,9 +1062,6 @@ public enum SendMessageOptions : int {
 }
 public sealed partial class Sprite : global::UnityEngine.Object {
   public Sprite() {}
-}
-public sealed partial class SphereCollider : global::UnityEngine.Collider {
-  public SphereCollider() {}
 }
 public partial class AsyncOperation : global::UnityEngine.YieldInstruction {
   public AsyncOperation() {}
@@ -884,9 +1079,7 @@ public partial struct UICharInfo {
 }
 public partial struct UIVertex {
 }
-public partial struct Color32 {
-}
-public partial struct Bounds {
+public partial interface ISerializationCallbackReceiver {
 }
 public partial class AudioBehaviour : global::UnityEngine.Behaviour {
   public AudioBehaviour() {}
@@ -894,7 +1087,39 @@ public partial class AudioBehaviour : global::UnityEngine.Behaviour {
 public partial class YieldInstruction {
   public YieldInstruction() {}
 }
-public partial interface ISerializationCallbackReceiver {
+}
+namespace UnityEngine.SceneManagement {
+public partial class SceneManager {
+  public static void add_sceneLoaded(global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEngine.SceneManagement.LoadSceneMode> value) { }
+  public static void remove_sceneLoaded(global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEngine.SceneManagement.LoadSceneMode> value) { }
+  public SceneManager() {}
+}
+public partial struct Scene {
+}
+public enum LoadSceneMode : int {
+  Single = 0,
+  Additive = 1,
+}
+}
+namespace UnityEngine.Experimental.Rendering {
+public static partial class AsyncGPUReadback {
+  public static global::UnityEngine.Experimental.Rendering.AsyncGPUReadbackRequest Request(global::UnityEngine.ComputeBuffer src, int size, int offset) { return default; }
+}
+public partial struct AsyncGPUReadbackRequest {
+  public bool done { get; set; }
+  public bool hasError { get; set; }
+  public global::Unity.Collections.NativeArray<T> GetData<T>(int layer = default) { return default; }
+}
+}
+namespace Unity.Collections {
+public partial struct NativeArray<T> {
+  public void CopyTo(T[] array) { }
+}
+}
+namespace MVR.FileManagement {
+public partial class FileManager : global::UnityEngine.MonoBehaviour {
+  public static bool FileExists(string path, bool onlySystemFiles = default, bool restrictPath = default) { return default; }
+  public FileManager() {}
 }
 }
 namespace MeshVR {
@@ -914,6 +1139,34 @@ public partial class Selector : global::UnityEngine.MonoBehaviour {
 public partial interface IBinaryStorable {
 }
 }
+namespace SimpleJSON {
+public partial class JSONNode {
+  public virtual void Add(global::SimpleJSON.JSONNode aItem) { }
+  public int Count { get; set; }
+  public global::SimpleJSON.JSONNode Item { get; set; }
+  public string Value { get; set; }
+  public static bool op_Equality(global::SimpleJSON.JSONNode a, object b) { return default; }
+  public static bool op_Inequality(global::SimpleJSON.JSONNode a, object b) { return default; }
+  public JSONNode() {}
+}
+public partial class JSONArray : global::SimpleJSON.JSONNode {
+  public JSONArray() {}
+}
+public partial class JSONClass : global::SimpleJSON.JSONNode {
+  public JSONClass() {}
+  public virtual global::System.Collections.IEnumerator GetEnumerator() { return default; }
+  public bool HasKey(string aKey) { return default; }
+}
+public partial class JSONData : global::SimpleJSON.JSONNode {
+  public JSONData(string aData) {}
+  public JSONData(bool aData) {}
+  public JSONData(float aData) {}
+  public JSONData() {}
+}
+public static partial class JSON {
+  public static global::SimpleJSON.JSONNode Parse(string aJSON) { return default; }
+}
+}
 namespace GPUTools.Skinner.Scripts.Providers {
 public partial class PreCalcMeshProvider : global::UnityEngine.MonoBehaviour {
   public global::UnityEngine.Mesh Mesh { get; set; }
@@ -931,19 +1184,6 @@ public partial class FileManagerSecure {
   public FileManagerSecure() {}
 }
 }
-namespace SimpleJSON {
-public partial class JSONNode {
-  public JSONNode() {}
-}
-public static partial class JSON {
-}
-public partial class JSONArray : global::SimpleJSON.JSONNode {
-  public JSONArray() {}
-}
-public partial class JSONClass : global::SimpleJSON.JSONNode {
-  public JSONClass() {}
-}
-}
 namespace AssetBundles {
 public abstract partial class AssetBundleLoadAssetOperation : global::AssetBundles.AssetBundleLoadOperation {
   public AssetBundleLoadAssetOperation() {}
@@ -955,15 +1195,9 @@ public abstract partial class AssetBundleLoadOperation {
   public AssetBundleLoadOperation() {}
 }
 }
-namespace UnityEngine.SceneManagement {
-public partial struct Scene {
-}
-public enum LoadSceneMode : int {
-  Single = 0,
-  Additive = 1,
-}
-public partial class SceneManager {
-  public SceneManager() {}
+namespace MVR {
+public partial class ObjectAllocator : global::UnityEngine.MonoBehaviour {
+  public ObjectAllocator() {}
 }
 }
 namespace GPUTools.Skinner.Scripts.Abstract {

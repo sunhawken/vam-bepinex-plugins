@@ -29,7 +29,7 @@ namespace ZeroT.UiKit
 
 			internal void Begin(ref Rect w)
 			{
-				if (has && w == last)
+				if (has && w.x == last.x && w.y == last.y && w.width == last.width && w.height == last.height)
 				{
 					w = home;
 				}

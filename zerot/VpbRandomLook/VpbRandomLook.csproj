@@ -10,6 +10,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\UiKit\RlChrome.cs" Link="UiKit\RlChrome.cs" />
+    <Compile Include="..\UiKit\RlExternal.cs" Link="UiKit\RlExternal.cs" />
+    <Compile Include="..\UiKit\RlImguiExternal.cs" Link="UiKit\RlImguiExternal.cs" />
     <Reference Include="BepInEx" />
     <Reference Include="Assembly-CSharp" />
     <Reference Include="UnityEngine" />

@@ -152,6 +152,22 @@ public sealed class FluidBridgeHelperPlugin : BaseUnityPlugin
 		return num * Mathf.Clamp(_uiScale.Value, 0.3f, 2.5f);
 	}
 
+	private ZeroT.UiKit.RlImguiExternal rlExt;
+
+	private void DrawExternal(float w, float h)
+	{
+		Rect saved = _window;
+		_window = new Rect(0f, 0f, w, h);
+		try
+		{
+			GUI.Window(270411, _window, (GUI.WindowFunction)DrawWindow, "", GUIStyle.none);
+		}
+		finally
+		{
+			_window = saved;
+		}
+	}
+
 	private void OnGUI()
 	{
 		if (!_rlShow.Value)
@@ -160,6 +176,14 @@ public sealed class FluidBridgeHelperPlugin : BaseUnityPlugin
 		}
 		_effectiveScale = GetScale();
 		EnsureStyles();
+		if (rlExt == null)
+		{
+			rlExt = new ZeroT.UiKit.RlImguiExternal(this, "Window", "FluidBridge Helper");
+		}
+		if (rlExt.Run(DrawExternal))
+		{
+			return;
+		}
 		ClampWindow();
 		Matrix4x4 matrix = GUI.matrix;
 		GUI.matrix = Matrix4x4.Scale(new Vector3(_effectiveScale, _effectiveScale, 1f)) * matrix;

@@ -383,10 +383,34 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 		}
 	}
 
+	private ZeroT.UiKit.RlImguiExternal rlExt;
+
+	private void DrawExternal(float w, float h)
+	{
+		Rect saved = windowRect;
+		windowRect = new Rect(0f, 0f, w, h);
+		try
+		{
+			GUI.Window(14087031, windowRect, (GUI.WindowFunction)DrawDesktopWindow, "", GUIStyle.none);
+		}
+		finally
+		{
+			windowRect = saved;
+		}
+	}
+
 	private void OnGUI()
 	{
 		if (guiVisible && !shuttingDown)
 		{
+			if (rlExt == null)
+			{
+				rlExt = new ZeroT.UiKit.RlImguiExternal(this, "Window", "PenetrationCounter");
+			}
+			if (rlExt.Run(DrawExternal))
+			{
+				return;
+			}
 			SanitizeWindowRect(recoverOffScreen: false);
 			Rect a = windowRect;
 			windowRect = GUI.Window(14087031, windowRect, (GUI.WindowFunction)DrawDesktopWindow, string.Empty, GUIStyle.none);

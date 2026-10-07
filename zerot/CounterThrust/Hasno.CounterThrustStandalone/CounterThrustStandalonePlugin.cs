@@ -1228,11 +1228,29 @@ public sealed class CounterThrustStandalonePlugin : BaseUnityPlugin
 	}
 
 	private readonly ZeroT.UiKit.RlChrome.WindowHome homeRect = new ZeroT.UiKit.RlChrome.WindowHome();
+	private ZeroT.UiKit.RlImguiExternal rlExt;
+
+	private void DrawExternal(float w, float h)
+	{
+		Rect saved = windowRect;
+		windowRect = new Rect(0f, 0f, w, h);
+		GUI.Window(windowId, windowRect, (GUI.WindowFunction)DrawWindow, string.Empty, GUIStyle.none);
+		windowRect = saved;
+	}
+
 	private void OnGUI()
 	{
 		if (cfgGuiVisible != null && cfgGuiVisible.Value)
 		{
 			EnsureStyles();
+			if (rlExt == null)
+			{
+				rlExt = new ZeroT.UiKit.RlImguiExternal(this, "Window", "CounterThrust");
+			}
+			if (rlExt.Run(DrawExternal))
+			{
+				return;
+			}
 			guiScaleCached = GetGuiScale();
 			Matrix4x4 matrix = GUI.matrix;
 			GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(guiScaleCached, guiScaleCached, 1f));

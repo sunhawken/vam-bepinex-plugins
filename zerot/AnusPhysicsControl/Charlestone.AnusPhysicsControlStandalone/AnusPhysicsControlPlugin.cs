@@ -713,6 +713,22 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		_serializedOverrides.Value = stringBuilder.ToString();
 	}
 
+	private ZeroT.UiKit.RlImguiExternal rlExt;
+
+	private void DrawExternal(float w, float h)
+	{
+		Rect saved = _window;
+		_window = new Rect(0f, 0f, w, h);
+		try
+		{
+			GUI.Window(17821, _window, (GUI.WindowFunction)DrawWindow, "", GUIStyle.none);
+		}
+		finally
+		{
+			_window = saved;
+		}
+	}
+
 	private void OnGUI()
 	{
 		if (!_visible.Value)
@@ -720,6 +736,14 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 			return;
 		}
 		RefreshDesktopDpi();
+		if (rlExt == null)
+		{
+			rlExt = new ZeroT.UiKit.RlImguiExternal(this, "Window", "Anus Physics Control");
+		}
+		if (rlExt.Run(DrawExternal))
+		{
+			return;
+		}
 		float num = EffectiveScale();
 		if (Mathf.Abs(_lastEffectiveScale - num) > 0.001f)
 		{

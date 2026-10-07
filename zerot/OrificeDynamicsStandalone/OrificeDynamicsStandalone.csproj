@@ -11,6 +11,8 @@
     <None Remove="OrificeDynamics.Resources" />
     <EmbeddedResource Include="OrificeDynamics.Resources" LogicalName="OrificeDynamics.Resources" />
     <Compile Include="..\UiKit\RlChrome.cs" Link="UiKit\RlChrome.cs" />
+    <Compile Include="..\UiKit\RlExternal.cs" Link="UiKit\RlExternal.cs" />
+    <Compile Include="..\UiKit\RlImguiExternal.cs" Link="UiKit\RlImguiExternal.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Core" />

@@ -311,9 +311,20 @@ namespace ZeroT.VpbRandomLook
 
         // ------------------------------------------------------------------ GUI
 
+        private ZeroT.UiKit.RlImguiExternal rlExt;
+
+        private void DrawExternal(float w, float h)
+        {
+            Rect panel = new Rect(0f, 0f, w, h);
+            GUI.Box(panel, "");
+            DrawWindow(panel, Mathf.Clamp(_scale.Value, 0.3f, 2.5f), false);
+        }
+
         private void OnGUI()
         {
             if (_showWindow == null || !_showWindow.Value) return;
+            if (rlExt == null) rlExt = new ZeroT.UiKit.RlImguiExternal(this, "Window", "VPB Random Look");
+            if (rlExt.Run(DrawExternal)) return;
 
             float scale = DpiScale() * Mathf.Clamp(_scale.Value, 0.3f, 2.5f);
             bool collapsed = _collapsed.Value;

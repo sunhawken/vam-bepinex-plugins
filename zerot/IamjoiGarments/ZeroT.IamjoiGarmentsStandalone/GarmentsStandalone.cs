@@ -442,6 +442,22 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		}
 	}
 
+	private ZeroT.UiKit.RlImguiExternal rlExt;
+
+	private void DrawExternal(float w, float h)
+	{
+		Rect saved = window;
+		window = new Rect(0f, 0f, w, h);
+		try
+		{
+			GUI.Window(742193, window, (GUI.WindowFunction)DrawWindow, "", windowStyle);
+		}
+		finally
+		{
+			window = saved;
+		}
+	}
+
 	private void OnGUI()
 	{
 		if (Screen.width <= 0 || Screen.height <= 0 || !cfgShow.Value)
@@ -450,6 +466,14 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 		}
 		effectiveScale = EffectiveScale();
 		EnsureStyles();
+		if (rlExt == null)
+		{
+			rlExt = new ZeroT.UiKit.RlImguiExternal(this, "Window", "Iamjoi Garments");
+		}
+		if (rlExt.Run(DrawExternal))
+		{
+			return;
+		}
 		Rect a = window;
 		ClampWindow();
 		if (!RectNearlyEqual(a, window))

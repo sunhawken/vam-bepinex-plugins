@@ -344,6 +344,22 @@ public sealed class Plugin : BaseUnityPlugin
 		return Mathf.Clamp(userScale * DpiScale(), 0.3f, 3f);
 	}
 
+	private ZeroT.UiKit.RlImguiExternal rlExt;
+
+	private void DrawExternal(float w, float h)
+	{
+		Rect saved = windowRect;
+		windowRect = new Rect(0f, 0f, w, h);
+		try
+		{
+			GUI.Window(1381126227, windowRect, (GUI.WindowFunction)DrawWindow, "", GUIStyle.none);
+		}
+		finally
+		{
+			windowRect = saved;
+		}
+	}
+
 	private void OnGUI()
 	{
 		if (Screen.width > 0 && Screen.height > 0 && cfgShow.Value)
@@ -365,6 +381,14 @@ public sealed class Plugin : BaseUnityPlugin
 			}
 			float scale = EffectiveScale();
 			EnsureStyles(scale);
+			if (rlExt == null)
+			{
+				rlExt = new ZeroT.UiKit.RlImguiExternal(this, "Window", "Procedural Slaps");
+			}
+			if (rlExt.Run(DrawExternal))
+			{
+				return;
+			}
 			ClampWindow(scale);
 			Rect val = (Rect)((!collapsed) ? windowRect : new Rect(windowRect.x, windowRect.y, windowRect.width, CollapsedHeight(scale)));
 			float x = val.x;

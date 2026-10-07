@@ -476,6 +476,22 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 		}
 	}
 
+	private ZeroT.UiKit.RlImguiExternal rlExt;
+
+	private void DrawExternal(float w, float h)
+	{
+		Rect saved = _window;
+		_window = new Rect(0f, 0f, w, h);
+		try
+		{
+			GUI.Window(347127, _window, (GUI.WindowFunction)DrawWindow, "", GUIStyle.none);
+		}
+		finally
+		{
+			_window = saved;
+		}
+	}
+
 	private void OnGUI()
 	{
 		if (Screen.width <= 0 || Screen.height <= 0)
@@ -488,6 +504,14 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 		}
 		_effectiveScale = EffectiveScale();
 		EnsureStyles();
+		if (rlExt == null)
+		{
+			rlExt = new ZeroT.UiKit.RlImguiExternal(this, "Window", "Orifice Dynamics");
+		}
+		if (rlExt.Run(DrawExternal))
+		{
+			return;
+		}
 		Rect window = _window;
 		ClampWindow();
 		if (Mathf.Abs(_window.x - window.x) > 0.01f || Mathf.Abs(_window.y - window.y) > 0.01f || Mathf.Abs(_window.width - window.width) > 0.01f || Mathf.Abs(_window.height - window.height) > 0.01f)
