@@ -12,7 +12,8 @@ namespace ZeroT.UIAssistHelper
 	// memory so UIAssist costs less and cannot spam errors:
 	//  1. every 0.1 s UIAssist rebuilt its gaze-target lists (about 25 new lists/dictionaries, a pass over every atom and
 	//     every controller); this now runs at a lower rate (shorter in VR where gaze selection needs to feel immediate)
-	//  2. exceptions inside its per-frame updates (a destroyed person, a half-loaded atom...) were logged every frame and
+	//  2. while Heel Adjust is on it re-listed its folder every second; now every few seconds
+	//  3. exceptions inside its per-frame updates (a destroyed person, a half-loaded atom...) were logged every frame and
 	//     stopped the rest of the update from running, freezing the HUD; they are now contained and logged once
 	[BepInPlugin("com.zerot.uiassist.helper", "UIAssist Helper", "1.0.0")]
 	public sealed class UIAssistHelperPlugin : BaseUnityPlugin
@@ -21,6 +22,7 @@ namespace ZeroT.UIAssistHelper
 		internal static ConfigEntry<float> CfgDesktopInterval;
 		internal static ConfigEntry<float> CfgVrInterval;
 		internal static ConfigEntry<bool> CfgContain;
+		internal static ConfigEntry<float> CfgHeelInterval;
 		internal static BepInEx.Logging.ManualLogSource Log;
 
 		private Harmony harmony;
@@ -34,6 +36,7 @@ namespace ZeroT.UIAssistHelper
 			CfgThrottle = Config.Bind<bool>("Speed", "ThrottleGazeTargets", true, "Rebuild UIAssist's gaze-target lists less often.");
 			CfgDesktopInterval = Config.Bind<float>("Speed", "DesktopIntervalSeconds", 0.35f, "Seconds between gaze-target rebuilds on desktop (UIAssist's own value is 0.1).");
 			CfgVrInterval = Config.Bind<float>("Speed", "VrIntervalSeconds", 0.15f, "Seconds between gaze-target rebuilds in VR.");
+			CfgHeelInterval = Config.Bind<float>("Speed", "HeelAdjustFileListSeconds", 5f, "Seconds between re-reading the Heel Adjust folder (UIAssist lists it every second while Heel Adjust is on). 0 = leave as is.");
 			CfgContain = Config.Bind<bool>("Stability", "ContainUpdateErrors", true, "Catch errors in UIAssist's per-frame updates so they cannot stop the HUD or flood the log.");
 			harmony = new Harmony("com.zerot.uiassist.helper");
 			AppDomain.CurrentDomain.AssemblyLoad += OnAssemblyLoad;
@@ -106,6 +109,13 @@ namespace ZeroT.UIAssistHelper
 				harmony.Patch(gaze, new HarmonyMethod(typeof(Hooks).GetMethod("GazePrefix")));
 				count++;
 			}
+			Type heel = asm.GetType("JayJayWon.HeelAdjustTool", false);
+			MethodInfo heelFiles = heel != null ? heel.GetMethod("UpdateExistingHAFiles", st, null, Type.EmptyTypes, null) : null;
+			if (CfgHeelInterval.Value > 0f && heelFiles != null)
+			{
+				harmony.Patch(heelFiles, new HarmonyMethod(typeof(Hooks).GetMethod("HeelPrefix")));
+				count++;
+			}
 			if (CfgContain.Value)
 			{
 				MethodInfo gridUpdate = grid.GetMethod("Update", st, null, Type.EmptyTypes, null);
@@ -150,6 +160,20 @@ namespace ZeroT.UIAssistHelper
 				return false;
 			}
 			lastGaze = now;
+			return true;
+		}
+
+		private static float lastHeel = -100f;
+
+		// Skip a Heel Adjust folder listing that comes too soon after the previous one.
+		public static bool HeelPrefix()
+		{
+			float now = Time.unscaledTime;
+			if (now - lastHeel < UIAssistHelperPlugin.CfgHeelInterval.Value)
+			{
+				return false;
+			}
+			lastHeel = now;
 			return true;
 		}
 
