@@ -236,7 +236,7 @@ internal static class Program
 			string body = m.ReturnType.FullName == "System.Void" ? "{ " + outs + "}" : "{ " + outs + "return " + DefaultExpr(m) + "; }";
 			string ov = m.IsVirtual && !m.IsNewSlot && d.BaseType != null && !m.IsAbstract && m.Name != "Finalize" ? (StubBaseDeclares(d, m) ? "override " : "virtual ") : "";
 			if (m.IsVirtual && m.IsNewSlot && !d.IsSealed) ov = "virtual ";
-			sb.AppendLine("  public " + (m.IsStatic ? "static " : "") + ov + Name(m.ReturnType) + " " + m.Name + GenericM(m) + "(" + Params(m) + ") " + body);
+			sb.AppendLine("  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public " + (m.IsStatic ? "static " : "") + ov + Name(m.ReturnType) + " " + m.Name + GenericM(m) + "(" + Params(m) + ") " + body);
 		}
 		foreach (var f in n.fields.OrderBy(x => x.Name))
 		{
@@ -260,8 +260,11 @@ internal static class Program
 			"GetContainingAtom", "RemoveSlider", "RemoveToggle", "RemoveButton", "RemoveTextField", "RemovePopup", "RemoveColorPicker", "RemoveSpacer", "enabledJSON", "pluginLabelJSON", "manager" } },
 		{ "DAZCharacterSelector", new HashSet<string> { "GetClothingItem" } },
 		{ "UnityEngine.Mesh", new HashSet<string> { ".ctor", "get_vertices", "set_vertices", "SetIndices", "Clear", "RecalculateBounds" } },
-		{ "UnityEngine.Material", new HashSet<string> { ".ctor", "get_color", "set_color", "SetFloat", "GetFloat" } },
+		{ "UnityEngine.Material", new HashSet<string> { ".ctor", "get_color", "set_color", "SetFloat", "GetFloat", "get_shader", "set_shader", "get_renderQueue", "set_renderQueue", "HasProperty", "SetTexture", "GetTexture" } },
 		{ "UnityEngine.Graphics", new HashSet<string> { "DrawMesh" } },
+		{ "UnityEngine.Shader", new HashSet<string> { ".ctor", "get_isSupported", "set_isSupported" } },
+		{ "UnityEngine.AssetBundle", new HashSet<string> { "LoadFromMemory", "LoadAsset", "LoadAllAssets", "Unload" } },
+		{ "UnityEngine.JsonUtility", new HashSet<string> { "FromJson", "ToJson" } },
 		{ "MVR.FileManagementSecure.FileManagerSecure", new HashSet<string> { "FileExists", "DirectoryExists", "GetFiles", "GetDirectories" } },
 		{ "MVR.FileManagement.FileManager", new HashSet<string> { "GetPackageUids", "get_lastPackageRefreshTime" } },
 	};

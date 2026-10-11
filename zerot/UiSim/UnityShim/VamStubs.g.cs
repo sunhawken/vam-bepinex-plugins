@@ -5,9 +5,9 @@ namespace UnityEngine.UI {
 public partial class Selectable : global::UnityEngine.EventSystems.UIBehaviour {
   public global::UnityEngine.UI.ColorBlock colors { get; set; }
   public global::UnityEngine.UI.Image image { get; set; }
-  public virtual bool IsInteractable() { return default; }
-  public virtual void OnPointerUp(global::UnityEngine.EventSystems.PointerEventData eventData) { }
-  public virtual void Select() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool IsInteractable() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void OnPointerUp(global::UnityEngine.EventSystems.PointerEventData eventData) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void Select() { }
   public bool interactable { get; set; }
   public global::UnityEngine.UI.Navigation navigation { get; set; }
   public global::UnityEngine.UI.Graphic targetGraphic { get; set; }
@@ -87,7 +87,7 @@ public abstract partial class LayoutGroup : global::UnityEngine.EventSystems.UIB
   public LayoutGroup() {}
 }
 public static partial class LayoutUtility {
-  public static float GetPreferredHeight(global::UnityEngine.RectTransform rect) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static float GetPreferredHeight(global::UnityEngine.RectTransform rect) { return default; }
 }
 public partial class GraphicRaycaster : global::UnityEngine.EventSystems.BaseRaycaster {
   public GraphicRaycaster() {}
@@ -112,7 +112,7 @@ public partial class Slider : global::UnityEngine.UI.Selectable {
   public float minValue { get; set; }
   public global::UnityEngine.UI.Slider.SliderEvent onValueChanged { get; set; } = new global::UnityEngine.UI.Slider.SliderEvent();
   public float value { get; set; }
-  public virtual void OnPointerDown(global::UnityEngine.EventSystems.PointerEventData eventData) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void OnPointerDown(global::UnityEngine.EventSystems.PointerEventData eventData) { }
   public global::UnityEngine.UI.Slider.Direction direction { get; set; }
   public bool wholeNumbers { get; set; }
 public enum Direction : int {
@@ -144,7 +144,7 @@ public partial class HorizontalLayoutGroup : global::UnityEngine.UI.HorizontalOr
   public HorizontalLayoutGroup() {}
 }
 public partial class InputField : global::UnityEngine.UI.Selectable {
-  public void ActivateInputField() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ActivateInputField() { }
   public int caretPosition { get; set; }
   public bool isFocused { get; set; }
   public global::UnityEngine.UI.InputField.SubmitEvent onEndEdit { get; set; } = new global::UnityEngine.UI.InputField.SubmitEvent();
@@ -204,7 +204,7 @@ public partial class Scrollbar : global::UnityEngine.UI.Selectable {
   public float value { get; set; }
   public global::UnityEngine.UI.Scrollbar.Direction direction { get; set; }
   public global::UnityEngine.RectTransform handleRect { get; set; }
-  public void SetDirection(global::UnityEngine.UI.Scrollbar.Direction direction, bool includeRectLayouts) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetDirection(global::UnityEngine.UI.Scrollbar.Direction direction, bool includeRectLayouts) { }
   public Scrollbar() {}
 public enum Direction : int {
   LeftToRight = 0,
@@ -217,7 +217,7 @@ public partial class ScrollEvent : global::UnityEngine.Events.UnityEvent<float> 
 }
 }
 public partial class LayoutRebuilder {
-  public static void ForceRebuildLayoutImmediate(global::UnityEngine.RectTransform layoutRoot) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void ForceRebuildLayoutImmediate(global::UnityEngine.RectTransform layoutRoot) { }
   public LayoutRebuilder() {}
 }
 public partial class Mask : global::UnityEngine.EventSystems.UIBehaviour {
@@ -225,10 +225,10 @@ public partial class Mask : global::UnityEngine.EventSystems.UIBehaviour {
   public Mask() {}
 }
 public partial class VertexHelper {
-  public void AddTriangle(int idx0, int idx1, int idx2) { }
-  public void AddVert(global::UnityEngine.UIVertex v) { }
-  public void AddVert(global::UnityEngine.Vector3 position, global::UnityEngine.Color32 color, global::UnityEngine.Vector2 uv0) { }
-  public void Clear() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddTriangle(int idx0, int idx1, int idx2) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddVert(global::UnityEngine.UIVertex v) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddVert(global::UnityEngine.Vector3 position, global::UnityEngine.Color32 color, global::UnityEngine.Vector2 uv0) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Clear() { }
   public int currentVertCount { get; set; }
   public VertexHelper() {}
 }
@@ -279,22 +279,22 @@ public partial interface IMaterialModifier {
 }
 namespace UnityEngine.Events {
 public partial class UnityEvent : global::UnityEngine.Events.UnityEventBase {
-  public void AddListener(global::UnityEngine.Events.UnityAction call) { }
-  public void Invoke() { }
-  public void RemoveListener(global::UnityEngine.Events.UnityAction call) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddListener(global::UnityEngine.Events.UnityAction call) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Invoke() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemoveListener(global::UnityEngine.Events.UnityAction call) { }
   public UnityEvent() {}
 }
 public delegate void UnityAction();
 public delegate void UnityAction<T0>(T0 arg0);
 public abstract partial class UnityEvent<T0> : global::UnityEngine.Events.UnityEventBase {
-  public void AddListener(global::UnityEngine.Events.UnityAction<T0> call) { }
-  public void RemoveListener(global::UnityEngine.Events.UnityAction<T0> call) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddListener(global::UnityEngine.Events.UnityAction<T0> call) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemoveListener(global::UnityEngine.Events.UnityAction<T0> call) { }
   public UnityEvent() {}
 }
 public delegate void UnityAction<T0, T1>(T0 arg0, T1 arg1);
 public delegate void UnityAction<T0, T1, T2>(T0 arg0, T1 arg1, T2 arg2);
 public abstract partial class UnityEventBase {
-  public void RemoveAllListeners() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemoveAllListeners() { }
   public UnityEventBase() {}
 }
 }
@@ -327,7 +327,7 @@ public enum InputButton : int {
 public partial class EventSystem : global::UnityEngine.EventSystems.UIBehaviour {
   public static global::UnityEngine.EventSystems.EventSystem current { get; set; } = new global::UnityEngine.EventSystems.EventSystem();
   public global::UnityEngine.GameObject currentSelectedGameObject { get; set; }
-  public void RaycastAll(global::UnityEngine.EventSystems.PointerEventData eventData, global::System.Collections.Generic.List<global::UnityEngine.EventSystems.RaycastResult> raycastResults) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RaycastAll(global::UnityEngine.EventSystems.PointerEventData eventData, global::System.Collections.Generic.List<global::UnityEngine.EventSystems.RaycastResult> raycastResults) { }
   public EventSystem() {}
 }
 public partial interface IPointerDownHandler {
@@ -347,8 +347,8 @@ public partial struct RaycastResult {
   public global::UnityEngine.Vector2 screenPosition;
 }
 public static partial class ExecuteEvents {
-  public static bool Execute<T>(global::UnityEngine.GameObject target, global::UnityEngine.EventSystems.BaseEventData eventData, global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<T> functor) { return default; }
-  public static global::UnityEngine.GameObject ExecuteHierarchy<T>(global::UnityEngine.GameObject root, global::UnityEngine.EventSystems.BaseEventData eventData, global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<T> callbackFunction) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool Execute<T>(global::UnityEngine.GameObject target, global::UnityEngine.EventSystems.BaseEventData eventData, global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<T> functor) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.GameObject ExecuteHierarchy<T>(global::UnityEngine.GameObject root, global::UnityEngine.EventSystems.BaseEventData eventData, global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<T> callbackFunction) { return default; }
   public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IBeginDragHandler> beginDragHandler { get; set; }
   public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IDragHandler> dragHandler { get; set; }
   public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IEndDragHandler> endDragHandler { get; set; }
@@ -359,7 +359,7 @@ public static partial class ExecuteEvents {
   public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IPointerExitHandler> pointerExitHandler { get; set; }
   public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IPointerUpHandler> pointerUpHandler { get; set; }
   public static global::UnityEngine.EventSystems.ExecuteEvents.EventFunction<global::UnityEngine.EventSystems.IScrollHandler> scrollHandler { get; set; }
-  public static global::UnityEngine.GameObject GetEventHandler<T>(global::UnityEngine.GameObject root) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.GameObject GetEventHandler<T>(global::UnityEngine.GameObject root) { return default; }
 public delegate void EventFunction<T1>(T1 handler, global::UnityEngine.EventSystems.BaseEventData eventData);
 }
 public abstract partial class BaseRaycaster : global::UnityEngine.EventSystems.UIBehaviour {
@@ -431,10 +431,10 @@ public partial interface ICancelHandler {
 }
 }
 public partial class MVRPluginManager : global::JSONStorable {
-  public global::MVRPlugin CreatePlugin() { return default; }
-  public void ReloadPluginWithUID(string uid) { }
-  public void RemoveAllPlugins() { }
-  public void RemovePluginWithUID(string uid) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::MVRPlugin CreatePlugin() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ReloadPluginWithUID(string uid) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemoveAllPlugins() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemovePluginWithUID(string uid) { }
   public global::UnityEngine.Transform configurableButtonPrefab;
   public global::UnityEngine.Transform configurableColorPickerPrefab;
   public global::UnityEngine.Transform configurableFilterablePopupPrefab;
@@ -454,11 +454,11 @@ public partial class MVRPluginManager : global::JSONStorable {
 }
 public partial class MVRScript : global::JSONStorable {
   public MVRScript() {}
-  public global::UIDynamicColorPicker CreateColorPicker(global::JSONStorableColor jsc, bool rightSide = default) { return default; }
-  public global::UnityEngine.Transform CreateUIElement(global::UnityEngine.Transform prefab, bool rightSide = default) { return default; }
-  public global::SimpleJSON.JSONNode LoadJSON(string saveName) { return default; }
-  public void SaveJSON(global::SimpleJSON.JSONClass jc, string saveName) { }
-  public virtual bool ShouldIgnore() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UIDynamicColorPicker CreateColorPicker(global::JSONStorableColor jsc, bool rightSide = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Transform CreateUIElement(global::UnityEngine.Transform prefab, bool rightSide = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::SimpleJSON.JSONNode LoadJSON(string saveName) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SaveJSON(global::SimpleJSON.JSONClass jc, string saveName) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool ShouldIgnore() { return default; }
   public global::UnityEngine.RectTransform leftUIContent;
   public global::UnityEngine.RectTransform rightUIContent;
 }
@@ -476,15 +476,15 @@ public partial class DAZPhysicsMesh : global::PhysicsSimulatorJSONStorable {
   public DAZPhysicsMesh() {}
 }
 public static partial class IEnumerableExtension {
-  public static global::System.Collections.Generic.List<T> ToList<T>(global::System.Collections.Generic.IEnumerable<T> collection) { return new global::System.Collections.Generic.List<T>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::System.Collections.Generic.List<T> ToList<T>(global::System.Collections.Generic.IEnumerable<T> collection) { return new global::System.Collections.Generic.List<T>(); }
 }
 public partial class DAZSkinV2 : global::GPUTools.Skinner.Scripts.Providers.PreCalcMeshProvider {
   public DAZSkinV2() {}
-  public void CopyMaterials() { }
-  public void FlushBuffers() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void CopyMaterials() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void FlushBuffers() { }
   public bool useSmoothing { get; set; }
   public bool wasInit { get; set; }
-  public void InitMesh() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void InitMesh() { }
   public global::UnityEngine.ComputeBuffer _surfaceNormalsBuffer;
   public global::DAZMesh dazMesh;
   public bool delayDisplayOneFrame;
@@ -509,7 +509,7 @@ public enum SkinMethod : int {
 }
 }
 public partial class DAZMesh : global::MVR.ObjectAllocator {
-  public void DrawMorphedUVMappedMesh(global::UnityEngine.Matrix4x4 m) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DrawMorphedUVMappedMesh(global::UnityEngine.Matrix4x4 m) { }
   public int[][] baseMaterialVertices { get; set; }
   public global::UnityEngine.Vector3[] baseSurfaceNormals { get; set; }
   public int[] baseTriangles { get; set; }
@@ -563,7 +563,7 @@ public partial class DAZBone : global::JSONStorable {
   public DAZBone() {}
 }
 public partial class DAZClothingItem : global::DAZDynamicItem {
-  public void SetLocked(bool b) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetLocked(bool b) { }
   public DAZClothingItem() {}
 }
 public partial class DAZHairGroup : global::DAZDynamicItem {
@@ -608,9 +608,9 @@ public partial class UserPreferences : global::UnityEngine.MonoBehaviour {
   public int smoothPasses { get; set; }
   public bool softPhysics { get; set; }
   public bool useHeadCollider { get; set; }
-  public void ResetPreferences() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ResetPreferences() { }
   public bool overlayUI { get; set; }
-  public void SetPhysicsRateFromString(string pr) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetPhysicsRateFromString(string pr) { }
   public global::MeshVR.LeapHandModelControl leapHandModelControl;
   public static global::UserPreferences singleton;
   public UserPreferences() {}
@@ -638,8 +638,8 @@ public enum PhysicsRate : int {
 }
 }
 public partial class UIDynamicSlider : global::UIDynamic {
-  public void Configure(string labelString, float min, float max, float defaultValue, bool clamp = default, string valFormat = default, bool showQuickButtons = default, bool showRangeAdjust = default) { }
-  public void ConfigureQuickButtons(float m1v, float m2v, float m3v, float m4v, float p1v, float p2v, float p3v, float p4v) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Configure(string labelString, float min, float max, float defaultValue, bool clamp = default, string valFormat = default, bool showQuickButtons = default, bool showRangeAdjust = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ConfigureQuickButtons(float m1v, float m2v, float m3v, float m4v, float p1v, float p2v, float p3v, float p4v) { }
   public string label { get; set; }
   public bool autoSetQuickButtons { get; set; }
   public bool defaultButtonEnabled { get; set; }
@@ -660,7 +660,7 @@ public partial class HairSimControl : global::PhysicsSimulatorJSONStorable {
   public HairSimControl() {}
 }
 public partial class ClothSimControl : global::PhysicsSimulatorJSONStorable {
-  public void Reset() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Reset() { }
   public global::GPUTools.Cloth.Scripts.ClothSettings clothSettings;
   public global::JSONStorableBool simEnabledJSON;
   public ClothSimControl() {}
@@ -684,8 +684,8 @@ public partial class UIDynamicTextField : global::UIDynamic {
 public partial class DAZDynamicItem : global::JSONStorableDynamic {
   public string[] tagsArray { get; set; }
   public string uid { get; set; }
-  public void GetThumbnail(global::DAZDynamicItem.ThumbnailLoadedCallback callback) { }
-  public void OpenUI() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void GetThumbnail(global::DAZDynamicItem.ThumbnailLoadedCallback callback) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void OpenUI() { }
   public string creatorName;
   public global::UnityEngine.Transform customizationUI;
   public string displayName;
@@ -703,8 +703,8 @@ public partial class DAZCharacterMaterialOptions : global::MaterialOptions {
 }
 public partial class MaterialOptions : global::JSONStorable {
   public MaterialOptions() {}
-  public virtual void SetAllParameters() { }
-  public virtual void SetTextureGroupSet(global::MaterialOptionTextureGroup tg, string setName, int onlyTextureNumber = default, global::UnityEngine.Texture customTexture = default, bool allowNull = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SetAllParameters() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SetTextureGroupSet(global::MaterialOptionTextureGroup tg, string setName, int onlyTextureNumber = default, global::UnityEngine.Texture customTexture = default, bool allowNull = default) { }
   public string currentTextureGroup1Set;
   public global::UnityEngine.Texture2D customTexture4;
   public bool customTexture4IsNull;
@@ -729,10 +729,10 @@ public partial class JSONStorableColor : global::JSONStorableParam {
   public global::HSVColorPicker colorPickerAlt { get; set; }
   public global::HSVColor defaultVal { get; set; }
   public global::HSVColor val { get; set; }
-  public void InternalSetVal(float h, float s, float v, bool doCallback) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void InternalSetVal(float h, float s, float v, bool doCallback) { }
   public global::HSVColor valNoCallback { get; set; }
-  public void SetColor(global::UnityEngine.Color c) { }
-  public void SetVal(float h, float s, float v) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetColor(global::UnityEngine.Color c) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetVal(float h, float s, float v) { }
   public global::HSVColor _defaultVal;
   public global::HSVColor _val;
   public global::JSONStorableColor.SetHSVColorCallback setCallbackFunction;
@@ -754,10 +754,10 @@ public partial class UIDynamicColorPicker : global::UIDynamic {
   public UIDynamicColorPicker() {}
 }
 public partial class HSVColorPicker : global::TwoDPicker {
-  public static global::UnityEngine.Color HSVToRGB(float H, float S, float V) { return default; }
-  public static global::UnityEngine.Color HSVToRGB(global::HSVColor hsvColor) { return default; }
-  public static global::HSVColor RGBToHSV(float r, float g, float b) { return default; }
-  public void SetHSV(global::HSVColor hc, bool noCallback = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Color HSVToRGB(float H, float S, float V) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Color HSVToRGB(global::HSVColor hsvColor) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::HSVColor RGBToHSV(float r, float g, float b) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetHSV(global::HSVColor hc, bool noCallback = default) { }
   public global::HSVColorPicker.OnColorChanged onColorChangedHandlers;
   public global::HSVColorPicker.OnHSVColorChanged onHSVColorChangedHandlers;
   public HSVColorPicker() {}
@@ -772,8 +772,8 @@ public partial class UIPopup : global::UnityEngine.MonoBehaviour {
   public string label { get; set; }
   public float popupPanelHeight { get; set; }
   public bool showSlider { get; set; }
-  public void SetNextValue() { }
-  public void SetPreviousValue() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetNextValue() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetPreviousValue() { }
   public bool alwaysOpen;
   public global::UnityEngine.UI.Text labelText;
   public global::UIPopup.OnOpenPopup onOpenPopupHandlers;
@@ -796,23 +796,23 @@ public partial class NamedAudioClip {
   public global::UnityEngine.AudioClip sourceClip;
 }
 public partial class AudioClipManager : global::JSONStorable {
-  public global::System.Collections.Generic.List<string> GetCategories() { return new global::System.Collections.Generic.List<string>(); }
-  public global::System.Collections.Generic.List<global::NamedAudioClip> GetCategoryClips(string category) { return new global::System.Collections.Generic.List<global::NamedAudioClip>(); }
-  public global::NamedAudioClip GetClip(string uid) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetCategories() { return new global::System.Collections.Generic.List<string>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<global::NamedAudioClip> GetCategoryClips(string category) { return new global::System.Collections.Generic.List<global::NamedAudioClip>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::NamedAudioClip GetClip(string uid) { return default; }
   public AudioClipManager() {}
 }
 public partial class Trigger {
   public Trigger() {}
-  public virtual global::SimpleJSON.JSONClass GetJSON() { return default; }
-  public virtual global::SimpleJSON.JSONClass GetJSON(string subScenePrefix) { return default; }
-  public virtual void InitTriggerUI() { }
-  public virtual void OpenTriggerActionsPanel() { }
-  public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc) { }
-  public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc, string subScenePrefix, bool isMerge) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::SimpleJSON.JSONClass GetJSON() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::SimpleJSON.JSONClass GetJSON(string subScenePrefix) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void InitTriggerUI() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void OpenTriggerActionsPanel() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc, string subScenePrefix, bool isMerge) { }
   public bool active { get; set; }
   public string displayName { get; set; }
-  public virtual void SyncAtomNames() { }
-  public virtual void Validate() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SyncAtomNames() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void Validate() { }
   public float _transitionInterpValue;
   public global::System.Collections.Generic.List<global::TriggerActionDiscrete> discreteActionsEnd;
   public global::System.Collections.Generic.List<global::TriggerActionDiscrete> discreteActionsStart;
@@ -834,11 +834,11 @@ public partial interface TriggerHandler {
 }
 public partial class TriggerActionDiscrete : global::TriggerAction {
   public bool timerActive { get; set; }
-  public void Trigger(bool reverse = default, bool force = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Trigger(bool reverse = default, bool force = default) { }
   public TriggerActionDiscrete() {}
 }
 public partial class TriggerActionTransition : global::TriggerAction {
-  public void TriggerInterp(float interp, bool force = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void TriggerInterp(float interp, bool force = default) { }
   public TriggerActionTransition() {}
 }
 public partial class TriggerActionTransitionUI : global::TriggerActionUI {
@@ -846,12 +846,12 @@ public partial class TriggerActionTransitionUI : global::TriggerActionUI {
   public TriggerActionTransitionUI() {}
 }
 public partial class ImageLoaderThreaded : global::UnityEngine.MonoBehaviour {
-  public bool DeregisterTextureUse(global::UnityEngine.Texture2D tex) { return default; }
-  public global::UnityEngine.Texture2D GetCachedThumbnail(string path) { return default; }
-  public void QueueImage(global::ImageLoaderThreaded.QueuedImage qi) { }
-  public void QueueThumbnail(global::ImageLoaderThreaded.QueuedImage qi) { }
-  public void QueueThumbnailImmediate(global::ImageLoaderThreaded.QueuedImage qi) { }
-  public bool RegisterTextureUse(global::UnityEngine.Texture2D tex) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool DeregisterTextureUse(global::UnityEngine.Texture2D tex) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Texture2D GetCachedThumbnail(string path) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void QueueImage(global::ImageLoaderThreaded.QueuedImage qi) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void QueueThumbnail(global::ImageLoaderThreaded.QueuedImage qi) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void QueueThumbnailImmediate(global::ImageLoaderThreaded.QueuedImage qi) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool RegisterTextureUse(global::UnityEngine.Texture2D tex) { return default; }
   public static global::ImageLoaderThreaded singleton;
   public ImageLoaderThreaded() {}
 public delegate void ImageLoaderCallback(global::ImageLoaderThreaded.QueuedImage qi);
@@ -891,7 +891,7 @@ public partial class JSONStorableVector3 : global::JSONStorableParam {
   public global::UnityEngine.Vector3 defaultVal { get; set; }
   public global::UnityEngine.Vector3 max { get; set; }
   public global::UnityEngine.Vector3 min { get; set; }
-  public void SetVal(global::UnityEngine.Vector3 value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetVal(global::UnityEngine.Vector3 value) { }
   public global::JSONStorableVector3.SetVector3Callback setCallbackFunction;
   public global::JSONStorableVector3.SetJSONVector3Callback setJSONCallbackFunction;
   public JSONStorableVector3() {}
@@ -899,33 +899,117 @@ public delegate void SetJSONVector3Callback(global::JSONStorableVector3 jf);
 public delegate void SetVector3Callback(global::UnityEngine.Vector3 v);
 }
 public partial class AudioSourceControl : global::VariableTrigger {
-  public void ClearQueue() { }
-  public void Pause() { }
-  public void PlayNow(global::NamedAudioClip nac) { }
-  public void QueueClip(global::NamedAudioClip nac) { }
-  public void Stop() { }
-  public void TogglePause() { }
-  public void UnPause() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ClearQueue() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Pause() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PlayNow(global::NamedAudioClip nac) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void QueueClip(global::NamedAudioClip nac) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Stop() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void TogglePause() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void UnPause() { }
   public AudioSourceControl() {}
 }
 public partial class CameraTarget : global::UnityEngine.MonoBehaviour {
   public static global::CameraTarget centerTarget;
   public CameraTarget() {}
 }
-public partial class TwoDPicker : global::UnityEngine.MonoBehaviour {
-  public global::UnityEngine.UI.Image Selector;
-  public TwoDPicker() {}
-}
 public partial class JSONStorableDynamic : global::UnityEngine.MonoBehaviour {
   public bool ready { get; set; }
+  public global::Atom containingAtom;
   public bool needsPostLoadJSONRestore;
   public global::JSONStorableDynamic.OnLoaded onLoadedHandlers;
   public JSONStorableDynamic() {}
 public delegate void OnLoaded();
 }
+public partial class DAZSkinWrap : global::GPUTools.Skinner.Scripts.Providers.PreCalcMeshProvider {
+  public DAZSkinWrap() {}
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DoSmoothingGPU(global::UnityEngine.ComputeBuffer startBuffer) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DrawMesh() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void FlushBuffers() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void InitMaterials() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void OnDestroy() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RunNormalTangentRecalc() { }
+  public bool renderSuspend { get; set; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void UpdateVerts(bool updateStartMesh = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void UpdateVertsGPU(bool fullUpdate = default) { }
+  public int _copyKernel;
+  public int _copyTangentsKernel;
+  public global::UnityEngine.ComputeBuffer _delayedNormalsBuffer;
+  public global::UnityEngine.ComputeBuffer _delayedTangentsBuffer;
+  public global::UnityEngine.ComputeBuffer _delayedVertsBuffer;
+  public global::UnityEngine.ComputeBuffer _drawVerticesBuffer;
+  public global::UnityEngine.ComputeBuffer _normalsBuffer;
+  public int _numMaterials;
+  public bool _renderSuspend;
+  public global::UnityEngine.ComputeBuffer _surfaceNormalsBuffer;
+  public global::UnityEngine.ComputeBuffer _tangentsBuffer;
+  public bool _updateDrawDisabled;
+  public global::UnityEngine.ComputeBuffer _verticesBuffer1;
+  public global::UnityEngine.ComputeBuffer _wrapVerticesBuffer;
+  public float additionalThicknessMultiplier;
+  public string assetSavePath;
+  public global::AutoCollider autoColliderToDisable;
+  public global::AutoCollider autoColliderToEnable;
+  public global::DAZMesh dazMesh;
+  public bool debug;
+  public float debugSize;
+  public int debugStartVert;
+  public int debugStopVert;
+  public float debugTan1;
+  public float debugTan2;
+  public float defaultAdditionalThicknessMultiplier;
+  public float defaultSurfaceOffset;
+  public bool draw;
+  public bool forceCPU;
+  public bool forceRawSkinVerts;
+  public bool GPUAutoSwapShader;
+  public global::UnityEngine.Material[] GPUmaterials;
+  public global::UnityEngine.ComputeShader GPUMeshCompute;
+  public global::UnityEngine.Material GPUsimpleMaterial;
+  public global::UnityEngine.ComputeShader GPUSkinWrapper;
+  public bool GPUuseSimpleMaterial;
+  public bool isWrapping;
+  public float laplacianSmoothBeta;
+  public int laplacianSmoothPasses;
+  public global::MapVerticesGPU mapVerticesGPU;
+  public global::System.Collections.Generic.Dictionary<int, global::UnityEngine.ComputeBuffer> materialNormalsBuffers;
+  public bool[] materialsEnabled;
+  public global::System.Collections.Generic.Dictionary<int, global::UnityEngine.ComputeBuffer> materialTangentsBuffers;
+  public global::System.Collections.Generic.Dictionary<int, global::UnityEngine.ComputeBuffer> materialVertsBuffers;
+  public global::UnityEngine.Mesh mesh;
+  public global::DAZSkinWrap morphCopyFrom;
+  public global::UnityEngine.Transform morphCopyFromTransform;
+  public bool moveToSurface;
+  public float moveToSurfaceOffset;
+  public int numVertThreadGroups;
+  public bool onlyUpdateEnabledMaterials;
+  public bool recalculateNormals;
+  public bool recalculateTangents;
+  public global::UnityEngine.Texture2D[] simTextures;
+  public global::DAZSkinV2 skin;
+  public global::UnityEngine.Transform skinTransform;
+  public int smoothOuterLoops;
+  public float spring2SmoothFactor;
+  public float springSmoothFactor;
+  public int springSmoothPasses;
+  public global::DAZSkinWrapStore startingWrapStore;
+  public static bool staticDraw;
+  public float surfaceOffset;
+  public bool useSpring2;
+  public int vertexIndexLimit;
+  public bool wrapCheckNormals;
+  public string wrapName;
+  public global::DAZSkinWrapStore wrapStore;
+  public bool wrapToDisabledMaterials;
+  public bool wrapToMorphedVertices;
+  public bool wrapToSkinnedVertices;
+}
+public partial class TwoDPicker : global::UnityEngine.MonoBehaviour {
+  public global::UnityEngine.UI.Image Selector;
+  public TwoDPicker() {}
+}
 public static partial class OVRInput {
-  public static global::UnityEngine.Vector3 GetLocalControllerPosition(global::OVRInput.Controller controllerType) { return default; }
-  public static global::UnityEngine.Quaternion GetLocalControllerRotation(global::OVRInput.Controller controllerType) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Vector3 GetLocalControllerPosition(global::OVRInput.Controller controllerType) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Quaternion GetLocalControllerRotation(global::OVRInput.Controller controllerType) { return default; }
 public enum Controller : int {
   None = 0,
   LTouch = 1,
@@ -958,7 +1042,7 @@ public partial class AQUAS_Parameters {
   public AQUAS_Parameters() {}
 }
 public partial class UITabSelector : global::UnityEngine.MonoBehaviour {
-  public void SetActiveTab(string name) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetActiveTab(string name) { }
   public global::UnityEngine.Transform toggleContainer;
   public UITabSelector() {}
 }
@@ -970,11 +1054,11 @@ public partial class MVRScriptControllerUI : global::UIProvider {
 public partial class MotionAnimationMaster : global::JSONStorableTriggerHandler {
   public bool loop { get; set; }
   public float playbackCounter { get; set; }
-  public void ResetAnimation() { }
-  public void StartPlayback() { }
-  public void StartRecordMode() { }
-  public void StopPlayback() { }
-  public void StopRecordMode() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ResetAnimation() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void StartPlayback() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void StartRecordMode() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void StopPlayback() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void StopRecordMode() { }
   public global::UnityEngine.GameObject activeWhilePlaying;
   public global::UnityEngine.GameObject activeWhileStopped;
   public MotionAnimationMaster() {}
@@ -984,7 +1068,7 @@ public partial class EmbeddedAudioClipManager : global::AudioClipManager {
   public EmbeddedAudioClipManager() {}
 }
 public partial class URLAudioClipManager : global::AudioClipManager {
-  public global::URLAudioClip QueueClip(string url, string displayName = default, bool fromRestore = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::URLAudioClip QueueClip(string url, string displayName = default, bool fromRestore = default) { return default; }
   public static global::URLAudioClipManager singleton;
   public URLAudioClipManager() {}
 }
@@ -994,7 +1078,7 @@ public partial class JSONStorableActionStringChooser {
 public delegate void StringChoiceActionCallback(string choice);
 }
 public partial class JSONStorableActionPresetFilePath {
-  public void Browse(global::JSONStorableString.SetStringCallback callback) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Browse(global::JSONStorableString.SetStringCallback callback) { }
   public string name;
   public global::JSONStorable storable;
   public JSONStorableActionPresetFilePath() {}
@@ -1005,12 +1089,12 @@ public partial class JSONStorableActionAudioClip {
 public delegate void AudioClipActionCallback(global::NamedAudioClip nac);
 }
 public partial class MemoryOptimizer : global::UnityEngine.MonoBehaviour {
-  public void TriggerOptimize() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void TriggerOptimize() { }
   public static global::MemoryOptimizer singleton;
   public MemoryOptimizer() {}
 }
 public partial class MotionAnimationControl : global::JSONStorable {
-  public void PlaybackStep(float playbackCounter) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PlaybackStep(float playbackCounter) { }
   public global::MotionAnimationClip clip;
   public global::FreeControllerV3 controller;
   public MotionAnimationControl() {}
@@ -1153,89 +1237,6 @@ public partial class GenerateDAZClothingSelectorUI : global::GenerateDAZDynamicS
 public partial class GenerateDAZHairSelectorUI : global::GenerateDAZDynamicSelectorUI {
   public GenerateDAZHairSelectorUI() {}
 }
-public partial class DAZSkinWrap : global::GPUTools.Skinner.Scripts.Providers.PreCalcMeshProvider {
-  public DAZSkinWrap() {}
-  public void DoSmoothingGPU(global::UnityEngine.ComputeBuffer startBuffer) { }
-  public void DrawMesh() { }
-  public void FlushBuffers() { }
-  public void InitMaterials() { }
-  public void OnDestroy() { }
-  public void RunNormalTangentRecalc() { }
-  public bool renderSuspend { get; set; }
-  public void UpdateVerts(bool updateStartMesh = default) { }
-  public void UpdateVertsGPU(bool fullUpdate = default) { }
-  public int _copyKernel;
-  public int _copyTangentsKernel;
-  public global::UnityEngine.ComputeBuffer _delayedNormalsBuffer;
-  public global::UnityEngine.ComputeBuffer _delayedTangentsBuffer;
-  public global::UnityEngine.ComputeBuffer _delayedVertsBuffer;
-  public global::UnityEngine.ComputeBuffer _drawVerticesBuffer;
-  public global::UnityEngine.ComputeBuffer _normalsBuffer;
-  public int _numMaterials;
-  public bool _renderSuspend;
-  public global::UnityEngine.ComputeBuffer _surfaceNormalsBuffer;
-  public global::UnityEngine.ComputeBuffer _tangentsBuffer;
-  public bool _updateDrawDisabled;
-  public global::UnityEngine.ComputeBuffer _verticesBuffer1;
-  public global::UnityEngine.ComputeBuffer _wrapVerticesBuffer;
-  public float additionalThicknessMultiplier;
-  public string assetSavePath;
-  public global::AutoCollider autoColliderToDisable;
-  public global::AutoCollider autoColliderToEnable;
-  public global::DAZMesh dazMesh;
-  public bool debug;
-  public float debugSize;
-  public int debugStartVert;
-  public int debugStopVert;
-  public float debugTan1;
-  public float debugTan2;
-  public float defaultAdditionalThicknessMultiplier;
-  public float defaultSurfaceOffset;
-  public bool draw;
-  public bool forceCPU;
-  public bool forceRawSkinVerts;
-  public bool GPUAutoSwapShader;
-  public global::UnityEngine.Material[] GPUmaterials;
-  public global::UnityEngine.ComputeShader GPUMeshCompute;
-  public global::UnityEngine.Material GPUsimpleMaterial;
-  public global::UnityEngine.ComputeShader GPUSkinWrapper;
-  public bool GPUuseSimpleMaterial;
-  public bool isWrapping;
-  public float laplacianSmoothBeta;
-  public int laplacianSmoothPasses;
-  public global::MapVerticesGPU mapVerticesGPU;
-  public global::System.Collections.Generic.Dictionary<int, global::UnityEngine.ComputeBuffer> materialNormalsBuffers;
-  public bool[] materialsEnabled;
-  public global::System.Collections.Generic.Dictionary<int, global::UnityEngine.ComputeBuffer> materialTangentsBuffers;
-  public global::System.Collections.Generic.Dictionary<int, global::UnityEngine.ComputeBuffer> materialVertsBuffers;
-  public global::UnityEngine.Mesh mesh;
-  public global::DAZSkinWrap morphCopyFrom;
-  public global::UnityEngine.Transform morphCopyFromTransform;
-  public bool moveToSurface;
-  public float moveToSurfaceOffset;
-  public int numVertThreadGroups;
-  public bool onlyUpdateEnabledMaterials;
-  public bool recalculateNormals;
-  public bool recalculateTangents;
-  public global::UnityEngine.Texture2D[] simTextures;
-  public global::DAZSkinV2 skin;
-  public global::UnityEngine.Transform skinTransform;
-  public int smoothOuterLoops;
-  public float spring2SmoothFactor;
-  public float springSmoothFactor;
-  public int springSmoothPasses;
-  public global::DAZSkinWrapStore startingWrapStore;
-  public static bool staticDraw;
-  public float surfaceOffset;
-  public bool useSpring2;
-  public int vertexIndexLimit;
-  public bool wrapCheckNormals;
-  public string wrapName;
-  public global::DAZSkinWrapStore wrapStore;
-  public bool wrapToDisabledMaterials;
-  public bool wrapToMorphedVertices;
-  public bool wrapToSkinnedVertices;
-}
 public partial class DAZCharacterRun : global::PhysicsSimulator {
   public global::DAZMergedSkinV2 skin;
   public DAZCharacterRun() {}
@@ -1245,11 +1246,11 @@ public partial class SliderControl : global::UnityEngine.MonoBehaviour {
   public SliderControl() {}
 }
 public partial class CustomUnityAssetLoader : global::JSONStorable {
-  public void DeregisterAssetClearedCallback(global::CustomUnityAssetLoader.AssetClearedCallback callback) { }
-  public void DeregisterAssetLoadedCallback(global::CustomUnityAssetLoader.AssetLoadedCallback callback) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DeregisterAssetClearedCallback(global::CustomUnityAssetLoader.AssetClearedCallback callback) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DeregisterAssetLoadedCallback(global::CustomUnityAssetLoader.AssetLoadedCallback callback) { }
   public bool isAssetLoaded { get; set; }
-  public void RegisterAssetClearedCallback(global::CustomUnityAssetLoader.AssetClearedCallback callback) { }
-  public void RegisterAssetLoadedCallback(global::CustomUnityAssetLoader.AssetLoadedCallback callback) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterAssetClearedCallback(global::CustomUnityAssetLoader.AssetClearedCallback callback) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterAssetLoadedCallback(global::CustomUnityAssetLoader.AssetLoadedCallback callback) { }
   public CustomUnityAssetLoader() {}
 public delegate void AssetClearedCallback();
 public delegate void AssetLoadedCallback();
@@ -1258,7 +1259,7 @@ public partial class PhysicsMaterialControl : global::JSONStorable {
   public PhysicsMaterialControl() {}
 }
 public partial class TabbedUIBuilder : global::UnityEngine.MonoBehaviour {
-  public void AddTab(global::TabbedUIBuilder.Tab tab, bool addTab = default, bool column2 = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddTab(global::TabbedUIBuilder.Tab tab, bool addTab = default, bool column2 = default) { }
   public global::UITabSelector selector;
   public TabbedUIBuilder() {}
 public partial class Tab {
@@ -1272,8 +1273,8 @@ public partial class UIConnectorMaster : global::UnityEngine.MonoBehaviour {
   public UIConnectorMaster() {}
 }
 public partial class DAZSkinWrapSwitcher : global::JSONStorable {
-  public void Init() { }
-  public void SetCurrentWrapName(string wrapName) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Init() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetCurrentWrapName(string wrapName) { }
   public DAZSkinWrapSwitcher() {}
 }
 public partial class DAZSkinWrapControl : global::JSONStorable {
@@ -1297,7 +1298,7 @@ public partial struct SkinWrapVert {
 }
 }
 public partial class MapVerticesGPU {
-  public void Map(global::UnityEngine.ComputeBuffer vertsBuffer) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Map(global::UnityEngine.ComputeBuffer vertsBuffer) { }
   public MapVerticesGPU() {}
 }
 public partial class VertexMap {
@@ -1350,16 +1351,16 @@ public partial class ScaleChangeReceiver : global::UnityEngine.MonoBehaviour {
 }
 namespace UnityEngine {
 public sealed partial class GL {
-  public static void Begin(int mode) { }
-  public static void Clear(bool clearDepth, bool clearColor, global::UnityEngine.Color backgroundColor) { }
-  public static void Color(global::UnityEngine.Color c) { }
-  public static void End() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void Begin(int mode) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void Clear(bool clearDepth, bool clearColor, global::UnityEngine.Color backgroundColor) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void Color(global::UnityEngine.Color c) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void End() { }
   public static bool sRGBWrite { get; set; }
-  public static void LoadOrtho() { }
-  public static void PopMatrix() { }
-  public static void PushMatrix() { }
-  public static void TexCoord2(float x, float y) { }
-  public static void Vertex3(float x, float y, float z) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void LoadOrtho() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void PopMatrix() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void PushMatrix() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void TexCoord2(float x, float y) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void Vertex3(float x, float y, float z) { }
   public GL() {}
 }
 public partial class Collision {
@@ -1385,46 +1386,33 @@ public sealed partial class CapsuleCollider : global::UnityEngine.Collider {
   public CapsuleCollider() {}
 }
 public sealed partial class AssetBundle : global::UnityEngine.Object {
-  public T[] LoadAllAssets<T>() { return new T[0]; }
-  public global::UnityEngine.Object[] LoadAllAssets() { return new global::UnityEngine.Object[0]; }
-  public T LoadAsset<T>(string name) { return default; }
-  public global::UnityEngine.Object LoadAsset(string name) { return default; }
-  public static global::UnityEngine.AssetBundle LoadFromMemory(byte[] binary) { return default; }
-  public void Unload(bool unloadAllLoadedObjects) { }
   public AssetBundle() {}
 }
 public sealed partial class Shader : global::UnityEngine.Object {
-  public static global::UnityEngine.Shader Find(string name) { return default; }
-  public bool isSupported { get; set; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Shader Find(string name) { return default; }
   public int renderQueue { get; set; }
-  public Shader() {}
 }
 public partial class Material : global::UnityEngine.Object {
-  public void CopyPropertiesFromMaterial(global::UnityEngine.Material mat) { }
-  public void DisableKeyword(string keyword) { }
-  public void EnableKeyword(string keyword) { }
-  public int renderQueue { get; set; }
-  public global::UnityEngine.Shader shader { get; set; }
-  public global::UnityEngine.Color GetColor(string name) { return default; }
-  public global::UnityEngine.Texture GetTexture(string name) { return default; }
-  public global::UnityEngine.Vector2 GetTextureOffset(string name) { return default; }
-  public global::UnityEngine.Vector2 GetTextureScale(string name) { return default; }
-  public global::UnityEngine.Vector4 GetVector(string name) { return default; }
-  public bool HasProperty(string name) { return default; }
-  public bool IsKeywordEnabled(string keyword) { return default; }
-  public void SetBuffer(string name, global::UnityEngine.ComputeBuffer value) { }
-  public void SetColor(string name, global::UnityEngine.Color value) { }
-  public void SetInt(string name, int value) { }
-  public void SetOverrideTag(string tag, string val) { }
-  public bool SetPass(int pass) { return default; }
-  public void SetTexture(string name, global::UnityEngine.Texture value) { }
-  public void SetTextureOffset(string name, global::UnityEngine.Vector2 value) { }
-  public void SetTextureScale(string name, global::UnityEngine.Vector2 value) { }
-  public void SetVector(string name, global::UnityEngine.Vector4 value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void CopyPropertiesFromMaterial(global::UnityEngine.Material mat) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DisableKeyword(string keyword) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void EnableKeyword(string keyword) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Color GetColor(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Vector2 GetTextureOffset(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Vector2 GetTextureScale(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Vector4 GetVector(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool IsKeywordEnabled(string keyword) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetBuffer(string name, global::UnityEngine.ComputeBuffer value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetColor(string name, global::UnityEngine.Color value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetInt(string name, int value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetOverrideTag(string tag, string val) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool SetPass(int pass) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetTextureOffset(string name, global::UnityEngine.Vector2 value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetTextureScale(string name, global::UnityEngine.Vector2 value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetVector(string name, global::UnityEngine.Vector4 value) { }
 }
 public partial struct Color32 {
   public Color32(byte r, byte g, byte b, byte a) {}
-  public static global::UnityEngine.Color32 op_Implicit(global::UnityEngine.Color c) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Color32 op_Implicit(global::UnityEngine.Color c) { return default; }
   public byte a;
   public byte b;
   public byte g;
@@ -1437,15 +1425,15 @@ public sealed partial class QualitySettings : global::UnityEngine.Object {
 public sealed partial class Mesh : global::UnityEngine.Object {
   public global::UnityEngine.Bounds bounds { get; set; }
   public int subMeshCount { get; set; }
-  public int[] GetTriangles(int submesh) { return new int[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public int[] GetTriangles(int submesh) { return new int[0]; }
 }
 public sealed partial class ComputeBuffer {
   public ComputeBuffer(int count, int stride) {}
   public int count { get; set; }
   public int stride { get; set; }
-  public void GetData(global::System.Array data) { }
-  public void Release() { }
-  public void SetData(global::System.Array data) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void GetData(global::System.Array data) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Release() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetData(global::System.Array data) { }
   public ComputeBuffer() {}
 }
 public sealed partial class SystemInfo {
@@ -1458,8 +1446,8 @@ public enum ColorSpace : int {
   Linear = 1,
 }
 public sealed partial class RectTransformUtility {
-  public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam) { return default; }
-  public static bool ScreenPointToLocalPointInRectangle(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam, out global::UnityEngine.Vector2 localPoint) { localPoint = default; return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool ScreenPointToLocalPointInRectangle(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam, out global::UnityEngine.Vector2 localPoint) { localPoint = default; return default; }
   public RectTransformUtility() {}
 }
 public partial interface ICanvasRaycastFilter {
@@ -1476,23 +1464,23 @@ public partial struct Ray {
   public Ray(global::UnityEngine.Vector3 origin, global::UnityEngine.Vector3 direction) {}
   public global::UnityEngine.Vector3 direction { get; set; }
   public global::UnityEngine.Vector3 origin { get; set; }
-  public global::UnityEngine.Vector3 GetPoint(float distance) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Vector3 GetPoint(float distance) { return default; }
 }
 public partial class Physics {
-  public static int OverlapSphereNonAlloc(global::UnityEngine.Vector3 position, float radius, global::UnityEngine.Collider[] results) { return default; }
-  public static bool Raycast(global::UnityEngine.Ray ray, out global::UnityEngine.RaycastHit hitInfo) { hitInfo = default; return default; }
-  public static int RaycastNonAlloc(global::UnityEngine.Ray ray, global::UnityEngine.RaycastHit[] results, float maxDistance) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static int OverlapSphereNonAlloc(global::UnityEngine.Vector3 position, float radius, global::UnityEngine.Collider[] results) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool Raycast(global::UnityEngine.Ray ray, out global::UnityEngine.RaycastHit hitInfo) { hitInfo = default; return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static int RaycastNonAlloc(global::UnityEngine.Ray ray, global::UnityEngine.RaycastHit[] results, float maxDistance) { return default; }
   public Physics() {}
 }
 public partial struct RaycastHit {
   public global::UnityEngine.Collider collider { get; set; }
 }
 public static partial class ImageConversion {
-  public static byte[] EncodeToPNG(global::UnityEngine.Texture2D tex) { return new byte[0]; }
-  public static bool LoadImage(global::UnityEngine.Texture2D tex, byte[] data) { return true; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static byte[] EncodeToPNG(global::UnityEngine.Texture2D tex) { return new byte[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool LoadImage(global::UnityEngine.Texture2D tex, byte[] data) { return true; }
 }
 public sealed partial class AudioSource : global::UnityEngine.AudioBehaviour {
-  public void PlayOneShot(global::UnityEngine.AudioClip clip, float volumeScale) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PlayOneShot(global::UnityEngine.AudioClip clip, float volumeScale) { }
   public float dopplerLevel { get; set; }
   public float maxDistance { get; set; }
   public float minDistance { get; set; }
@@ -1503,7 +1491,7 @@ public sealed partial class AudioSource : global::UnityEngine.AudioBehaviour {
   public AudioSource() {}
 }
 public sealed partial class Random {
-  public static int Range(int min, int max) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static int Range(int min, int max) { return default; }
   public Random() {}
 }
 public sealed partial class MeshFilter : global::UnityEngine.Component {
@@ -1544,9 +1532,9 @@ public enum SendMessageOptions : int {
   DontRequireReceiver = 1,
 }
 public sealed partial class Sprite : global::UnityEngine.Object {
-  public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit, uint extrude, global::UnityEngine.SpriteMeshType meshType, global::UnityEngine.Vector4 border) { return default; }
-  public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit) { return default; }
-  public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit, uint extrude, global::UnityEngine.SpriteMeshType meshType, global::UnityEngine.Vector4 border) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot) { return default; }
   public global::UnityEngine.Texture2D texture { get; set; }
   public Sprite() {}
 }
@@ -1577,15 +1565,17 @@ public partial struct UIVertex {
 }
 public partial struct Plane {
   public Plane(global::UnityEngine.Vector3 inNormal, global::UnityEngine.Vector3 inPoint) {}
-  public bool Raycast(global::UnityEngine.Ray ray, out float enter) { enter = default; return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool Raycast(global::UnityEngine.Ray ray, out float enter) { enter = default; return default; }
 }
 public enum SpriteMeshType : int {
   FullRect = 0,
   Tight = 1,
 }
+public static partial class JsonUtility {
+}
 public sealed partial class Graphics {
-  public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat) { }
-  public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest) { }
   public Graphics() {}
 }
 public enum MeshTopology : int {
@@ -1604,13 +1594,13 @@ public sealed partial class Projector : global::UnityEngine.Behaviour {
   public Projector() {}
 }
 public sealed partial class ColorUtility {
-  public static string ToHtmlStringRGB(global::UnityEngine.Color color) { return ""; }
-  public static bool TryParseHtmlString(string htmlString, out global::UnityEngine.Color color) { color = default; return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string ToHtmlStringRGB(global::UnityEngine.Color color) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool TryParseHtmlString(string htmlString, out global::UnityEngine.Color color) { color = default; return default; }
   public ColorUtility() {}
 }
 public sealed partial class ComputeShader : global::UnityEngine.Object {
-  public void Dispatch(int kernelIndex, int threadGroupsX, int threadGroupsY, int threadGroupsZ) { }
-  public void SetBuffer(int kernelIndex, string name, global::UnityEngine.ComputeBuffer buffer) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Dispatch(int kernelIndex, int threadGroupsX, int threadGroupsY, int threadGroupsZ) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetBuffer(int kernelIndex, string name, global::UnityEngine.ComputeBuffer buffer) { }
   public ComputeShader() {}
 }
 public partial class DefaultExecutionOrder : global::System.Attribute {
@@ -1624,7 +1614,7 @@ public partial class Joint : global::UnityEngine.Component {
   public Joint() {}
 }
 public partial class ScriptableObject : global::UnityEngine.Object {
-  public static T CreateInstance<T>() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static T CreateInstance<T>() { return default; }
   public ScriptableObject() {}
 }
 public partial interface ISerializationCallbackReceiver {
@@ -1635,8 +1625,8 @@ public partial class AudioBehaviour : global::UnityEngine.Behaviour {
 }
 namespace UnityEngine.SceneManagement {
 public partial class SceneManager {
-  public static void add_sceneLoaded(global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEngine.SceneManagement.LoadSceneMode> value) { }
-  public static void remove_sceneLoaded(global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEngine.SceneManagement.LoadSceneMode> value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void add_sceneLoaded(global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEngine.SceneManagement.LoadSceneMode> value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void remove_sceneLoaded(global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEngine.SceneManagement.LoadSceneMode> value) { }
   public SceneManager() {}
 }
 public partial struct Scene {
@@ -1648,27 +1638,27 @@ public enum LoadSceneMode : int {
 }
 namespace UnityEngine.Experimental.Rendering {
 public static partial class AsyncGPUReadback {
-  public static global::UnityEngine.Experimental.Rendering.AsyncGPUReadbackRequest Request(global::UnityEngine.ComputeBuffer src, int size, int offset) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Experimental.Rendering.AsyncGPUReadbackRequest Request(global::UnityEngine.ComputeBuffer src, int size, int offset) { return default; }
 }
 public partial struct AsyncGPUReadbackRequest {
   public bool done { get; set; }
   public bool hasError { get; set; }
-  public global::Unity.Collections.NativeArray<T> GetData<T>(int layer = default) { return default; }
-  public void WaitForCompletion() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::Unity.Collections.NativeArray<T> GetData<T>(int layer = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void WaitForCompletion() { }
 }
 }
 namespace MVR.FileManagement {
 public partial class FileManager : global::UnityEngine.MonoBehaviour {
-  public static bool FileExists(string path, bool onlySystemFiles = default, bool restrictPath = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool FileExists(string path, bool onlySystemFiles = default, bool restrictPath = default) { return default; }
   public FileManager() {}
 }
 }
 namespace MeshVR {
 public partial class PresetManager : global::UnityEngine.MonoBehaviour {
   public string presetName { get; set; }
-  public string GetStoreFolderPath(bool includePackage = default) { return ""; }
-  public void LoadPresetFromJSON(global::SimpleJSON.JSONClass inputJSON, bool isMerge = default) { }
-  public void RefreshStorables() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string GetStoreFolderPath(bool includePackage = default) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadPresetFromJSON(global::SimpleJSON.JSONClass inputJSON, bool isMerge = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RefreshStorables() { }
   public global::SimpleJSON.JSONClass lastLoadedJSON;
   public global::UnityEngine.Events.UnityEvent postLoadEvent = new global::UnityEngine.Events.UnityEvent();
   public global::MeshVR.PresetManager.SpecificStorable[] specificStorables;
@@ -1683,8 +1673,8 @@ public partial class SpecificStorable {
 }
 }
 public partial class AssetLoader : global::UnityEngine.MonoBehaviour {
-  public static void DoneWithAssetBundleFromFile(string path) { }
-  public static void QueueLoadAssetBundleFromFile(global::MeshVR.AssetLoader.AssetBundleFromFileRequest abffr) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void DoneWithAssetBundleFromFile(string path) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void QueueLoadAssetBundleFromFile(global::MeshVR.AssetLoader.AssetBundleFromFileRequest abffr) { }
   public AssetLoader() {}
 public delegate void LoadBundleFromFileCallback(global::MeshVR.AssetLoader.AssetBundleFromFileRequest abffr);
 public partial class AssetBundleFromFileRequest {
@@ -1705,7 +1695,7 @@ public partial class HandModelControl : global::JSONStorable {
   public bool leftHandEnabled { get; set; }
   public bool rightHandEnabled { get; set; }
   public bool useCollision { get; set; }
-  public void ToggleCollision() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ToggleCollision() { }
   public HandModelControl() {}
 }
 public partial class PerfMon : global::UnityEngine.MonoBehaviour {
@@ -1725,7 +1715,7 @@ public partial interface IBinaryStorable {
 }
 namespace GPUTools.Skinner.Scripts.Providers {
 public partial class PreCalcMeshProvider : global::UnityEngine.MonoBehaviour {
-  public virtual void Dispatch() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void Dispatch() { }
   public global::UnityEngine.Mesh Mesh { get; set; }
   public global::GPUTools.Common.Scripts.PL.Tools.GpuBuffer<global::UnityEngine.Vector3> NormalsBuffer { get; set; }
   public global::GPUTools.Common.Scripts.PL.Tools.GpuBuffer<global::UnityEngine.Vector3> PreCalculatedVerticesBuffer { get; set; }
@@ -1734,22 +1724,22 @@ public partial class PreCalcMeshProvider : global::UnityEngine.MonoBehaviour {
   public PreCalcMeshProvider() {}
 }
 public partial class MeshProvider {
-  public virtual void Dispatch() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void Dispatch() { }
   public global::GPUTools.Skinner.Scripts.Providers.PreCalcMeshProvider PreCalcProvider;
   public MeshProvider() {}
 }
 }
 namespace uFileBrowser {
 public partial class FileBrowser : global::UnityEngine.MonoBehaviour {
-  public void ActivateFileNameField() { }
-  public bool IsHidden() { return default; }
-  public void MakeNewUniqueFolder() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ActivateFileNameField() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool IsHidden() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void MakeNewUniqueFolder() { }
   public bool keepOpen { get; set; }
   public int limit { get; set; }
-  public void SetTextEntry(bool b) { }
-  public void SetTitle(string title) { }
-  public void Show(global::uFileBrowser.FileBrowserFullCallback fullCallback, bool changeDirectory = default) { }
-  public void Show(global::uFileBrowser.FileBrowserCallback callback, bool changeDirectory = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetTextEntry(bool b) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetTitle(string title) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Show(global::uFileBrowser.FileBrowserFullCallback fullCallback, bool changeDirectory = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Show(global::uFileBrowser.FileBrowserCallback callback, bool changeDirectory = default) { }
   public bool browseVarFilesAsDirectories;
   public string defaultPath;
   public global::UnityEngine.UI.InputField fileEntryField;
@@ -1769,23 +1759,23 @@ public delegate void FileBrowserFullCallback(string path, bool didClose);
 }
 namespace MVR.FileManagementSecure {
 public partial class FileManagerSecure {
-  public static void CopyFile(string oldPath, string newPath) { }
-  public static void CreateDirectory(string path) { }
-  public static void DeleteFile(string path) { }
-  public static string GetDirectoryName(string path, bool returnSlashPath = default) { return ""; }
-  public static string GetFileName(string path) { return ""; }
-  public static string GetFullPath(string path) { return ""; }
-  public static global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> GetShortCutsForDirectory(string dir, bool allowNavigationAboveRegularDirectories = default, bool useFullPaths = default, bool generateAllFlattenedShortcut = default, bool includeRegularDirsInFlattenedShortcut = default) { return new global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut>(); }
-  public static bool IsDirectoryInPackage(string path) { return default; }
-  public static bool IsFileInPackage(string path) { return default; }
-  public static string NormalizeLoadPath(string path) { return ""; }
-  public static string NormalizePath(string path) { return ""; }
-  public static bool PackageExists(string packageUid) { return default; }
-  public static byte[] ReadAllBytes(string path) { return new byte[0]; }
-  public static string ReadAllText(string path) { return ""; }
-  public static void WriteAllBytes(string path, byte[] bytes) { }
-  public static void WriteAllText(string path, string text) { }
-  public static void WriteAllText(string path, string text, global::MVR.FileManagementSecure.UserActionCallback confirmCallback, global::MVR.FileManagementSecure.UserActionCallback denyCallback, global::MVR.FileManagementSecure.ExceptionCallback exceptionCallback) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void CopyFile(string oldPath, string newPath) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void CreateDirectory(string path) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void DeleteFile(string path) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string GetDirectoryName(string path, bool returnSlashPath = default) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string GetFileName(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string GetFullPath(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> GetShortCutsForDirectory(string dir, bool allowNavigationAboveRegularDirectories = default, bool useFullPaths = default, bool generateAllFlattenedShortcut = default, bool includeRegularDirsInFlattenedShortcut = default) { return new global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool IsDirectoryInPackage(string path) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool IsFileInPackage(string path) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string NormalizeLoadPath(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string NormalizePath(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool PackageExists(string packageUid) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static byte[] ReadAllBytes(string path) { return new byte[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string ReadAllText(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void WriteAllBytes(string path, byte[] bytes) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void WriteAllText(string path, string text) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void WriteAllText(string path, string text, global::MVR.FileManagementSecure.UserActionCallback confirmCallback, global::MVR.FileManagementSecure.UserActionCallback denyCallback, global::MVR.FileManagementSecure.ExceptionCallback exceptionCallback) { }
   public FileManagerSecure() {}
 }
 public partial class ShortCut {
@@ -1807,27 +1797,27 @@ public partial class ClothSettings : global::GPUCollidersConsumer {
 }
 namespace Leap.Unity {
 public abstract partial class HandModelBase : global::UnityEngine.MonoBehaviour {
-  public virtual global::Leap.Hand GetLeapHand() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::Leap.Hand GetLeapHand() { return default; }
   public HandModelBase() {}
 }
 public static partial class ListAndArrayExtensions {
-  public static T RemoveLast<T>(global::System.Collections.Generic.List<T> list) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static T RemoveLast<T>(global::System.Collections.Generic.List<T> list) { return default; }
 }
 public partial class RiggedHand : global::Leap.Unity.HandModel {
   public RiggedHand() {}
 }
 public static partial class Utils {
-  public static bool ContainsNaN(global::UnityEngine.Vector3 v) { return default; }
-  public static global::Leap.Unity.Utils.ChildrenEnumerator GetChildren(global::UnityEngine.Transform t) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool ContainsNaN(global::UnityEngine.Vector3 v) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::Leap.Unity.Utils.ChildrenEnumerator GetChildren(global::UnityEngine.Transform t) { return default; }
 public partial struct ChildrenEnumerator {
   public global::UnityEngine.Transform Current { get; set; }
-  public global::Leap.Unity.Utils.ChildrenEnumerator GetEnumerator() { return default; }
-  public bool MoveNext() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::Leap.Unity.Utils.ChildrenEnumerator GetEnumerator() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool MoveNext() { return default; }
 }
 }
 public static partial class BitConverterNonAlloc {
-  public static int ToInt32(byte[] bytes, int offset = default) { return default; }
-  public static float ToSingle(byte[] bytes, int offset = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static int ToInt32(byte[] bytes, int offset = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static float ToSingle(byte[] bytes, int offset = default) { return default; }
 }
 public abstract partial class HandModel : global::Leap.Unity.HandModelBase {
   public HandModel() {}
@@ -1848,18 +1838,18 @@ public partial struct Vector {
 namespace UnityEngine.Windows.Speech {
 public static partial class PhraseRecognitionSystem {
   public static global::UnityEngine.Windows.Speech.SpeechSystemStatus Status { get; set; }
-  public static void Restart() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void Restart() { }
 }
 public sealed partial class KeywordRecognizer : global::UnityEngine.Windows.Speech.PhraseRecognizer {
   public KeywordRecognizer(string[] keywords, global::UnityEngine.Windows.Speech.ConfidenceLevel minimumConfidence) {}
   public KeywordRecognizer() {}
 }
 public abstract partial class PhraseRecognizer {
-  public void add_OnPhraseRecognized(global::UnityEngine.Windows.Speech.PhraseRecognizer.PhraseRecognizedDelegate value) { }
-  public virtual void Dispose() { }
-  public void remove_OnPhraseRecognized(global::UnityEngine.Windows.Speech.PhraseRecognizer.PhraseRecognizedDelegate value) { }
-  public void Start() { }
-  public void Stop() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void add_OnPhraseRecognized(global::UnityEngine.Windows.Speech.PhraseRecognizer.PhraseRecognizedDelegate value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void Dispose() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void remove_OnPhraseRecognized(global::UnityEngine.Windows.Speech.PhraseRecognizer.PhraseRecognizedDelegate value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Start() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Stop() { }
   public PhraseRecognizer() {}
 public delegate void PhraseRecognizedDelegate(global::UnityEngine.Windows.Speech.PhraseRecognizedEventArgs args);
 }
@@ -1889,7 +1879,7 @@ public static partial class XRSettings {
 }
 namespace MVR.Hub {
 public partial class HubDownloader : global::JSONStorable {
-  public void FindPackage(string packageName, bool download = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void FindPackage(string packageName, bool download = default) { }
   public static global::MVR.Hub.HubDownloader singleton;
   public HubDownloader() {}
 }
@@ -1910,8 +1900,8 @@ public partial class BuildRuntimeCloth : global::GPUTools.Common.Scripts.Tools.C
 }
 namespace GPUTools.Cloth.Scripts.Runtime.Physics {
 public partial class ClothPhysics : global::UnityEngine.MonoBehaviour {
-  public void Dispatch() { }
-  public void DispatchCopyToOld() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Dispatch() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DispatchCopyToOld() { }
   public ClothPhysics() {}
 }
 }
@@ -1923,13 +1913,13 @@ public partial class GpuBuffer<T> {
 }
 namespace GPUTools.Physics.Scripts.Types.Dynamic {
 public partial struct GPParticle {
-  public static int Size() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static int Size() { return default; }
   public global::UnityEngine.Vector3 Position;
 }
 }
 namespace GPUTools.Hair.Scripts.Runtime.Render {
 public partial struct TessRenderParticle {
-  public static int Size() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static int Size() { return default; }
   public global::UnityEngine.Vector3 Position;
 }
 }
@@ -1961,7 +1951,7 @@ public partial class HairStandsSettings : global::GPUTools.Hair.Scripts.Settings
 }
 namespace GPUTools.Hair.Scripts.Geometry.Abstract {
 public abstract partial class GeometryProviderBase : global::UnityEngine.MonoBehaviour {
-  public virtual int GetStandsNum() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual int GetStandsNum() { return default; }
   public GeometryProviderBase() {}
 }
 }
@@ -1992,30 +1982,30 @@ public partial class HairSettingsBase {
 }
 namespace UnityEngine {
 public partial class Component {
-  public void BroadcastMessage(string methodName, object parameter, global::UnityEngine.SendMessageOptions options) { }
-  public void BroadcastMessage(string methodName, object parameter) { }
-  public void GetComponentsInChildren<T>(bool includeInactive, global::System.Collections.Generic.List<T> result) { }
-  public void SendMessage(string methodName, object value) { }
-  public void SendMessage(string methodName, object value, global::UnityEngine.SendMessageOptions options) { }
-  public void SendMessage(string methodName, global::UnityEngine.SendMessageOptions options) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void BroadcastMessage(string methodName, object parameter, global::UnityEngine.SendMessageOptions options) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void BroadcastMessage(string methodName, object parameter) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void GetComponentsInChildren<T>(bool includeInactive, global::System.Collections.Generic.List<T> result) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SendMessage(string methodName, object value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SendMessage(string methodName, object value, global::UnityEngine.SendMessageOptions options) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SendMessage(string methodName, global::UnityEngine.SendMessageOptions options) { }
 }
 public partial class GameObject {
-  public static global::UnityEngine.GameObject CreatePrimitive(global::UnityEngine.PrimitiveType type) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.GameObject CreatePrimitive(global::UnityEngine.PrimitiveType type) { return default; }
   public global::UnityEngine.GameObject gameObject { get; set; }
-  public T GetComponentInParent<T>() { return default; }
-  public T[] GetComponents<T>() { return new T[0]; }
-  public T[] GetComponentsInChildren<T>() { return new T[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public T GetComponentInParent<T>() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public T[] GetComponents<T>() { return new T[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public T[] GetComponentsInChildren<T>() { return new T[0]; }
 }
 public partial class Canvas {
-  public static void ForceUpdateCanvases() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void ForceUpdateCanvases() { }
   public global::UnityEngine.Camera worldCamera { get; set; }
   public bool pixelPerfect { get; set; }
   public float planeDistance { get; set; }
 }
 public partial class RectTransform {
-  public void GetWorldCorners(global::UnityEngine.Vector3[] fourCornersArray) { }
-  public void SetInsetAndSizeFromParentEdge(global::UnityEngine.RectTransform.Edge edge, float inset, float size) { }
-  public void SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis axis, float size) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void GetWorldCorners(global::UnityEngine.Vector3[] fourCornersArray) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetInsetAndSizeFromParentEdge(global::UnityEngine.RectTransform.Edge edge, float inset, float size) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis axis, float size) { }
 public enum Edge : int {
   Left = 0,
   Right = 1,
@@ -2028,55 +2018,55 @@ public enum Axis : int {
 }
 }
 public partial class Transform {
-  public void LookAt(global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector3 worldUp) { }
-  public void Rotate(float xAngle, float yAngle, float zAngle) { }
-  public void SetPositionAndRotation(global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) { }
-  public void Translate(float x, float y, float z) { }
-  public void Translate(float x, float y, float z, global::UnityEngine.Space relativeTo) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LookAt(global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector3 worldUp) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Rotate(float xAngle, float yAngle, float zAngle) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetPositionAndRotation(global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Translate(float x, float y, float z) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Translate(float x, float y, float z, global::UnityEngine.Space relativeTo) { }
 }
 public static partial class Resources {
-  public static T[] FindObjectsOfTypeAll<T>() { return new T[0]; }
-  public static global::UnityEngine.Object[] FindObjectsOfTypeAll(global::System.Type type) { return new global::UnityEngine.Object[0]; }
-  public static global::UnityEngine.Object GetBuiltinResource(global::System.Type type, string path) { return default; }
-  public static global::UnityEngine.AsyncOperation UnloadUnusedAssets() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static T[] FindObjectsOfTypeAll<T>() { return new T[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Object[] FindObjectsOfTypeAll(global::System.Type type) { return new global::UnityEngine.Object[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.Object GetBuiltinResource(global::System.Type type, string path) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.AsyncOperation UnloadUnusedAssets() { return default; }
 }
 public partial class Event {
   public int clickCount { get; set; }
 }
 public static partial class Debug {
-  public static void LogException(global::System.Exception exception) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void LogException(global::System.Exception exception) { }
 }
 public partial class RenderTexture {
-  public bool Create() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool Create() { return default; }
   public bool autoGenerateMips { get; set; }
   public bool useMipMap { get; set; }
 }
 public partial class Texture2D {
   public static global::UnityEngine.Texture2D whiteTexture { get; set; }
-  public byte[] GetRawTextureData() { return new byte[0]; }
-  public void ReadPixels(global::UnityEngine.Rect source, int destX, int destY, bool recalculateMipMaps) { }
-  public void SetPixels(global::UnityEngine.Color[] colors) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public byte[] GetRawTextureData() { return new byte[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ReadPixels(global::UnityEngine.Rect source, int destX, int destY, bool recalculateMipMaps) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetPixels(global::UnityEngine.Color[] colors) { }
 }
 public static partial class Input {
   public static bool anyKey { get; set; }
-  public static float GetAxis(string axisName) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static float GetAxis(string axisName) { return default; }
 }
 public static partial class GUILayout {
-  public static float HorizontalSlider(float value, float leftValue, float rightValue, global::UnityEngine.GUIStyle slider, global::UnityEngine.GUIStyle thumb, global::UnityEngine.GUILayoutOption[] options) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static float HorizontalSlider(float value, float leftValue, float rightValue, global::UnityEngine.GUIStyle slider, global::UnityEngine.GUIStyle thumb, global::UnityEngine.GUILayoutOption[] options) { return default; }
 }
 public static partial class GUIUtility {
   public static string systemCopyBuffer { get; set; }
 }
 public partial class Camera {
   public int pixelWidth { get; set; }
-  public void Render() { }
-  public global::UnityEngine.Ray ScreenPointToRay(global::UnityEngine.Vector3 pos) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Render() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Ray ScreenPointToRay(global::UnityEngine.Vector3 pos) { return default; }
   public global::UnityEngine.Color backgroundColor { get; set; }
   public bool orthographic { get; set; }
   public global::UnityEngine.RenderTexture targetTexture { get; set; }
   public bool useOcclusionCulling { get; set; }
-  public global::UnityEngine.Vector3 ViewportToWorldPoint(global::UnityEngine.Vector3 position) { return default; }
-  public global::UnityEngine.Vector3 WorldToScreenPoint(global::UnityEngine.Vector3 position) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Vector3 ViewportToWorldPoint(global::UnityEngine.Vector3 position) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Vector3 WorldToScreenPoint(global::UnityEngine.Vector3 position) { return default; }
 }
 public static partial class Application {
   public static string dataPath { get; set; }
@@ -2088,8 +2078,8 @@ public partial class Graphic {
   public int depth { get; set; }
   public global::UnityEngine.Texture mainTexture { get; set; }
   public global::UnityEngine.Material material { get; set; }
-  public global::UnityEngine.Rect GetPixelAdjustedRect() { return default; }
-  public virtual void SetVerticesDirty() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Rect GetPixelAdjustedRect() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SetVerticesDirty() { }
 }
 public partial class Text {
   public global::UnityEngine.TextGenerator cachedTextGenerator { get; set; } = new global::UnityEngine.TextGenerator();
@@ -2117,14 +2107,14 @@ public enum FillMethod : int {
 }
 }
 public partial class SuperController {
-  public global::UnityEngine.Transform AddAtom(global::Atom atom, string useuid = default, bool userInvoked = default, bool forceSelect = default, bool forceFocus = default, bool instantiate = default) { return default; }
-  public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked, bool forceSelect) { return default; }
-  public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked) { return default; }
-  public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid) { return default; }
-  public void Alert(string alertMessage, global::UnityEngine.Events.UnityAction okAlertCallback, global::SuperController.DisplayUIChoice displayUIChoice = default) { }
-  public void Alert(string alertMessage, global::UnityEngine.Events.UnityAction okAlertCallback, global::UnityEngine.Events.UnityAction cancelAlertCallback, global::SuperController.DisplayUIChoice displayUIChoice = default) { }
-  public void DoSaveScreenshot(string saveName, global::SuperController.ScreenShotCallback callback = default) { }
-  public void EndIsolateEditAtom() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Transform AddAtom(global::Atom atom, string useuid = default, bool userInvoked = default, bool forceSelect = default, bool forceFocus = default, bool instantiate = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked, bool forceSelect) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Alert(string alertMessage, global::UnityEngine.Events.UnityAction okAlertCallback, global::SuperController.DisplayUIChoice displayUIChoice = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Alert(string alertMessage, global::UnityEngine.Events.UnityAction okAlertCallback, global::UnityEngine.Events.UnityAction cancelAlertCallback, global::SuperController.DisplayUIChoice displayUIChoice = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DoSaveScreenshot(string saveName, global::SuperController.ScreenShotCallback callback = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void EndIsolateEditAtom() { }
   public global::SuperController.ActiveUI activeUI { get; set; }
   public string currentLoadDir { get; set; }
   public bool disableAllNavigation { get; set; }
@@ -2143,50 +2133,50 @@ public partial class SuperController {
   public bool teleportAllowRotation { get; set; }
   public global::UISideAlign.Side UISide { get; set; }
   public float worldScale { get; set; }
-  public global::UnityEngine.GameObject GetCachedPrefab(string assetBundleName, string assetName) { return default; }
-  public void GetDirectoryPathDialog(global::uFileBrowser.FileBrowserCallback callback, string suggestedFolder = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool fullComputerBrowse = default) { }
-  public string[] GetFilesAtPath(string path, string pattern = default) { return new string[0]; }
-  public bool GetLeftGrab() { return default; }
-  public bool GetLeftGrabRelease() { return default; }
-  public bool GetLeftSelect() { return default; }
-  public void GetMediaPathDialog(global::uFileBrowser.FileBrowserCallback callback, string filter = default, string suggestedFolder = default, bool fullComputerBrowse = default, bool showDirs = default, bool showKeepOpt = default, string fileRemovePrefix = default, bool hideExtenstion = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool browseVarFilesAsDirectories = default, bool showInstallFolderInDirectoryList = default) { }
-  public void GetMediaPathDialog(global::uFileBrowser.FileBrowserFullCallback callback, string filter = default, string suggestedFolder = default, bool fullComputerBrowse = default, bool showDirs = default, bool showKeepOpt = default, string fileRemovePrefix = default, bool hideExtenstion = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool browseVarFilesAsDirectories = default, bool showInstallFolderInDirectoryList = default) { }
-  public bool GetRightGrab() { return default; }
-  public bool GetRightGrabRelease() { return default; }
-  public bool GetRightSelect() { return default; }
-  public global::SimpleJSON.JSONClass GetSaveJSON(global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default) { return default; }
-  public global::FreeControllerV3 GetSelectedController() { return default; }
-  public global::System.Collections.Generic.List<string> GetVisibleAtomUIDs() { return new global::System.Collections.Generic.List<string>(); }
-  public void HideMainHUD() { }
-  public void Load(string saveName = default) { }
-  public void LoadFromJSONEmbed(global::JSONEmbed je, bool loadMerge = default, bool editMode = default) { }
-  public void LoadMerge(string saveName = default) { }
-  public string NormalizeDirectoryPath(string path) { return ""; }
-  public string NormalizeLoadPath(string path) { return ""; }
-  public string NormalizeMediaPath(string path) { return ""; }
-  public string NormalizePath(string path) { return ""; }
-  public void OpenHub() { }
-  public void PauseSimulation(int numFrames, string pauseName) { }
-  public void PushOverrideLoadDirFromFilePath(string path) { }
-  public void Quit() { }
-  public string ReadFileIntoString(string path) { return ""; }
-  public void RegisterPrefab(string assetBundleName, string assetName, global::UnityEngine.GameObject prefab) { }
-  public global::UnityEngine.Rigidbody RigidbodyNameToRigidbody(string rigidbodyName) { return default; }
-  public void Save(string saveName = default, global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default, global::SuperController.ScreenShotCallback callback = default, bool isOverwrite = default) { }
-  public void SaveStringIntoFile(string path, string contents) { }
-  public void SelectController(global::FreeControllerV3 controller, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
-  public void SelectController(string atomName, string controllerName, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.GameObject GetCachedPrefab(string assetBundleName, string assetName) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void GetDirectoryPathDialog(global::uFileBrowser.FileBrowserCallback callback, string suggestedFolder = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool fullComputerBrowse = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string[] GetFilesAtPath(string path, string pattern = default) { return new string[0]; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetLeftGrab() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetLeftGrabRelease() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetLeftSelect() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void GetMediaPathDialog(global::uFileBrowser.FileBrowserCallback callback, string filter = default, string suggestedFolder = default, bool fullComputerBrowse = default, bool showDirs = default, bool showKeepOpt = default, string fileRemovePrefix = default, bool hideExtenstion = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool browseVarFilesAsDirectories = default, bool showInstallFolderInDirectoryList = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void GetMediaPathDialog(global::uFileBrowser.FileBrowserFullCallback callback, string filter = default, string suggestedFolder = default, bool fullComputerBrowse = default, bool showDirs = default, bool showKeepOpt = default, string fileRemovePrefix = default, bool hideExtenstion = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool browseVarFilesAsDirectories = default, bool showInstallFolderInDirectoryList = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetRightGrab() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetRightGrabRelease() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetRightSelect() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::SimpleJSON.JSONClass GetSaveJSON(global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::FreeControllerV3 GetSelectedController() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetVisibleAtomUIDs() { return new global::System.Collections.Generic.List<string>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void HideMainHUD() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Load(string saveName = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadFromJSONEmbed(global::JSONEmbed je, bool loadMerge = default, bool editMode = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadMerge(string saveName = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string NormalizeDirectoryPath(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string NormalizeLoadPath(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string NormalizeMediaPath(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string NormalizePath(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void OpenHub() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PauseSimulation(int numFrames, string pauseName) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PushOverrideLoadDirFromFilePath(string path) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Quit() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string ReadFileIntoString(string path) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterPrefab(string assetBundleName, string assetName, global::UnityEngine.GameObject prefab) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Rigidbody RigidbodyNameToRigidbody(string rigidbodyName) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Save(string saveName = default, global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default, global::SuperController.ScreenShotCallback callback = default, bool isOverwrite = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SaveStringIntoFile(string path, string contents) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SelectController(global::FreeControllerV3 controller, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SelectController(string atomName, string controllerName, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
   public float freeMoveMultiplier { get; set; }
   public float grabNavigationPositionMultiplier { get; set; }
   public float grabNavigationRotationMultiplier { get; set; }
-  public void SetFreezeAnimation(bool freeze) { }
-  public void SetMainMenuTab(string tabName) { }
-  public void SetOnlyShowControllers(global::System.Collections.Generic.HashSet<global::FreeControllerV3> onlyControllers) { }
-  public void ShowMainHUD(bool setAnchors = default, bool forceMonitor = default) { }
-  public void ShowMainHUDAuto() { }
-  public void StartIsolateEditAtom(global::Atom atom) { }
-  public void SyncMonitorRigPosition() { }
-  public void ToggleTargetsOnWithButton() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetFreezeAnimation(bool freeze) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetMainMenuTab(string tabName) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetOnlyShowControllers(global::System.Collections.Generic.HashSet<global::FreeControllerV3> onlyControllers) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ShowMainHUD(bool setAnchors = default, bool forceMonitor = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ShowMainHUDAuto() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void StartIsolateEditAtom(global::Atom atom) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SyncMonitorRigPosition() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ToggleTargetsOnWithButton() { }
   public global::CameraTarget centerCameraTarget;
   public global::MeshVR.HandModelControl commonHandModelControl;
   public bool disableInternalKeyBindings;
@@ -2258,20 +2248,20 @@ public partial class Atom {
   public global::SubScene containingSubScene { get; set; }
   public global::MotionAnimationControl[] motionAnimationControls { get; set; }
   public global::System.Collections.Generic.List<global::MeshVR.PresetManagerControl> presetManagerControls { get; set; }
-  public void LateRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool restoreCore = default, bool isSubSceneRestore = default, bool setMissingToDefault = default, bool isTheSubSceneAtom = default) { }
-  public void LoadAppearancePreset(string saveName = default) { }
-  public void LoadPhysicalPreset(string saveName = default) { }
-  public void LoadPreset(string saveName = default) { }
-  public void PostRestore() { }
-  public void PreRestore() { }
-  public void Remove() { }
-  public void ResetAppearance() { }
-  public void Restore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool restoreCore = default, global::SimpleJSON.JSONArray presetAtoms = default, bool isClear = default, bool isSubSceneRestore = default, bool setMissingToDefault = default, bool isTheSubSceneAtom = default) { }
-  public void RestoreTransform(global::SimpleJSON.JSONClass jc, bool setUnlistedToDefault = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LateRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool restoreCore = default, bool isSubSceneRestore = default, bool setMissingToDefault = default, bool isTheSubSceneAtom = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadAppearancePreset(string saveName = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadPhysicalPreset(string saveName = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadPreset(string saveName = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PostRestore() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PreRestore() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Remove() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ResetAppearance() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Restore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool restoreCore = default, global::SimpleJSON.JSONArray presetAtoms = default, bool isClear = default, bool isSubSceneRestore = default, bool setMissingToDefault = default, bool isTheSubSceneAtom = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RestoreTransform(global::SimpleJSON.JSONClass jc, bool setUnlistedToDefault = default) { }
   public global::Atom parentAtom { get; set; }
-  public void SetLastRestoredData(global::SimpleJSON.JSONClass jc, bool isAppearance = default, bool isPhysical = default) { }
-  public void SetUID(string val) { }
-  public void ToggleOn() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetLastRestoredData(global::SimpleJSON.JSONClass jc, bool isAppearance = default, bool isPhysical = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetUID(string val) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ToggleOn() { }
   public string category;
   public global::UnityEngine.Transform childAtomContainer;
   public global::JSONStorableBool collisionEnabledJSON;
@@ -2280,32 +2270,32 @@ public partial class Atom {
   public global::UnityEngine.Transform reParentObject;
 }
 public partial class JSONStorable {
-  public void DeregisterColor(global::JSONStorableColor param) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DeregisterColor(global::JSONStorableColor param) { }
   public bool isPresetRestore { get; set; }
   public string subScenePrefix { get; set; }
-  public global::System.Collections.Generic.List<string> GetActionNames() { return new global::System.Collections.Generic.List<string>(); }
-  public global::System.Collections.Generic.List<string> GetAllParamAndActionNames() { return new global::System.Collections.Generic.List<string>(); }
-  public global::JSONStorableActionAudioClip GetAudioClipAction(string name) { return default; }
-  public virtual bool GetBoolParamValue(string param) { return default; }
-  public global::JSONStorableColor GetColorJSONParam(string name) { return default; }
-  public global::System.Collections.Generic.List<string> GetColorParamNames() { return new global::System.Collections.Generic.List<string>(); }
-  public virtual global::HSVColor GetColorParamValue(string param) { return default; }
-  public virtual float GetFloatParamValue(string param) { return default; }
-  public global::JSONStorableParam GetParam(string name) { return default; }
-  public global::JSONStorableActionPresetFilePath GetPresetFilePathAction(string name) { return default; }
-  public global::JSONStorableActionStringChooser GetStringChooserAction(string name) { return default; }
-  public virtual global::System.Collections.Generic.List<string> GetStringChooserJSONParamChoices(string param) { return new global::System.Collections.Generic.List<string>(); }
-  public virtual string GetStringParamValue(string param) { return ""; }
-  public virtual string GetUrlParamValue(string param) { return ""; }
-  public global::JSONStorableVector3 GetVector3JSONParam(string name) { return default; }
-  public global::System.Collections.Generic.List<string> GetVector3ParamNames() { return new global::System.Collections.Generic.List<string>(); }
-  public virtual void PostRestore() { }
-  public virtual void PreRestore() { }
-  public void RegisterColor(global::JSONStorableColor param) { }
-  public void RestoreAllFromDefaults() { }
-  public virtual void SetColorParamValue(string param, global::HSVColor value) { }
-  public virtual void SetStringParamValue(string param, string value) { }
-  public virtual void Validate() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetActionNames() { return new global::System.Collections.Generic.List<string>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetAllParamAndActionNames() { return new global::System.Collections.Generic.List<string>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::JSONStorableActionAudioClip GetAudioClipAction(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool GetBoolParamValue(string param) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::JSONStorableColor GetColorJSONParam(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetColorParamNames() { return new global::System.Collections.Generic.List<string>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::HSVColor GetColorParamValue(string param) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual float GetFloatParamValue(string param) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::JSONStorableParam GetParam(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::JSONStorableActionPresetFilePath GetPresetFilePathAction(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::JSONStorableActionStringChooser GetStringChooserAction(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::System.Collections.Generic.List<string> GetStringChooserJSONParamChoices(string param) { return new global::System.Collections.Generic.List<string>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual string GetStringParamValue(string param) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual string GetUrlParamValue(string param) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::JSONStorableVector3 GetVector3JSONParam(string name) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetVector3ParamNames() { return new global::System.Collections.Generic.List<string>(); }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void PostRestore() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void PreRestore() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterColor(global::JSONStorableColor param) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RestoreAllFromDefaults() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SetColorParamValue(string param, global::HSVColor value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SetStringParamValue(string param, string value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void Validate() { }
   public bool needsStore;
 public enum Type : int {
   None = 0,
@@ -2325,8 +2315,8 @@ public enum Type : int {
 }
 public partial class FreeControllerV3 {
   public global::UnityEngine.Rigidbody linkToRB { get; set; }
-  public void SelectLinkToRigidbody(global::UnityEngine.Rigidbody rb, global::FreeControllerV3.SelectLinkState linkState, bool usePhysicalLink = default, bool modifyState = default) { }
-  public virtual void SetLinkToAtom(string atomUID) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SelectLinkToRigidbody(global::UnityEngine.Rigidbody rb, global::FreeControllerV3.SelectLinkState linkState, bool usePhysicalLink = default, bool modifyState = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SetLinkToAtom(string atomUID) { }
   public global::UnityEngine.Mesh deselectedMesh;
   public float deselectedMeshScale;
   public float highlightedScale;
@@ -2346,23 +2336,23 @@ public partial class DAZCharacter {
 public partial class JSONStorableFloat {
   public global::UnityEngine.UI.Slider slider { get; set; }
   public global::UnityEngine.UI.Slider sliderAlt { get; set; }
-  public void RegisterSlider(global::UnityEngine.UI.Slider s, bool isAlt = default) { }
-  public void SetVal(float value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterSlider(global::UnityEngine.UI.Slider s, bool isAlt = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetVal(float value) { }
 }
 public partial class JSONStorableString {
   public global::UIDynamicTextField dynamicText { get; set; }
   public global::UnityEngine.UI.InputField inputField { get; set; }
   public global::UnityEngine.UI.Text text { get; set; }
   public global::UnityEngine.UI.Text textAlt { get; set; }
-  public void RegisterText(global::UnityEngine.UI.Text t, bool isAlt = default) { }
-  public void SetVal(string value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterText(global::UnityEngine.UI.Text t, bool isAlt = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetVal(string value) { }
 }
 public partial class DAZCharacterSelector {
   public global::DAZClothingItem[] clothingItems { get; set; }
   public global::DAZClothingItem[] femaleClothingItems { get; set; }
   public global::DAZClothingItem[] maleClothingItems { get; set; }
-  public global::DAZHairGroup GetHairItem(string itemId) { return default; }
-  public void SetActiveClothingItem(global::DAZClothingItem item, bool active, bool fromRestore = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::DAZHairGroup GetHairItem(string itemId) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetActiveClothingItem(global::DAZClothingItem item, bool active, bool fromRestore = default) { }
   public global::GenerateDAZClothingSelectorUI clothingSelectorFemaleUI;
   public global::GenerateDAZClothingSelectorUI clothingSelectorMaleUI;
   public global::DAZClothingItem femaleClothingCreatorItem;
@@ -2382,19 +2372,19 @@ public partial class DAZCharacterSelector {
 public partial class JSONStorableBool {
   public global::UnityEngine.UI.Toggle toggle { get; set; }
   public global::UnityEngine.UI.Toggle toggleAlt { get; set; }
-  public void RegisterToggle(global::UnityEngine.UI.Toggle t, bool isAlt = default) { }
-  public void SetVal(bool value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterToggle(global::UnityEngine.UI.Toggle t, bool isAlt = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetVal(bool value) { }
   public bool _defaultVal;
 }
 public partial class JSONStorableUrl {
-  public void FileBrowse() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void FileBrowse() { }
   public bool allowBrowseAboveSuggestedPath { get; set; }
   public global::UnityEngine.UI.Button fileBrowseButton { get; set; }
   public string suggestedPath { get; set; }
-  public void RegisterFileBrowseButton(global::UnityEngine.UI.Button b, bool isAlt = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterFileBrowseButton(global::UnityEngine.UI.Button b, bool isAlt = default) { }
   public global::UnityEngine.UI.Button clearButton { get; set; }
   public string suggestedPathGroup { get; set; }
-  public void SetFilePath(string path) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetFilePath(string path) { }
   public bool allowFullComputerBrowse;
   public global::JSONStorableUrl.BeginBrowseWithObjectCallback beginBrowseWithObjectCallback;
   public global::JSONStorableUrl.EndBrowseCallback endBrowseCallback;
@@ -2408,13 +2398,13 @@ public delegate void BeginBrowseWithObjectCallback(global::JSONStorableUrl jsurl
 public delegate void EndBrowseWithObjectCallback(global::JSONStorableUrl jsurl);
 }
 public partial class GenerateDAZMorphsControlUI {
-  public void DefaultMorph() { }
-  public global::DAZMorph GetMorphByUid(string morphUid) { return default; }
-  public void ZeroAll() { }
-  public void ZeroMorph() { }
-  public void ZeroNearZero() { }
-  public void ZeroNearZeroMore() { }
-  public void ZeroPose() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DefaultMorph() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::DAZMorph GetMorphByUid(string morphUid) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroAll() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroMorph() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroNearZero() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroNearZeroMore() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroPose() { }
 }
 public partial class DAZMorph {
   public string formulasString { get; set; }
@@ -2435,7 +2425,7 @@ public partial class JSONStorableAction {
   public global::UnityEngine.UI.Button button { get; set; }
   public global::UnityEngine.UI.Button buttonAlt { get; set; }
   public global::UIDynamicButton dynamicButton { get; set; }
-  public void RegisterButton(global::UIDynamicButton b, bool isAlt = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterButton(global::UIDynamicButton b, bool isAlt = default) { }
   public string name;
   public global::JSONStorable storable;
 }
@@ -2443,38 +2433,38 @@ public partial class JSONStorableStringChooser {
   public global::System.Collections.Generic.List<string> displayChoices { get; set; }
   public global::UIPopup popup { get; set; }
   public global::UIPopup popupAlt { get; set; }
-  public void RegisterPopup(global::UIPopup p, bool isAlt = default) { }
-  public void SetVal(string value) { }
-  public override bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterPopup(global::UIPopup p, bool isAlt = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetVal(string value) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public override bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
 public delegate void PopupOpenCallback();
 }
 public partial class DAZMorphBank {
-  public void Init() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Init() { }
   public global::DAZBones morphBones;
 }
 public abstract partial class JSONStorableParam {
-  public virtual bool NeedsLateRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default) { return default; }
-  public virtual bool NeedsRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default) { return default; }
-  public virtual bool NeedsStore(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default) { return default; }
-  public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool setMissingToDefault = default) { }
-  public virtual void SetDefaultFromCurrent() { }
-  public virtual void SetValToDefault() { }
-  public virtual bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool NeedsLateRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool NeedsRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool NeedsStore(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool setMissingToDefault = default) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SetDefaultFromCurrent() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SetValToDefault() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
   public string altName;
   public global::JSONStorable.Type type;
 }
 namespace SimpleJSON {
 public abstract partial class JSONNode {
   public global::System.Collections.Generic.IEnumerable<global::SimpleJSON.JSONNode> Childs { get; set; }
-  public static global::SimpleJSON.JSONNode Parse(string aJSON) { return default; }
-  public virtual global::SimpleJSON.JSONNode Remove(string aKey) { return default; }
-  public virtual global::SimpleJSON.JSONNode Remove(int aIndex) { return default; }
-  public virtual string ToString(string aPrefix) { return ""; }
-  public virtual void ToString(string aPrefix, global::System.Text.StringBuilder sb) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::SimpleJSON.JSONNode Parse(string aJSON) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::SimpleJSON.JSONNode Remove(string aKey) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::SimpleJSON.JSONNode Remove(int aIndex) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual string ToString(string aPrefix) { return ""; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void ToString(string aPrefix, global::System.Text.StringBuilder sb) { }
 }
 }
 namespace UnityEngine.EventSystems {
 public partial class UIBehaviour {
-  public virtual bool IsActive() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool IsActive() { return default; }
 }
 }

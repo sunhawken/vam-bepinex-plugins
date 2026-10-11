@@ -125,11 +125,18 @@ namespace UnityEngine
 	{
 		public Color color { get; set; }
 		private readonly System.Collections.Generic.Dictionary<string, float> floats = new System.Collections.Generic.Dictionary<string, float>();
+		public Shader shader { get; set; }
+		public int renderQueue { get; set; }
+		private readonly System.Collections.Generic.Dictionary<string, Texture> textures = new System.Collections.Generic.Dictionary<string, Texture>();
+		public System.Collections.Generic.HashSet<string> SimProperties = new System.Collections.Generic.HashSet<string>();   // what the shader declares (the simulator has no shader to ask)
+		public bool HasProperty(string name) { return SimProperties.Contains(name) || floats.ContainsKey(name) || textures.ContainsKey(name); }
+		public void SetTexture(string name, Texture t) { textures[name] = t; }
+		public Texture GetTexture(string name) { Texture t; return textures.TryGetValue(name, out t) ? t : null; }
 		public void SetFloat(string name, float v) { floats[name] = v; }
 		public float GetFloat(string name) { float v; return floats.TryGetValue(name, out v) ? v : 0f; }
 		public Material() { }
-		public Material(Shader shader) { }
-		public Material(Material source) { color = source.color; foreach (var kv in source.floats) floats[kv.Key] = kv.Value; }
+		public Material(Shader shader) { this.shader = shader; }
+		public Material(Material source) { color = source.color; shader = source.shader; renderQueue = source.renderQueue; foreach (var kv in source.floats) floats[kv.Key] = kv.Value; foreach (var kv in source.textures) textures[kv.Key] = kv.Value; foreach (var p in source.SimProperties) SimProperties.Add(p); }
 	}
 
 	public sealed partial class Graphics
@@ -205,5 +212,33 @@ namespace MVR.FileManagement
 		public static System.DateTime SimRefreshTime = new System.DateTime(2026, 1, 1);
 		public static System.Collections.Generic.List<string> GetPackageUids() { return new System.Collections.Generic.List<string>(SimPackageUids); }
 		public static System.DateTime lastPackageRefreshTime { get { return SimRefreshTime; } }
+	}
+}
+
+namespace UnityEngine
+{
+	public sealed partial class Shader : Object
+	{
+		public bool isSupported { get; set; }
+		public Shader() { isSupported = true; }
+	}
+
+	// an asset bundle the simulator cannot open: it hands out whatever the test put in SimContents under the asset name
+	public sealed partial class AssetBundle : Object
+	{
+		public static readonly System.Collections.Generic.Dictionary<string, Object> SimContents = new System.Collections.Generic.Dictionary<string, Object>();
+		public static int SimLoadFromMemoryCalls;
+		public static bool SimFailLoad;
+		public static AssetBundle LoadFromMemory(byte[] binary) { SimLoadFromMemoryCalls++; return SimFailLoad || binary == null || binary.Length == 0 ? null : new AssetBundle(); }
+		public T LoadAsset<T>(string name) where T : Object { Object o; return SimContents.TryGetValue(name, out o) && o is T ? (T)o : null; }
+		public T[] LoadAllAssets<T>() where T : Object { var l = new System.Collections.Generic.List<T>(); foreach (var o in SimContents.Values) if (o is T) l.Add((T)o); return l.ToArray(); }
+		public void Unload(bool unloadAllLoadedObjects) { }
+	}
+
+	public static partial class JsonUtility
+	{
+		private static readonly System.Text.Json.JsonSerializerOptions opts = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+		public static T FromJson<T>(string json) { return System.Text.Json.JsonSerializer.Deserialize<T>(json, opts); }
+		public static string ToJson(object obj) { return System.Text.Json.JsonSerializer.Serialize(obj, obj.GetType(), opts); }
 	}
 }

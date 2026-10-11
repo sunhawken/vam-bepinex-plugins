@@ -368,6 +368,7 @@ namespace UnityEngine
 		public Texture2D(int w, int h) { }
 		public Texture2D(int w, int h, TextureFormat f, bool mip) { }
 		public Color Pixel0 = new Color(1, 1, 1, 1);
+		public static Texture2D blackTexture { get; } = new Texture2D(1, 1);
 		public void SetPixel(int x, int y, Color c) { Pixel0 = c; }
 		public void Apply() { }
 		public void Apply(bool a, bool b) { }

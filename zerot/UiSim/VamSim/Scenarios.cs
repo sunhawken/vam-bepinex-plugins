@@ -1,3 +1,6 @@
+using System.IO;
+using System.Reflection;
+using System.Text;
 using System;
 using System.Linq;
 using UnityEngine;
@@ -234,5 +237,178 @@ public static class Scenarios
 		h.Near(ctl.unhighlightedScale, 0.25f, "original plugin present: standalone restores VaM's values and steps aside");
 		h.Check(frame().Length == 0, "original plugin present: no duplicate lines");
 		h.Check(h.LogHas("steps aside"), "...and says why in the log");
+	}
+
+	public static int FlushCalls;
+	public static bool CountFlush() { FlushCalls++; return true; }
+
+	[Scenario("clothingbackface", "ZeroT.ClothingBackfaceStandalone")]
+	public static void ClothingBackface(Harness h)
+	{
+		const string Src = "Custom/Subsurface/TransparentGlossNMNoCullSeparateAlphaComputeBuff";
+		const string BackName = "Nial/VaM/Clothing Backface Native TankTop";
+		var back = new Shader { name = BackName };
+		var src = new Shader { name = Src };
+		var other = new Shader { name = "Custom/Subsurface/GlossNM" };
+		AssetBundle.SimContents.Clear();
+		AssetBundle.SimContents["assets/nialclothingbackface/nialclothingbackface.shader"] = back;
+		var harm = new HarmonyLib.Harmony("test.backface");
+		harm.Patch(typeof(DAZSkinWrap).GetMethod("FlushBuffers"), new HarmonyLib.HarmonyMethod(typeof(Scenarios).GetMethod("CountFlush", BindingFlags.Public | BindingFlags.Static)));
+
+		Func<Shader, int, bool, Material> mat = (sh, queue, specNull) =>
+		{
+			var m = new Material(sh); m.renderQueue = queue; m.SimProperties.Add("_SpecTex");
+			if (!specNull) m.SetTexture("_SpecTex", new Texture2D(2, 2));
+			return m;
+		};
+		Func<Atom, string, string, Material[], bool, DAZSkinWrap> addCloth = (person, goName, display, mats, active) =>
+		{
+			var go = new GameObject(goName); go.transform.SetParent(person.transform, false);
+			var item = go.AddComponent<DAZClothingItem>(); item.containingAtom = person; item.displayName = display;
+			var wg = new GameObject("wrap"); wg.transform.SetParent(go.transform, false);
+			var wrap = wg.AddComponent<DAZSkinWrap>(); wrap.GPUuseSimpleMaterial = false; wrap.GPUmaterials = mats;
+			go.SetActive(active);
+			return wrap;
+		};
+
+		var f = h.Person("Female1"); var m1 = h.Person("Male1", true);
+		var mA = mat(src, 2450, true); var mB = mat(src, 2460, false); var mC = mat(other, 2000, true); var mD = mat(src, 2470, true);
+		var wrapDress = addCloth(f, "DressGO", "Dress", new[] { mA, mB, mC, mD }, true);
+		wrapDress.materialsEnabled = new[] { true, true, true, false };           // slot 4 is switched off
+		var mS = mat(src, 2500, true);
+		var wrapSimple = addCloth(f, "TopGO", "Top", new Material[0], true); wrapSimple.GPUuseSimpleMaterial = true; wrapSimple.GPUsimpleMaterial = mS;
+		var mHidden = mat(src, 2400, true); addCloth(f, "HiddenGO", "Hidden", new[] { mHidden }, false);
+		var mMale = mat(src, 2300, true); addCloth(m1, "ShirtGO", "Shirt", new[] { mMale }, true);
+		var mNull = mat(src, 2100, true); var wrapLazy = addCloth(f, "LazyGO", "Lazy", null, true);   // materials not built yet: the plugin asks the wrap to build them
+		FlushCalls = 0;
+		Directory.CreateDirectory(BepInEx.Paths.ConfigPath);
+		var savedFile = Path.Combine(BepInEx.Paths.ConfigPath, "ZeroT.ClothingBackface.profiles.txt");
+		if (File.Exists(savedFile)) File.Delete(savedFile);
+
+		// ---- the shader bundle fails to load first: 5 attempts, 1.5 s apart, then it stops
+		AssetBundle.SimFailLoad = true; AssetBundle.SimLoadFromMemoryCalls = 0;
+		h.Start();
+		h.Step(0.3f);
+		h.Check(AssetBundle.SimLoadFromMemoryCalls == 1, "shader load: first attempt at once");
+		h.Step(1.5f); h.Check(AssetBundle.SimLoadFromMemoryCalls == 2, "...second after 1.5 s");
+		h.Step(6.5f); h.Check(AssetBundle.SimLoadFromMemoryCalls == 5, "...five attempts in all (" + AssetBundle.SimLoadFromMemoryCalls + ")");
+		h.Step(5f); h.Check(AssetBundle.SimLoadFromMemoryCalls == 5 && h.LogHas("Failed after 5 attempts"), "...then it gives up and says so");
+		h.Check(mA.shader == src && mS.shader == src, "nothing is touched while the shader is missing");
+		AssetBundle.SimFailLoad = false;
+		var host = f.GetStorableByID("ZeroT.ClothingBackface");
+		h.Check(host != null && m1.GetStorableByID("ZeroT.ClothingBackface") != null, "the controls are on every Person atom (female and male)");
+		host.CallAction("Apply"); h.Step(0.3f);
+		h.Check(mA.shader == back, "Apply starts the shader load over (attempts reset) and it works");
+
+		// ---- what gets patched
+		h.Check(mA.shader == back && mB.shader == back, "materials using VaM's no-cull clothing shader now use the backface shader");
+		h.Check(mS.shader == back, "a wrap on the simple material is patched too");
+		h.Check(mC.shader == other, "a material on any other shader is left alone");
+		h.Check(mD.shader == src, "a material slot switched off in the wrap is left alone");
+		h.Check(mHidden.shader == src, "a clothing item that is not active is left alone");
+		h.Check(mMale.shader == back, "male Person atoms work the same");
+		h.Check(mA.renderQueue == 2450 && mB.renderQueue == 2460 && mS.renderQueue == 2500, "render queues are kept");
+		h.Near(mA.GetFloat("_BackBrightness"), 0.28f, "_BackBrightness starts at the original's default 0.28");
+		h.Check(mA.GetTexture("_SpecTex") == Texture2D.blackTexture, "no specular map -> a black one is put in");
+		h.Check(mB.GetTexture("_SpecTex") != null && mB.GetTexture("_SpecTex") != Texture2D.blackTexture, "a specular map that exists is not replaced");
+		h.Check(FlushCalls >= 3, "the wraps are told to rebuild their buffers (" + FlushCalls + " flushes)");
+
+		// ---- controls and the profile string
+		var tDress = host.GetBoolJSONParam("Dress"); var sDress = host.GetFloatJSONParam("Dress Brightness");
+		h.Check(tDress != null && sDress != null && tDress.val && Math.Abs(sDress.val - 0.28f) < 1e-4f, "per clothing item: a toggle 'Dress' and a slider 'Dress Brightness'");
+		h.Check(host.GetBoolJSONParam("Top") != null && host.GetBoolJSONParam("Hidden") == null, "...for active items only");
+		var prof = host.GetStringJSONParam("ClothingBackface.Profiles").val;
+		string DecodeFirst(string p) { var e = p.Split(';')[0].Split(':'); return Encoding.UTF8.GetString(Convert.FromBase64String(e[0])) + ":" + e[1] + ":" + e[2]; }
+		h.Check(prof.Split(';').Length == 3 && prof.Split(';').Select(x => Encoding.UTF8.GetString(Convert.FromBase64String(x.Split(':')[0]))).OrderBy(x => x).SequenceEqual(new[] { "DressGO", "LazyGO", "TopGO" }), "the original's profile string: base64(key):enabled:brightness x 10000 - one entry per active item (" + string.Join(",", prof.Split(';').Select(x => Encoding.UTF8.GetString(Convert.FromBase64String(x.Split(':')[0])))) + ")");
+		h.Check(prof.Split(';').Any(x => x.EndsWith(":1:2800")), "...with 0.28 saved as 2800");
+
+		// ---- brightness slider, toggle
+		sDress.val = 0.6f;
+		h.Near(mA.GetFloat("_BackBrightness"), 0.6f, "slider: that clothing's materials follow at once");
+		h.Near(mS.GetFloat("_BackBrightness"), 0.28f, "...other clothing is untouched");
+		h.Check(host.GetStringJSONParam("ClothingBackface.Profiles").val.Split(';').Any(x => x.EndsWith(":1:6000")), "...and the profile string says 6000");
+		sDress.val = 7f; h.Near(mA.GetFloat("_BackBrightness"), 1f, "brightness is limited to 0 - 1");
+		sDress.val = 0.6f;
+		tDress.val = false;
+		h.Check(mA.shader == src && mA.renderQueue == 2450 && mA.GetTexture("_SpecTex") == null && mB.shader == src, "toggle off: that item goes back to VaM's shader, queue and the black spec map is removed again");
+		h.Check(mB.GetTexture("_SpecTex") != null && mS.shader == back, "...the specular map that was there stays; other items keep the effect");
+		tDress.val = true;
+		h.Check(mA.shader == back && Math.Abs(mA.GetFloat("_BackBrightness") - 0.6f) < 1e-4f, "toggle on: patched again with the saved brightness");
+
+		// ---- Restore / Apply
+		host.CallAction("Restore");
+		h.Check(mA.shader == src && mS.shader == src && mMale.shader == back, "Restore: this person back to VaM's shaders (the other person keeps its effect)");
+		var mNew = mat(src, 2600, true); addCloth(f, "NewGO", "New", new[] { mNew }, true); h.Step(2f);
+		h.Check(mNew.shader == src, "...and a new item is not patched while in manual restore mode");
+		host.CallAction("Apply"); h.Step(0.3f);
+		h.Check(mA.shader == back && mNew.shader == back, "Apply: the effect is back on everything, new items included");
+
+		// ---- scan: changes are noticed
+		var mLate = mat(src, 2700, true); var wLate = addCloth(f, "LateGO", "Late", new[] { mLate }, true);
+		h.Step(1.2f);
+		h.Check(mLate.shader == back && f.GetStorableByID("ZeroT.ClothingBackface").GetBoolJSONParam("Late") != null, "a clothing item added later is patched within a second and gets its controls");
+		wLate.gameObject.transform.parent.gameObject.SetActive(false); h.Step(1.2f);
+		h.Check(mLate.shader == src && host.GetBoolJSONParam("Late") == null, "an item switched off is restored and its controls go");
+		wLate.gameObject.transform.parent.gameObject.SetActive(true); h.Step(1.2f);
+		h.Check(mLate.shader == back, "...and back on again");
+		var lateMat2 = mat(src, 2710, true); wLate.GPUmaterials = new[] { lateMat2 }; h.Step(1.2f);
+		h.Check(lateMat2.shader == back && mLate.shader == src, "a wrap that swaps its materials is followed");
+		UnityEngine.Object.Destroy(wLate.gameObject.transform.parent.gameObject); h.Step(1.2f);
+		h.Check(host.GetBoolJSONParam("Late") == null, "an item that disappears loses its controls");
+
+		// ---- duplicate names
+		var d1 = mat(src, 2800, true); var d2 = mat(src, 2801, true);
+		addCloth(f, "Twin", "Twin", new[] { d1 }, true); addCloth(f, "Twin", "Twin", new[] { d2 }, true); h.Step(1.2f);
+		var t1 = host.GetBoolJSONParam("Twin (1)"); var t2 = host.GetBoolJSONParam("Twin (2)");
+		h.Check(t1 != null && t2 != null, "two items with the same name: numbered 'Twin (1)', 'Twin (2)'");
+		host.GetFloatJSONParam("Twin (2) Brightness").val = 0.9f;
+		h.Check(Math.Abs(d2.GetFloat("_BackBrightness") - 0.9f) < 1e-4f && Math.Abs(d1.GetFloat("_BackBrightness") - 0.28f) < 1e-4f, "...and each has its own profile");
+
+		// ---- profiles: stored per person, base-name fallback, old JSON form
+		h.Step(1.5f);
+		var file = Path.Combine(BepInEx.Paths.ConfigPath, "ZeroT.ClothingBackface.profiles.txt");
+		h.Check(File.Exists(file) && File.ReadAllText(file).Contains("Female1\t"), "profiles are written to ZeroT.ClothingBackface.profiles.txt (one line per person)");
+		string B64(string s) { return Convert.ToBase64String(Encoding.UTF8.GetBytes(s)); }
+		host.GetStringJSONParam("ClothingBackface.Profiles").val = B64("Dress") + ":1:5000;" + B64("TopGO") + ":0:2000";   // 'Dress' is the display name, not the path key
+		h.Step(1.2f);
+		h.Near(mA.GetFloat("_BackBrightness"), 0.5f, "an older profile saved under the item's plain name is still found (base-name fallback)");
+		h.Check(mS.shader == src, "a profile with enabled=0 keeps that item off");
+		host.GetStringJSONParam("ClothingBackface.Profiles").val = "{\"profiles\":[{\"id\":\"DressGO\",\"enabled\":false,\"brightness\":0.9},{\"id\":\"TopGO\",\"enabled\":true,\"brightness\":0.7}]}";
+		h.Step(1.2f);
+		h.Check(mA.shader == src && mS.shader == back && Math.Abs(mS.GetFloat("_BackBrightness") - 0.7f) < 1e-4f, "the old JSON profile form is read too");
+		host.GetStringJSONParam("ClothingBackface.Profiles").val = "";
+		h.Step(1.2f);
+		h.Check(mA.shader == back && Math.Abs(mA.GetFloat("_BackBrightness") - 0.28f) < 1e-4f, "empty profiles -> every item back to the defaults");
+
+		// ---- defaults in the settings
+		h.Set("Defaults", "Brightness", "0.5");
+		var mDef = mat(src, 2900, true); addCloth(f, "DefGO", "Def", new[] { mDef }, true); h.Step(1.2f);
+		h.Near(mDef.GetFloat("_BackBrightness"), 0.5f, "Defaults.Brightness applies to items that have no profile yet");
+		h.Set("Defaults", "Brightness", "0.28");
+
+		// ---- settings
+		h.Set("General", "IncludeMales", "false"); h.Step(1.5f);
+		h.Check(mMale.shader == src && m1.GetStorableByID("ZeroT.ClothingBackface") == null && mA.shader == back, "IncludeMales=false: male persons are restored and left alone");
+		h.Set("General", "IncludeMales", "true"); h.Step(1.5f);
+		h.Check(mMale.shader == back, "...and back when switched on");
+		h.Set("General", "Active", "false"); h.Step(1.5f);
+		h.Check(mA.shader == src && mS.shader == src && mMale.shader == src && mDef.shader == src && f.GetStorableByID("ZeroT.ClothingBackface") == null, "Active=false: every material restored and the controls removed");
+		h.Set("General", "Active", "true"); h.Step(2f);
+		h.Check(mA.shader == back && mMale.shader == back && f.GetStorableByID("ZeroT.ClothingBackface") != null, "Active=true: everything comes back");
+
+		// ---- Nial's own plugin on a person: this one steps aside there
+		var asm = h.LoadTarget("ClothingBackfaceScripts");
+		var ot = asm.GetType("ClothingBackface", true);
+		m1.gameObject.AddComponent(ot);
+		h.Step(3.5f);
+		h.Check(mMale.shader == src && m1.GetStorableByID("ZeroT.ClothingBackface") == null && h.LogHas("steps aside"), "Nial's plugin on a person: this one restores it and steps aside there");
+		h.Check(mA.shader == back, "...while the other person keeps the effect");
+
+		// ---- scene load: new atoms, the saved profiles come back
+		h.Load(() => { f = h.Person("Female1"); });
+		var mL = mat(src, 3000, true); addCloth(f, "DressGO", "Dress", new[] { mL }, true);
+		h.Step(3f);
+		h.Check(mL.shader == back, "after a scene load the new person is patched");
+		h.Check(f.GetStorableByID("ZeroT.ClothingBackface") != null, "...with its controls");
 	}
 }
