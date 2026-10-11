@@ -106,6 +106,12 @@ internal static class Program
 			if (args[i] == "--set") { string kv = args[++i]; int eq = kv.IndexOf('='); overrides[kv.Substring(0, eq)] = kv.Substring(eq + 1); }
 			else rest.Add(args[i]);
 		}
+		if (rest[0] == "--scene")
+		{
+			int vi = rest.IndexOf("--vam");
+			string vamDir = vi >= 0 ? rest[vi + 1] : (Environment.GetEnvironmentVariable("VAM_DIR") ?? "T:/New folder");
+			return SceneSim.Run(Path.GetFullPath(rest[1]), vamDir);
+		}
 		int failed = 0;
 		if (rest[0] == "--all")
 		{

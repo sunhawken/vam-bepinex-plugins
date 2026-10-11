@@ -494,6 +494,8 @@ def main(argv):
         return 0 if cmd_cslcheck(a[0], a[1]) else 1
     elif c == 'simall':
         return 0 if cmd_simall() else 1
+    elif c == 'scene':
+        return run([VAMSIM, '--scene', a[0]] + a[1:], None, False).returncode
     elif c == 'scenelint':
         return 0 if cmd_scenelint(a[0]) else 1
     elif c == 'sheet':
