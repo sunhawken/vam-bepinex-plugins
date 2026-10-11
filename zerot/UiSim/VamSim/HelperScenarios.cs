@@ -1,3 +1,4 @@
+using System.IO;
 using System;
 using System.Collections;
 using System.Linq;
@@ -192,6 +193,11 @@ public static class HelperScenarios
 		h.Check(hf != null && hf.Prefixes.Count == 1, "HeelAdjustTool.UpdateExistingHAFiles carries the throttle");
 	}
 
+	public static int FindCalls;
+	public static readonly System.Collections.Generic.List<string> Writes = new System.Collections.Generic.List<string>();
+	public static bool CountFind() { FindCalls++; return false; }
+	public static bool CountWrite(string subPath) { Writes.Add(subPath); return false; }
+
 	[Scenario("uxplushelper", "ZeroT.UXPlusHelper")]
 	public static void UXPlus(Harness h)
 	{
@@ -213,12 +219,63 @@ public static class HelperScenarios
 		h.Check(h.Sc.allControllersCalls == 3, "baseline: the controller list is rebuilt every frame (3 calls)");
 		h.Check(f1.freeControllers[3].hidden == false && f1.freeControllers[4].hidden == true, "baseline result: highlighted target visible, the rest hidden");
 
+
+
+		// ---- Preview Camera Helper: baseline bug, then the fix
+		var camState = T(asm, "everlaster.UX.PreviewCamHelper.AtomCameraState");
+		Func<Atom> camPerson = () =>
+		{
+			var a = new GameObject("CamPerson").AddComponent<Atom>(); a.type = "Person"; a.uid = a.name = "CamPerson"; a.containingAtom = a;
+			var eye = new GameObject("EyelidControl").AddComponent<JSONStorable>(); eye.RegisterBool(new JSONStorableBool("blinkEnabled", true)); a.storables["EyelidControl"] = eye;
+			var ae = new GameObject("AutoExpressions").AddComponent<JSONStorable>(); ae.RegisterBool(new JSONStorableBool("enabled", true)); a.storables["AutoExpressions"] = ae;
+			return a;
+		};
+		Func<Atom, bool> blink = a => a.GetStorableByID("EyelidControl").GetBoolJSONParam("blinkEnabled").val;
+		var ca = camPerson();
+		var st1 = Activator.CreateInstance(camState, new object[] { ca });
+		camState.GetMethod("Enable").Invoke(st1, new object[] { true, true });
+		camState.GetMethod("Enable").Invoke(st1, new object[] { true, true });     // preview + hi-res camera both switch on
+		camState.GetMethod("Disable").Invoke(st1, null);
+		bool baseBlinkStuck = !blink(ca);
+		var cb = camPerson();
+		var st2 = Activator.CreateInstance(camState, new object[] { cb });
+		camState.GetMethod("Disable").Invoke(st2, null);                           // a disable nobody paused
+		bool baseForced = !blink(cb);
+		var camHelper = T(asm, "everlaster.UX.PreviewCamHelper.PreviewCamHelper");
+		var camMod = Activator.CreateInstance(camHelper, true);
+		var barePerson = new GameObject("Bare").AddComponent<Atom>(); barePerson.type = "Person"; barePerson.uid = "Bare";
+		bool baseThrew = false;
+		try { camHelper.GetMethod("OnAtomAdded", All).Invoke(camMod, new object[] { barePerson }); } catch (Exception) { baseThrew = true; }
+		// ---- Download latest on startup, autosave: baseline numbers
+		var hub = new MVR.Hub.HubDownloader(); MVR.Hub.HubDownloader.singleton = hub;
+		var harm = new HarmonyLib.Harmony("test.uxplus");
+		harm.Patch(typeof(MVR.Hub.HubDownloader).GetMethod("FindPackage"), new HarmonyLib.HarmonyMethod(typeof(HelperScenarios).GetMethod("CountFind", BindingFlags.Public | BindingFlags.Static)));
+		harm.Patch(T(asm, "everlaster.FileUtils").GetMethod("WriteDataJSON"), new HarmonyLib.HarmonyMethod(typeof(HelperScenarios).GetMethod("CountWrite", BindingFlags.Public | BindingFlags.Static)));
+		FindCalls = 0; Writes.Clear();
+		var pluginT = T(asm, "everlaster.UX.AlternatePluginsList.Plugin");
+		var urlPaths = T(asm, "UXPlus.AlternatePluginsList.UrlPaths");
+		Func<string, object> mkPlugin = url =>
+		{
+			var paths = urlPaths.GetMethod("Parse").Invoke(null, new object[] { url, false });
+			var pl = Activator.CreateInstance(pluginT, new object[] { paths });
+			pluginT.GetMethod("SetAsFavorite").Invoke(pl, new object[] { true, "SESSION" });
+			return pl;
+		};
+		var plug = mkPlugin("Someone.Thing.4:/Custom/Scripts/Someone/Thing.cs");
+		var dl = pluginT.GetMethod("DownloadLatest");
+		var alt = T(asm, "everlaster.UX.AlternatePluginsList.AlternatePluginsList");
+		var altMod = Activator.CreateInstance(alt, true);
+		var uxmod = T(asm, "everlaster.UX.UXModule");
+		Field(uxmod, "useDataFile").SetValue(altMod, true); Field(uxmod, "initialized").SetValue(altMod, true); Field(uxmod, "_dataFile").SetValue(altMod, "AlternatePluginsList.json");
+		var dict = (System.Collections.IDictionary)alt.GetField("pluginsDict").GetValue(altMod);
+
+
 		// reset counters/state, start the helper
 		foreach (var a in h.Sc.atoms) foreach (var c in a.freeControllers) { c.hiddenWrites = 0; c.hidden = false; c.hiddenWrites = 0; }
 		h.Sc.allControllersCalls = 0;
 		h.Start();
 		h.Step(3f);
-		h.Check(h.LogHas("Show Target On Hover patched"), "helper reports the patch was applied");
+		h.Check(h.LogHas("UXPlus patched"), "helper reports the patches were applied");
 		var info = HarmonyLib.Harmony.GetPatchInfo(onUpdate);
 		h.Check(info != null && info.Prefixes.Count == 1, "ShowTargetOnHover.OnUpdate carries the optimisation");
 		for (int i = 0; i < 3; i++) onUpdate.Invoke(mod, null);
@@ -248,5 +305,60 @@ public static class HelperScenarios
 		bool threw = false;
 		try { onUpdate.Invoke(mod, null); onUpdate.Invoke(mod, null); } catch (Exception) { threw = true; }
 		h.Check(!threw, "a removed person does not break the update");
+		// ---- the helper is already running (started above); exercise it
+		Directory.CreateDirectory(BepInEx.Paths.ConfigPath);
+		var checksFile = Path.Combine(BepInEx.Paths.ConfigPath, "ZeroT.UXPlusHelper.hubchecks.txt");
+		var hooks2 = h.Asm.GetType("ZeroT.UXPlusHelper.Hooks", true);
+
+		// camera fix
+		var cc = camPerson();
+		var st3 = Activator.CreateInstance(camState, new object[] { cc });
+		camState.GetMethod("Enable").Invoke(st3, new object[] { true, true });
+		camState.GetMethod("Enable").Invoke(st3, new object[] { true, true });
+		camState.GetMethod("Disable").Invoke(st3, null);
+		var cd = camPerson();
+		var st4 = Activator.CreateInstance(camState, new object[] { cd });
+		camState.GetMethod("Disable").Invoke(st4, null);
+		h.Check(baseBlinkStuck, "baseline: after two camera enables, blink stays OFF after the screenshot (UXPlus bug)");
+		h.Check(baseForced, "baseline: a disable nobody paused forces blink OFF");
+		h.Check(blink(cc), "fixed: blink restored to its real value after two enables + disable");
+		h.Check(blink(cd), "fixed: a disable without a pause leaves blink alone");
+		h.Check(cc.GetStorableByID("AutoExpressions").GetBoolJSONParam("enabled").val, "fixed: auto expressions restored too");
+		// contained handler errors
+		bool threw2 = false;
+		try { camHelper.GetMethod("OnAtomAdded", All).Invoke(camMod, new object[] { barePerson }); } catch (Exception) { threw2 = true; }
+		h.Check(baseThrew && !threw2, "OnAtomAdded: baseline throws on a person with missing storables, helper contains it");
+		h.Check(h.LogHas("error contained (logged once)"), "...and says so once in the log");
+
+		// hub check throttle: startup check once, then skipped; a favorite click always goes through
+		if (File.Exists(checksFile)) File.Delete(checksFile);
+		hooks2.GetMethod("InitPrefix").Invoke(null, null);
+		dl.Invoke(plug, null); dl.Invoke(plug, null);
+		var other = mkPlugin("Else.Where.2:/Custom/Scripts/Else/Where.cs");
+		dl.Invoke(other, null);
+		hooks2.GetMethod("InitPostfix").Invoke(null, null);
+		dl.Invoke(plug, null);
+		h.Check(FindCalls == 3, "hub: startup asks once per plugin (2 plugins), repeat skipped, a favorite click still asks (got " + FindCalls + " calls)");
+		h.Check(File.Exists(checksFile) && File.ReadAllText(checksFile).Contains("Someone.Thing.latest"), "hub: last-check times are remembered between runs");
+		FindCalls = 0;
+		hooks2.GetMethod("InitPrefix").Invoke(null, null);
+		dl.Invoke(plug, null);
+		hooks2.GetMethod("InitPostfix").Invoke(null, null);
+		h.Check(FindCalls == 0, "hub: next startup within the window asks nobody");
+
+		// autosave: first look only remembers; a change is written on the next look; no change = no write
+		hooks2.GetMethod("Track").Invoke(null, new object[] { altMod });
+		var tick = hooks2.GetMethod("AutosaveTick");
+		Writes.Clear();
+		tick.Invoke(null, null);
+		h.Check(Writes.Count == 0, "autosave: nothing written for data that was just loaded");
+		dict["Someone.Thing.latest:/Custom/Scripts/Someone/Thing.cs"] = plug;   // a favorite added during the session
+		tick.Invoke(null, null);
+		h.Check(Writes.Count == 1 && Writes[0] == "AlternatePluginsList.json", "autosave: a new favorite is written to AlternatePluginsList.json without waiting for exit (" + Writes.Count + " writes)");
+		tick.Invoke(null, null); tick.Invoke(null, null);
+		h.Check(Writes.Count == 1, "autosave: no further writes while nothing changes");
+		pluginT.GetMethod("SetAsFavorite").Invoke(plug, new object[] { false, "SESSION" });
+		tick.Invoke(null, null);
+		h.Check(Writes.Count == 2, "autosave: un-favoriting is saved too");
 	}
 }
