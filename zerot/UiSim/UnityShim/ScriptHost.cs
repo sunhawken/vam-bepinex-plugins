@@ -105,3 +105,44 @@ public partial class DAZCharacterSelector
 		return null;
 	}
 }
+
+namespace UnityEngine
+{
+	// geometry the simulator can look at: what a plugin assigns to a mesh and what it asks the renderer to draw
+	public sealed partial class Mesh : Object
+	{
+		private Vector3[] _vertices = new Vector3[0];
+		public int[] indices = new int[0];
+		public MeshTopology topology = MeshTopology.Triangles;
+		public Vector3[] vertices { get { return _vertices; } set { _vertices = value ?? new Vector3[0]; } }
+		public void SetIndices(int[] idx, MeshTopology t, int submesh) { indices = idx ?? new int[0]; topology = t; }
+		public void Clear() { _vertices = new Vector3[0]; indices = new int[0]; }
+		public void RecalculateBounds() { }
+		public Mesh() { }
+	}
+
+	public partial class Material : Object
+	{
+		public Color color { get; set; }
+		private readonly System.Collections.Generic.Dictionary<string, float> floats = new System.Collections.Generic.Dictionary<string, float>();
+		public void SetFloat(string name, float v) { floats[name] = v; }
+		public float GetFloat(string name) { float v; return floats.TryGetValue(name, out v) ? v : 0f; }
+		public Material() { }
+		public Material(Shader shader) { }
+		public Material(Material source) { color = source.color; foreach (var kv in source.floats) floats[kv.Key] = kv.Value; }
+	}
+
+	public sealed partial class Graphics
+	{
+		public sealed class DrawCall { public Mesh mesh; public Material material; public int layer; public int vertexCount; public int indexCount; public Color color; public float alpha; }
+		public static readonly System.Collections.Generic.List<DrawCall> DrawLog = new System.Collections.Generic.List<DrawCall>();
+		public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer)
+		{
+			DrawLog.Add(new DrawCall { mesh = mesh, material = material, layer = layer, vertexCount = mesh.vertices.Length, indexCount = mesh.indices.Length, color = material == null ? default(Color) : material.color, alpha = material == null ? 0f : material.GetFloat("_Alpha") });
+		}
+		public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties, bool castShadows, bool receiveShadows)
+		{
+			DrawMesh(mesh, matrix, material, layer);
+		}
+	}
+}

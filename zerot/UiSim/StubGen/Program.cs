@@ -245,7 +245,7 @@ internal static class Program
 			if (hand != null && hand.Contains(f.Name)) continue;
 			sb.AppendLine("  public " + (f.IsStatic ? "static " : "") + (f.IsLiteral ? "" : "") + Name(f.FieldType) + " " + f.Name + (!f.IsStatic && IsPlainUnityClass(f.FieldType) ? " = new " + Name(f.FieldType) + "();" : ";"));
 		}
-		if (have == null && kind == "class" && !(d.IsAbstract && d.IsSealed) && !n.methods.Any(x => x.IsConstructor && !x.IsStatic && x.Parameters.Count == 0)) sb.AppendLine("  public " + SimpleName(d) + "() {}");
+		if (have == null && !(hand != null && hand.Contains(".ctor")) && kind == "class" && !(d.IsAbstract && d.IsSealed) && !n.methods.Any(x => x.IsConstructor && !x.IsStatic && x.Parameters.Count == 0)) sb.AppendLine("  public " + SimpleName(d) + "() {}");
 		foreach (var nt in d.NestedTypes)
 			if (needs.TryGetValue(nt.FullName, out var nn) && !nn.existsInShim) Emit(sb, nn);
 		sb.AppendLine("}");
@@ -259,6 +259,9 @@ internal static class Program
 		{ "MVRScript", new HashSet<string> { "Init", "InitUI", "ForceAwake", "CreateSlider", "CreateToggle", "CreateButton", "CreateTextField", "CreatePopup", "CreateScrollablePopup", "CreateFilterablePopup", "CreateSpacer",
 			"GetContainingAtom", "RemoveSlider", "RemoveToggle", "RemoveButton", "RemoveTextField", "RemovePopup", "RemoveColorPicker", "RemoveSpacer", "enabledJSON", "pluginLabelJSON", "manager" } },
 		{ "DAZCharacterSelector", new HashSet<string> { "GetClothingItem" } },
+		{ "UnityEngine.Mesh", new HashSet<string> { ".ctor", "get_vertices", "set_vertices", "SetIndices", "Clear", "RecalculateBounds" } },
+		{ "UnityEngine.Material", new HashSet<string> { ".ctor", "get_color", "set_color", "SetFloat", "GetFloat" } },
+		{ "UnityEngine.Graphics", new HashSet<string> { "DrawMesh" } },
 	};
 
 	// reference-typed members the real engine always fills (RectOffset padding, UnityEvents...) start as live objects, not null

@@ -1374,6 +1374,7 @@ public sealed partial class CapsuleCollider : global::UnityEngine.Collider {
   public CapsuleCollider() {}
 }
 public sealed partial class AssetBundle : global::UnityEngine.Object {
+  public T[] LoadAllAssets<T>() { return new T[0]; }
   public global::UnityEngine.Object[] LoadAllAssets() { return new global::UnityEngine.Object[0]; }
   public T LoadAsset<T>(string name) { return default; }
   public static global::UnityEngine.AssetBundle LoadFromMemory(byte[] binary) { return default; }
@@ -1387,25 +1388,20 @@ public sealed partial class Shader : global::UnityEngine.Object {
   public Shader() {}
 }
 public partial class Material : global::UnityEngine.Object {
-  public Material(global::UnityEngine.Shader shader) {}
-  public Material(global::UnityEngine.Material source) {}
   public void CopyPropertiesFromMaterial(global::UnityEngine.Material mat) { }
   public void DisableKeyword(string keyword) { }
   public void EnableKeyword(string keyword) { }
   public int renderQueue { get; set; }
   public global::UnityEngine.Shader shader { get; set; }
   public global::UnityEngine.Color GetColor(string name) { return default; }
-  public float GetFloat(string name) { return default; }
   public global::UnityEngine.Texture GetTexture(string name) { return default; }
   public global::UnityEngine.Vector2 GetTextureOffset(string name) { return default; }
   public global::UnityEngine.Vector2 GetTextureScale(string name) { return default; }
   public global::UnityEngine.Vector4 GetVector(string name) { return default; }
   public bool HasProperty(string name) { return default; }
   public bool IsKeywordEnabled(string keyword) { return default; }
-  public global::UnityEngine.Color color { get; set; }
   public void SetBuffer(string name, global::UnityEngine.ComputeBuffer value) { }
   public void SetColor(string name, global::UnityEngine.Color value) { }
-  public void SetFloat(string name, float value) { }
   public void SetInt(string name, int value) { }
   public void SetOverrideTag(string tag, string val) { }
   public bool SetPass(int pass) { return default; }
@@ -1413,7 +1409,6 @@ public partial class Material : global::UnityEngine.Object {
   public void SetTextureOffset(string name, global::UnityEngine.Vector2 value) { }
   public void SetTextureScale(string name, global::UnityEngine.Vector2 value) { }
   public void SetVector(string name, global::UnityEngine.Vector4 value) { }
-  public Material() {}
 }
 public partial struct Color32 {
   public Color32(byte r, byte g, byte b, byte a) {}
@@ -1430,9 +1425,7 @@ public sealed partial class QualitySettings : global::UnityEngine.Object {
 public sealed partial class Mesh : global::UnityEngine.Object {
   public global::UnityEngine.Bounds bounds { get; set; }
   public int subMeshCount { get; set; }
-  public global::UnityEngine.Vector3[] vertices { get; set; }
   public int[] GetTriangles(int submesh) { return new int[0]; }
-  public Mesh() {}
 }
 public sealed partial class ComputeBuffer {
   public ComputeBuffer(int count, int stride) {}
@@ -1589,14 +1582,19 @@ public sealed partial class Projector : global::UnityEngine.Behaviour {
 public sealed partial class Graphics {
   public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat) { }
   public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest) { }
-  public static void DrawMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Matrix4x4 matrix, global::UnityEngine.Material material, int layer) { }
-  public static void DrawMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Matrix4x4 matrix, global::UnityEngine.Material material, int layer, global::UnityEngine.Camera camera, int submeshIndex, global::UnityEngine.MaterialPropertyBlock properties, bool castShadows, bool receiveShadows) { }
   public Graphics() {}
 }
 public sealed partial class ColorUtility {
   public static string ToHtmlStringRGB(global::UnityEngine.Color color) { return ""; }
   public static bool TryParseHtmlString(string htmlString, out global::UnityEngine.Color color) { color = default; return default; }
   public ColorUtility() {}
+}
+public enum MeshTopology : int {
+  Triangles = 0,
+  Quads = 2,
+  Lines = 3,
+  LineStrip = 4,
+  Points = 5,
 }
 public sealed partial class ComputeShader : global::UnityEngine.Object {
   public void Dispatch(int kernelIndex, int threadGroupsX, int threadGroupsY, int threadGroupsZ) { }
@@ -2317,6 +2315,12 @@ public enum Type : int {
 public partial class FreeControllerV3 {
   public global::UnityEngine.Rigidbody linkToRB { get; set; }
   public virtual void SetLinkToAtom(string atomUID) { }
+  public global::UnityEngine.Mesh deselectedMesh;
+  public float deselectedMeshScale;
+  public float highlightedScale;
+  public global::UnityEngine.Material linkLineMaterial;
+  public float selectedScale;
+  public float unhighlightedScale;
 }
 public partial class DAZCharacter {
   public global::DAZSkinV2 skin { get; set; }

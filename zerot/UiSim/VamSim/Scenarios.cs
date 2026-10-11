@@ -139,4 +139,100 @@ public static class Scenarios
 		h.Step(2f);
 		h.Check(m7.morphValue == 0f, "locked morphs revert a change (" + m7.morphValue + ")");
 	}
+
+	[Scenario("controllersappearance", "ZeroT.ControllersAppearanceStandalone")]
+	public static void ControllersAppearance(Harness h)
+	{
+		var f = h.Person("Female1"); var m = h.Person("Male1", true);
+		var e = new GameObject("Empty1").AddComponent<Atom>(); e.type = "Empty"; e.uid = e.name = "Empty1"; e.containingAtom = e;
+		var ec = new GameObject("control").AddComponent<FreeControllerV3>(); ec.name = "control"; ec.containingAtom = e; ec.transform.SetParent(e.transform, false);
+		var erb = new GameObject("rb").AddComponent<Rigidbody>(); erb.transform.SetParent(e.transform, false); ec.followWhenOffRB = erb;
+		e.freeControllers = new[] { ec }; e.mainController = ec; h.Sc.AddAtom(e);
+		var lineMat = new Material((Shader)null); lineMat.SetFloat("_Alpha", 1f);
+		foreach (var a in h.Sc.atoms)
+		{
+			a.mainController.linkLineMaterial = lineMat;
+			foreach (var c in a.freeControllers)
+			{
+				c.deselectedMeshScale = a.type == "Empty" ? 0.02f : 0.02f; c.unhighlightedScale = 0.25f; c.highlightedScale = 0.25f; c.selectedScale = 1f;
+				if (c.followWhenOffRB != null) c.transform.position = c.followWhenOffRB.transform.position + new Vector3(0.2f, 0f, 0f);   // controller away from its body part: a line to draw
+			}
+		}
+		Func<Atom, int> lines = a => a.freeControllers.Count(c => c.followWhenOffRB != null);
+		int nF = lines(f), nM = lines(m), nE = lines(e);
+
+		h.Start();
+		h.Step(1f);
+		var ctl = f.freeControllers.First(c => c.name == "headControl");
+		h.Near(ctl.deselectedMeshScale, 0.01f, "icon scale: 0.02 x 0.5");
+		h.Near(ctl.unhighlightedScale, 0.15f, "cube scale: 0.25 x 0.6");
+		h.Near(ctl.highlightedScale, 0.15f, "highlighted scale follows");
+		h.Near(ctl.selectedScale, 0.5f, "selected scale 0.5");
+		h.Near(m.freeControllers.First(c => c.name == "headControl").unhighlightedScale, 0.15f, "male person scaled too");
+		h.Near(ec.deselectedMeshScale, 0.01f, "non-person atom scaled too");
+
+		// lines: one batched draw per colour, not one per line
+		Func<Graphics.DrawCall[]> frame = () => { Graphics.DrawLog.Clear(); h.Step(0.02f); return Graphics.DrawLog.ToArray(); };
+		var draws = frame();
+		h.Check(draws.Length == 3, "3 draw calls per frame for " + (nF + nM + nE) + " lines (the original makes one per line) - got " + draws.Length);
+		Func<Graphics.DrawCall[], Color, Graphics.DrawCall> byColor = (ds, col) => ds.FirstOrDefault(d => Math.Abs(d.color.r - col.r) < 0.01f && Math.Abs(d.color.g - col.g) < 0.01f && Math.Abs(d.color.b - col.b) < 0.01f);
+		var pink = byColor(draws, new Color(1f, 0.451f, 0.761f)); var blue = byColor(draws, new Color(0.251f, 0.502f, 1f)); var other = byColor(draws, new Color(0.4f, 0.702f, 0.851f));
+		h.Check(pink != null && pink.indexCount == 2 * nF, "female controllers: pink lines (" + nF + " lines)");
+		h.Check(blue != null && blue.indexCount == 2 * nM, "male controllers: blue lines (" + nM + " lines, includes the male parts)");
+		h.Check(other != null && other.indexCount == 2 * nE, "other atoms: the original light blue (" + nE + " line)");
+		h.Check(draws.All(d => d.layer == 8 && Math.Abs(d.alpha - 0.7f) < 1e-3f), "drawn on layer 8 with alpha 0.7 like the original");
+		h.Check(pink != null && blue != null && pink.material != blue.material && pink.material != lineMat, "each colour has its own copy of VaM's line material");
+
+		// a controller that is hidden gets no line
+		f.freeControllers.First(c => c.followWhenOffRB != null && c.name != "headControl").hidden = true;
+		h.Step(0.6f);
+		draws = frame(); pink = byColor(draws, new Color(1f, 0.451f, 0.761f));
+		h.Check(pink != null && pink.indexCount == 2 * (nF - 1), "a hidden controller loses its line");
+		f.freeControllers.First(c => c.hidden).hidden = false;
+		h.Step(0.6f);
+
+		// settings
+		h.Set("Lines", "FemaleColor", "#00FF00"); h.Step(0.1f);
+		draws = frame();
+		h.Check(byColor(draws, new Color(0f, 1f, 0f)) != null && byColor(draws, new Color(1f, 0.451f, 0.761f)) == null, "FemaleColor setting changes the pink live");
+		h.Set("Lines", "FemaleColor", "#FF73C2");
+		h.Set("Lines", "ColorByGender", "false"); h.Step(0.1f);
+		draws = frame();
+		h.Check(draws.Length == 1 && draws[0].indexCount == 2 * (nF + nM + nE), "ColorByGender off: every line in OtherColor in one batch");
+		h.Set("Lines", "ColorByGender", "true");
+		h.Set("Lines", "Alpha", "0"); h.Step(0.1f);
+		h.Check(frame().Length == 0, "Alpha 0 skips drawing");
+		h.Set("Lines", "Alpha", "0.7");
+		h.Set("Scale", "IconScale", "1"); h.Step(0.6f);
+		h.Near(ctl.deselectedMeshScale, 0.02f, "IconScale setting re-applies to existing controllers");
+		h.Set("Scale", "IconScale", "0.5"); h.Step(0.6f);
+
+		// a person added later gets everything
+		var late = h.Person("Female2");
+		foreach (var c in late.freeControllers) if (c.followWhenOffRB != null) c.transform.position = c.followWhenOffRB.transform.position + new Vector3(0.2f, 0f, 0f);
+		late.mainController.linkLineMaterial = lineMat;
+		h.Step(1f);
+		h.Near(late.freeControllers.First(c => c.name == "headControl").unhighlightedScale, 0.15f, "person added later is scaled");
+		draws = frame(); pink = byColor(draws, new Color(1f, 0.451f, 0.761f));
+		h.Check(pink != null && pink.indexCount == 2 * (nF + lines(late)), "...and gets pink lines too");
+
+		// the embedded icon bundle is the original's
+		var res = h.Asm.GetManifestResourceStream("ControllersAppearance.assetbundle");
+		h.Check(res != null && res.Length > 10000, "icon assetbundle is inside the DLL (" + (res == null ? 0 : res.Length) + " bytes)");
+
+		// off switch restores VaM's values
+		h.Set("General", "Active", "false"); h.Step(0.6f);
+		h.Near(ctl.unhighlightedScale, 0.25f, "Active off: VaM's own scale back");
+		h.Near(ctl.selectedScale, 1f, "Active off: selected scale back");
+		h.Check(frame().Length == 0, "Active off: no lines");
+		h.Set("General", "Active", "true"); h.Step(1f);
+		h.Near(ctl.unhighlightedScale, 0.15f, "Active on again: applied again");
+
+		// Datel's own plugin appears in the session: this one steps aside
+		h.LoadTarget("ControllersAppearanceScripts");
+		h.Step(2.5f);
+		h.Near(ctl.unhighlightedScale, 0.25f, "original plugin present: standalone restores VaM's values and steps aside");
+		h.Check(frame().Length == 0, "original plugin present: no duplicate lines");
+		h.Check(h.LogHas("steps aside"), "...and says why in the log");
+	}
 }

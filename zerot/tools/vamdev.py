@@ -45,6 +45,7 @@ P = {
     'decalmakerhelper': ('DecalMakerHelper/ZeroT.DecalMakerHelper.csproj', 'ZeroT.DecalMakerHelper.dll', None),
     'bodylanguagehelper': ('BodyLanguageHelper/ZeroT.BodyLanguageHelper.csproj', 'ZeroT.BodyLanguageHelper.dll', None),
     'uiassisthelper': ('UIAssistHelper/ZeroT.UIAssistHelper.csproj', 'ZeroT.UIAssistHelper.dll', None),
+    'controllersappearance': ('ControllersAppearanceStandalone/ZeroT.ControllersAppearanceStandalone.csproj', 'ZeroT.ControllersAppearanceStandalone.dll', None),
     'uxplushelper': ('UXPlusHelper/ZeroT.UXPlusHelper.csproj', 'ZeroT.UXPlusHelper.dll', None),
     'personguard': ('PersonGuard/ZeroT.PersonGuard.csproj', 'ZeroT.PersonGuard.dll', None),
     'microphysics': ('MicroPhysicsFixerStandalone/ZeroT.MicroPhysicsFixerStandalone.csproj', 'ZeroT.MicroPhysicsFixerStandalone.dll', None),
@@ -52,7 +53,7 @@ P = {
     'extraautogenitals': ('ExtraAutoGenitalsStandalone/ZeroT.ExtraAutoGenitalsStandalone.csproj', 'ZeroT.ExtraAutoGenitalsStandalone.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HEADLESS = {'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
 HELPERS = {'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper'}   # Harmony helpers: need the script assemblies from `simtargets`
 UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook'}
@@ -274,6 +275,7 @@ TARGETS = {
     'BodyLanguageScripts': 'CheesyFX.BodyLanguage_Lite.*.var',
     'UIAssistScripts': 'JayJayWon.UIAssist(Patron).*.var',
     'UXPlusScripts': 'everlaster.UXPlus.*.var',
+    'ControllersAppearanceScripts': 'Datel.ControllersAppearance.*.var',
 }
 
 

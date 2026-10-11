@@ -498,7 +498,11 @@ namespace UnityEngine
 		{
 			if (src == null) return null;
 			var go = src as GameObject ?? (src as Component)?.gameObject;
-			if (go == null) return src;
+			if (go == null)
+			{   // assets (Material, Mesh...): a copy through the copy constructor when there is one
+				var cc = src.GetType().GetConstructor(new[] { src.GetType() });
+				return cc != null ? (T)cc.Invoke(new object[] { src }) : src;
+			}
 			var map = new Dictionary<Object, Object>();
 			var copy = CloneGo(go, parent, map);
 			if (src is GameObject) return (T)(Object)copy;
