@@ -20,4 +20,17 @@ Pieces
 Caveats
 - Text metrics use Arial at 13 px (my recollection of the legacy IMGUI default; change TextMetrics.DefaultPx if real VaM differs).
 - Plugins run with no atoms/scene, so only empty-state UI is checked; native VaM UI hosted inside SmartWardrobe/Detached is not simulated.
-- ZeroT.ParticlePinnacleUiSkin (Harmony) is not simulated; its layout is RlChrome.TitleRow, which the other plugins exercise.
+- ZeroT.ParticlePinnacleUiSkin (Harmony) renders when its host is passed: `uisim in\ZeroT.ParticlePinnacleUiSkin.dll --host hosts\<host>.dll::<plugin GUID>`.
+
+VamSim (headless plugins and whole scenes, no VaM)
+    python zerot\tools\vamdev.py simall                  every logic scenario + every UI plugin x 5 window states, parallel (~15 s)
+    python zerot\tools\vamdev.py test <plugin>           build + sim one plugin;  ship <plugin> = build + sim + deploy
+    python zerot\tools\vamdev.py scenelint <scene.json|folder>   static checks (out-of-range plugin offsets, L/R mirror, double-driven CUA atoms)
+    python zerot\tools\vamdev.py scenescripts <scene.json>       compile every script the scene loads, from its packages, into in\scene
+    python zerot\tools\vamdev.py scene <scene.json>              load the scene: resolve packages, build atoms/bones, run the scene's REAL scripts, report exceptions
+    python zerot\tools\vamdev.py sheet                           collapsed-window contact sheet of every plugin
+
+- VamSim/SceneSim.cs + SceneHost.cs: scene loader. Real MVRScript plugins run on the shim (UnityShim/ScriptHost.cs = MVRScript host, Yield.cs = yield
+  instructions, Native.cs = NativeArray/Pose). Asset bundles are not opened (requests complete with placeholders); bone poses are derived from saved
+  stud positions; VaM link/Hold physics is not modelled.
+- Built binaries are attached to the GitHub Release `sim-*` (no VaM or third-party plugin DLLs are included).
