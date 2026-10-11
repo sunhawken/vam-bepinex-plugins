@@ -26,6 +26,17 @@ public sealed class Harness
 	public Assembly Asm;
 	public List<BepInEx.BaseUnityPlugin> Plugins = new List<BepInEx.BaseUnityPlugin>();
 	public int Checks, Failures;
+	public string Work;
+	public static string CoresDir;
+	// loads a script-assembly built by `vamdev.py simtargets` (the code a Harmony helper patches) into the simulator
+	public Assembly LoadTarget(string name)
+	{
+		string src = Path.Combine(CoresDir, name + ".dll");
+		if (!File.Exists(src)) throw new FileNotFoundException("build it first: python zerot/tools/vamdev.py simtargets  (missing " + src + ")");
+		return Assembly.LoadFrom(Program.Retarget(src, Work));
+	}
+	public void Unpatch(string harmonyId) { new HarmonyLib.Harmony(harmonyId).UnpatchAll(harmonyId); }
+	public bool LogHas(string text) => BepInEx.Logging.ManualLogSource.Lines.Any(l => l.Contains(text));
 	public BepInEx.BaseUnityPlugin Plugin => Plugins.Count > 0 ? Plugins[0] : null;
 
 	public void Start()
@@ -139,10 +150,12 @@ internal static class Program
 			return File.Exists(p) ? Assembly.LoadFrom(p) : null;
 		};
 		// fresh world
-		foreach (var go in Sim.AllObjects.ToArray()) UnityEngine.Object.Destroy(go);
+		// objects of the previous scenario are simply dropped (no OnDestroy: their plugins belong to a world that no longer exists)
 		Sim.AllObjects.Clear(); Sim.Routines.Clear(); Sim.Lifecycle.Pending.Clear(); Sim.Lifecycle.Started.Clear();
 		Sim.Now = 0f; Sim.FixedAccum = 0f;
 		var h = new Harness();
+		h.Work = work;
+		Harness.CoresDir = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location), "..", "..", "..", "..", "in", "targets");
 		h.Asm = Assembly.LoadFrom(patched);
 		h.Sc = SimWorld.NewSuperController();
 		try { scenario.Invoke(null, new object[] { h }); }
@@ -155,7 +168,7 @@ internal static class Program
 		return h.Failures == 0 ? 0 : 1;
 	}
 
-	private static string Retarget(string path, string work)
+	internal static string Retarget(string path, string work)
 	{
 		var resolver = new DefaultAssemblyResolver();
 		resolver.AddSearchDirectory(work);
@@ -164,15 +177,20 @@ internal static class Program
 		var toRemove = new List<AssemblyNameReference>();
 		foreach (var r in mod.AssemblyReferences)
 		{
-			bool unity = r.Name.StartsWith("UnityEngine") || r.Name == "BepInEx" || r.Name == "Assembly-CSharp" || r.Name == "0Harmony";
+			if (r.Name == "0Harmony" || r.Name == "0Harmony20") { r.Name = "0Harmony"; r.Version = new Version(2, 3, 3, 0); r.PublicKeyToken = null; r.PublicKey = null; continue; }   // real Harmony (Lib.Harmony)
+			bool unity = r.Name.StartsWith("UnityEngine") || r.Name == "BepInEx" || r.Name == "Assembly-CSharp";
 			if (!unity) continue;
 			if (shim == null) { r.Name = "UnityShim"; r.Version = new Version(1, 0, 0, 0); r.PublicKeyToken = null; r.PublicKey = null; shim = r; }
 			else toRemove.Add(r);
 		}
 		foreach (var tr in mod.GetTypeReferences())
-			if (tr.Scope is AssemblyNameReference an && an != shim && (an.Name.StartsWith("UnityEngine") || an.Name == "BepInEx" || an.Name == "Assembly-CSharp" || an.Name == "0Harmony") && shim != null)
+			if (tr.Scope is AssemblyNameReference an && an != shim && (an.Name.StartsWith("UnityEngine") || an.Name == "BepInEx" || an.Name == "Assembly-CSharp") && shim != null)
 				tr.Scope = shim;
 		foreach (var r in toRemove) mod.AssemblyReferences.Remove(r);
+		// the helpers were built against Harmony 2.0 (0Harmony20), whose Patch() returns DynamicMethod; Lib.Harmony returns MethodInfo
+		foreach (var mr in mod.GetMemberReferences())
+			if (mr is MethodReference m2 && m2.DeclaringType != null && m2.DeclaringType.FullName == "HarmonyLib.Harmony" && m2.Name == "Patch" && m2.ReturnType.FullName == "System.Reflection.Emit.DynamicMethod")
+				m2.ReturnType = mod.ImportReference(typeof(System.Reflection.MethodInfo));
 		string outp = Path.Combine(work, Path.GetFileName(path));
 		mod.Write(outp);
 		return outp;

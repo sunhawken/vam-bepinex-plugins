@@ -232,7 +232,7 @@ namespace UnityEngine
 		// --------------------------------------------------------------------------- rendering
 		public static void Render(Bitmap bmp)
 		{
-			using (var g = Graphics.FromImage(bmp))
+			using (var g = System.Drawing.Graphics.FromImage(bmp))
 			{
 				g.SmoothingMode = SmoothingMode.None;
 				g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;

@@ -4,6 +4,10 @@ using System; using System.Collections; using System.Collections.Generic;
 namespace UnityEngine.UI {
 public partial class Selectable : global::UnityEngine.EventSystems.UIBehaviour {
   public global::UnityEngine.UI.ColorBlock colors { get; set; }
+  public global::UnityEngine.UI.Image image { get; set; }
+  public virtual bool IsInteractable() { return default; }
+  public virtual void OnPointerUp(global::UnityEngine.EventSystems.PointerEventData eventData) { }
+  public bool interactable { get; set; }
   public global::UnityEngine.UI.Navigation navigation { get; set; }
   public global::UnityEngine.UI.Graphic targetGraphic { get; set; }
   public Selectable() {}
@@ -15,11 +19,11 @@ public enum Transition : int {
 }
 }
 public partial struct ColorBlock {
+  public global::UnityEngine.Color normalColor { get; set; }
   public float colorMultiplier { get; set; }
   public global::UnityEngine.Color disabledColor { get; set; }
   public float fadeDuration { get; set; }
   public global::UnityEngine.Color highlightedColor { get; set; }
-  public global::UnityEngine.Color normalColor { get; set; }
   public global::UnityEngine.Color pressedColor { get; set; }
 }
 public partial struct Navigation {
@@ -41,11 +45,13 @@ public partial class ButtonClickedEvent : global::UnityEngine.Events.UnityEvent 
 }
 public partial class ScrollRect : global::UnityEngine.EventSystems.UIBehaviour {
   public global::UnityEngine.RectTransform content { get; set; }
+  public float verticalNormalizedPosition { get; set; }
+  public global::UnityEngine.UI.Scrollbar verticalScrollbar { get; set; }
   public bool horizontal { get; set; }
   public global::UnityEngine.UI.ScrollRect.MovementType movementType { get; set; }
   public float scrollSensitivity { get; set; }
   public bool vertical { get; set; }
-  public float verticalNormalizedPosition { get; set; }
+  public global::UnityEngine.UI.ScrollRect.ScrollbarVisibility verticalScrollbarVisibility { get; set; }
   public global::UnityEngine.RectTransform viewport { get; set; }
   public ScrollRect() {}
 public enum MovementType : int {
@@ -71,6 +77,7 @@ public abstract partial class HorizontalOrVerticalLayoutGroup : global::UnityEng
   public HorizontalOrVerticalLayoutGroup() {}
 }
 public abstract partial class LayoutGroup : global::UnityEngine.EventSystems.UIBehaviour {
+  public global::UnityEngine.TextAnchor childAlignment { get; set; }
   public global::UnityEngine.RectOffset padding { get; set; }
   public LayoutGroup() {}
 }
@@ -85,6 +92,7 @@ public partial class VerticalLayoutGroup : global::UnityEngine.UI.HorizontalOrVe
 }
 public partial class Toggle : global::UnityEngine.UI.Selectable {
   public bool isOn { get; set; }
+  public global::UnityEngine.UI.ToggleGroup group { get; set; }
   public global::UnityEngine.UI.Toggle.ToggleEvent onValueChanged;
   public Toggle() {}
 public partial class ToggleEvent : global::UnityEngine.Events.UnityEvent<bool> {
@@ -92,28 +100,47 @@ public partial class ToggleEvent : global::UnityEngine.Events.UnityEvent<bool> {
 }
 }
 public partial class Slider : global::UnityEngine.UI.Selectable {
-  public global::UnityEngine.UI.Slider.SliderEvent onValueChanged { get; set; } = new global::UnityEngine.UI.Slider.SliderEvent();
-  public float value { get; set; }
+  public Slider() {}
   public global::UnityEngine.RectTransform fillRect { get; set; }
   public global::UnityEngine.RectTransform handleRect { get; set; }
   public float maxValue { get; set; }
   public float minValue { get; set; }
+  public global::UnityEngine.UI.Slider.SliderEvent onValueChanged { get; set; } = new global::UnityEngine.UI.Slider.SliderEvent();
+  public float value { get; set; }
+  public virtual void OnPointerDown(global::UnityEngine.EventSystems.PointerEventData eventData) { }
+  public global::UnityEngine.UI.Slider.Direction direction { get; set; }
   public bool wholeNumbers { get; set; }
-  public Slider() {}
+public enum Direction : int {
+  LeftToRight = 0,
+  RightToLeft = 1,
+  BottomToTop = 2,
+  TopToBottom = 3,
+}
 public partial class SliderEvent : global::UnityEngine.Events.UnityEvent<float> {
   public SliderEvent() {}
 }
 }
 public partial class LayoutElement : global::UnityEngine.EventSystems.UIBehaviour {
+  public float minHeight { get; set; }
+  public float preferredWidth { get; set; }
   public LayoutElement() {}
 }
 public partial class RawImage : global::UnityEngine.UI.MaskableGraphic {
+  public global::UnityEngine.Texture texture { get; set; }
   public RawImage() {}
 }
 public partial class HorizontalLayoutGroup : global::UnityEngine.UI.HorizontalOrVerticalLayoutGroup {
   public HorizontalLayoutGroup() {}
 }
 public partial class InputField : global::UnityEngine.UI.Selectable {
+  public void ActivateInputField() { }
+  public global::UnityEngine.UI.InputField.SubmitEvent onEndEdit { get; set; } = new global::UnityEngine.UI.InputField.SubmitEvent();
+  public global::UnityEngine.UI.InputField.OnChangeEvent onValueChanged { get; set; } = new global::UnityEngine.UI.InputField.OnChangeEvent();
+  public string text { get; set; }
+  public global::UnityEngine.UI.Text textComponent { get; set; }
+  public int characterLimit { get; set; }
+  public global::UnityEngine.UI.InputField.ContentType contentType { get; set; }
+  public global::UnityEngine.UI.InputField.LineType lineType { get; set; }
   public InputField() {}
 public enum ContentType : int {
   Standard = 0,
@@ -150,9 +177,16 @@ public enum AspectMode : int {
 }
 }
 public partial class CanvasScaler : global::UnityEngine.EventSystems.UIBehaviour {
+  public float dynamicPixelsPerUnit { get; set; }
+  public float scaleFactor { get; set; }
   public CanvasScaler() {}
 }
 public partial class Scrollbar : global::UnityEngine.UI.Selectable {
+  public global::UnityEngine.UI.Scrollbar.ScrollEvent onValueChanged { get; set; } = new global::UnityEngine.UI.Scrollbar.ScrollEvent();
+  public float size { get; set; }
+  public float value { get; set; }
+  public global::UnityEngine.RectTransform handleRect { get; set; }
+  public void SetDirection(global::UnityEngine.UI.Scrollbar.Direction direction, bool includeRectLayouts) { }
   public Scrollbar() {}
 public enum Direction : int {
   LeftToRight = 0,
@@ -160,15 +194,44 @@ public enum Direction : int {
   BottomToTop = 2,
   TopToBottom = 3,
 }
+public partial class ScrollEvent : global::UnityEngine.Events.UnityEvent<float> {
+  public ScrollEvent() {}
+}
 }
 public partial class LayoutRebuilder {
   public LayoutRebuilder() {}
 }
 public partial class Mask : global::UnityEngine.EventSystems.UIBehaviour {
+  public bool showMaskGraphic { get; set; }
   public Mask() {}
 }
 public partial class VertexHelper {
   public VertexHelper() {}
+}
+public partial class ContentSizeFitter : global::UnityEngine.EventSystems.UIBehaviour {
+  public global::UnityEngine.UI.ContentSizeFitter.FitMode horizontalFit { get; set; }
+  public global::UnityEngine.UI.ContentSizeFitter.FitMode verticalFit { get; set; }
+  public ContentSizeFitter() {}
+public enum FitMode : int {
+  Unconstrained = 0,
+  MinSize = 1,
+  PreferredSize = 2,
+}
+}
+public partial class ToggleGroup : global::UnityEngine.EventSystems.UIBehaviour {
+  public ToggleGroup() {}
+}
+public partial class GridLayoutGroup : global::UnityEngine.UI.LayoutGroup {
+  public global::UnityEngine.Vector2 cellSize { get; set; }
+  public global::UnityEngine.UI.GridLayoutGroup.Constraint constraint { get; set; }
+  public int constraintCount { get; set; }
+  public global::UnityEngine.Vector2 spacing { get; set; }
+  public GridLayoutGroup() {}
+public enum Constraint : int {
+  Flexible = 0,
+  FixedColumnCount = 1,
+  FixedRowCount = 2,
+}
 }
 public partial interface ICanvasElement {
 }
@@ -188,6 +251,7 @@ public partial interface IMaterialModifier {
 namespace UnityEngine.Events {
 public partial class UnityEvent : global::UnityEngine.Events.UnityEventBase {
   public void AddListener(global::UnityEngine.Events.UnityAction call) { }
+  public void Invoke() { }
   public UnityEvent() {}
 }
 public delegate void UnityAction();
@@ -199,6 +263,7 @@ public abstract partial class UnityEvent<T0> : global::UnityEngine.Events.UnityE
 public delegate void UnityAction<T0, T1>(T0 arg0, T1 arg1);
 public delegate void UnityAction<T0, T1, T2>(T0 arg0, T1 arg1, T2 arg2);
 public abstract partial class UnityEventBase {
+  public void RemoveAllListeners() { }
   public UnityEventBase() {}
 }
 }
@@ -206,15 +271,17 @@ namespace UnityEngine.EventSystems {
 public partial class PointerEventData : global::UnityEngine.EventSystems.BaseEventData {
   public PointerEventData(global::UnityEngine.EventSystems.EventSystem eventSystem) {}
   public global::UnityEngine.EventSystems.PointerEventData.InputButton button { get; set; }
+  public int clickCount { get; set; }
   public bool dragging { get; set; }
   public bool eligibleForClick { get; set; }
+  public global::UnityEngine.EventSystems.RaycastResult pointerCurrentRaycast { get; set; }
   public global::UnityEngine.GameObject pointerDrag { get; set; }
   public global::UnityEngine.GameObject pointerPress { get; set; }
   public global::UnityEngine.Vector2 position { get; set; }
+  public global::UnityEngine.Camera pressEventCamera { get; set; }
   public global::UnityEngine.Vector2 pressPosition { get; set; }
-  public int clickCount { get; set; }
   public global::UnityEngine.Vector2 delta { get; set; }
-  public global::UnityEngine.EventSystems.RaycastResult pointerCurrentRaycast { get; set; }
+  public int pointerId { get; set; }
   public global::UnityEngine.EventSystems.RaycastResult pointerPressRaycast { get; set; }
   public global::UnityEngine.GameObject rawPointerPress { get; set; }
   public global::UnityEngine.Vector2 scrollDelta { get; set; }
@@ -228,6 +295,7 @@ public enum InputButton : int {
 }
 public partial class EventSystem : global::UnityEngine.EventSystems.UIBehaviour {
   public static global::UnityEngine.EventSystems.EventSystem current { get; set; } = new global::UnityEngine.EventSystems.EventSystem();
+  public void RaycastAll(global::UnityEngine.EventSystems.PointerEventData eventData, global::System.Collections.Generic.List<global::UnityEngine.EventSystems.RaycastResult> raycastResults) { }
   public EventSystem() {}
 }
 public partial interface IPointerDownHandler {
@@ -241,6 +309,7 @@ public partial interface IDragHandler {
 public partial interface IEndDragHandler {
 }
 public partial struct RaycastResult {
+  public bool isValid { get; set; }
   public global::UnityEngine.GameObject gameObject { get; set; }
   public global::UnityEngine.EventSystems.BaseRaycaster module;
   public global::UnityEngine.Vector2 screenPosition;
@@ -272,6 +341,7 @@ public partial interface IPointerExitHandler {
 public partial interface IPointerEnterHandler {
 }
 public partial interface IPointerClickHandler {
+  void OnPointerClick(global::UnityEngine.EventSystems.PointerEventData eventData);
 }
 public partial interface IInitializePotentialDragHandler {
 }
@@ -280,12 +350,15 @@ public partial interface IPointerUpHandler {
 public partial interface IScrollHandler {
 }
 public partial class EventTrigger : global::UnityEngine.MonoBehaviour {
+  public global::System.Collections.Generic.List<global::UnityEngine.EventSystems.EventTrigger.Entry> triggers { get; set; }
   public EventTrigger() {}
 public partial class TriggerEvent : global::UnityEngine.Events.UnityEvent<global::UnityEngine.EventSystems.BaseEventData> {
   public TriggerEvent() {}
 }
 public partial class Entry {
   public Entry() {}
+  public global::UnityEngine.EventSystems.EventTrigger.TriggerEvent callback;
+  public global::UnityEngine.EventSystems.EventTriggerType eventID;
 }
 }
 public enum EventTriggerType : int {
@@ -345,12 +418,26 @@ public partial class MVRPluginManager : global::JSONStorable {
 public partial class MVRScript : global::JSONStorable {
   public MVRScript() {}
   public global::UIDynamicButton CreateButton(string label, bool rightSide = default) { return default; }
+  public global::UIDynamicColorPicker CreateColorPicker(global::JSONStorableColor jsc, bool rightSide = default) { return default; }
+  public global::UIDynamicPopup CreateFilterablePopup(global::JSONStorableStringChooser jsc, bool rightSide = default) { return default; }
   public global::UIDynamicPopup CreatePopup(global::JSONStorableStringChooser jsc, bool rightSide = default) { return default; }
+  public global::UIDynamicPopup CreateScrollablePopup(global::JSONStorableStringChooser jsc, bool rightSide = default) { return default; }
   public global::UIDynamicSlider CreateSlider(global::JSONStorableFloat jsf, bool rightSide = default) { return default; }
+  public global::UIDynamic CreateSpacer(bool rightSide = default) { return default; }
   public global::UIDynamicTextField CreateTextField(global::JSONStorableString jss, bool rightSide = default) { return default; }
   public global::UIDynamicToggle CreateToggle(global::JSONStorableBool jsb, bool rightSide = default) { return default; }
   public void ForceAwake() { }
   public virtual void Init() { }
+  public override void InitUI() { }
+  public global::SimpleJSON.JSONNode LoadJSON(string saveName) { return default; }
+  public void RemoveButton(global::UIDynamicButton button) { }
+  public void RemoveColorPicker(global::UIDynamicColorPicker dcolor) { }
+  public void RemovePopup(global::UIDynamicPopup dpopup) { }
+  public void RemoveSlider(global::UIDynamicSlider dslider) { }
+  public void RemoveSpacer(global::UIDynamic spacer) { }
+  public void RemoveTextField(global::UIDynamicTextField dtext) { }
+  public void RemoveToggle(global::UIDynamicToggle dtoggle) { }
+  public global::JSONStorableBool enabledJSON;
   public global::MVRPluginManager manager;
   public global::JSONStorableString pluginLabelJSON;
 }
@@ -425,9 +512,11 @@ public partial class DAZPhysicsMeshCapsuleCollider {
   public DAZPhysicsMeshCapsuleCollider() {}
 }
 public partial class DAZBone : global::JSONStorable {
+  public global::UnityEngine.Vector3 baseJointRotation { get; set; }
   public DAZBone() {}
 }
 public partial class DAZClothingItem : global::DAZDynamicItem {
+  public void SetLocked(bool b) { }
   public DAZClothingItem() {}
 }
 public partial class DAZHairGroup : global::DAZDynamicItem {
@@ -439,18 +528,39 @@ public partial class MVRPlugin {
   public MVRPlugin() {}
 }
 public partial class JSONStorableUrl : global::JSONStorableString {
+  public JSONStorableUrl(string paramName, string startingValue, global::JSONStorableString.SetStringCallback callback, string filter, bool forceCallbackOnSet) {}
+  public JSONStorableUrl(string paramName, string startingValue, global::JSONStorableString.SetStringCallback callback) {}
+  public JSONStorableUrl(string paramName, string startingValue) {}
+  public bool allowBrowseAboveSuggestedPath { get; set; }
+  public string suggestedPath { get; set; }
+  public string suggestedPathGroup { get; set; }
+  public bool allowFullComputerBrowse;
+  public string fileRemovePrefix;
+  public bool hideExtension;
+  public bool showDirs;
   public JSONStorableUrl() {}
 }
 public partial class UIDynamicButton : global::UIDynamic {
+  public global::UnityEngine.Color buttonColor { get; set; }
+  public string label { get; set; }
+  public global::UnityEngine.Color textColor { get; set; }
   public global::UnityEngine.UI.Button button;
+  public global::UnityEngine.UI.Image buttonImage;
+  public global::UnityEngine.UI.Text buttonText;
   public UIDynamicButton() {}
 }
 public partial class UIDynamicToggle : global::UIDynamic {
+  public global::UnityEngine.Color backgroundColor { get; set; }
+  public string label { get; set; }
+  public global::UnityEngine.Color textColor { get; set; }
+  public global::UnityEngine.UI.Text labelText;
   public global::UnityEngine.UI.Toggle toggle;
   public UIDynamicToggle() {}
 }
 public partial class UserPreferences : global::UnityEngine.MonoBehaviour {
+  public bool desktopVsync { get; set; }
   public global::UserPreferences.GlowEffectsLevel glowEffects { get; set; }
+  public bool hideInactiveTargets { get; set; }
   public bool mirrorReflections { get; set; }
   public int msaaLevel { get; set; }
   public bool physicsHighQuality { get; set; }
@@ -462,7 +572,10 @@ public partial class UserPreferences : global::UnityEngine.MonoBehaviour {
   public global::UserPreferences.ShaderLOD shaderLOD { get; set; }
   public int smoothPasses { get; set; }
   public bool softPhysics { get; set; }
+  public bool useHeadCollider { get; set; }
+  public bool overlayUI { get; set; }
   public void SetPhysicsRateFromString(string pr) { }
+  public global::MeshVR.LeapHandModelControl leapHandModelControl;
   public static global::UserPreferences singleton;
   public UserPreferences() {}
 public enum ShaderLOD : int {
@@ -491,9 +604,11 @@ public enum PhysicsRate : int {
 public partial class UIDynamicSlider : global::UIDynamic {
   public void ConfigureQuickButtons(float m1v, float m2v, float m3v, float m4v, float p1v, float p2v, float p3v, float p4v) { }
   public bool autoSetQuickButtons { get; set; }
+  public string label { get; set; }
   public bool quickButtonsEnabled { get; set; }
   public bool rangeAdjustEnabled { get; set; }
   public string valueFormat { get; set; }
+  public global::UnityEngine.UI.Text labelText;
   public global::UnityEngine.UI.Slider slider;
   public UIDynamicSlider() {}
 }
@@ -505,18 +620,36 @@ public partial class HairSimControl : global::PhysicsSimulatorJSONStorable {
   public HairSimControl() {}
 }
 public partial class ClothSimControl : global::PhysicsSimulatorJSONStorable {
+  public void Reset() { }
+  public global::GPUTools.Cloth.Scripts.ClothSettings clothSettings;
+  public global::JSONStorableBool simEnabledJSON;
   public ClothSimControl() {}
 }
 public partial class UIDynamicPopup : global::UIDynamic {
+  public string label { get; set; }
+  public float labelWidth { get; set; }
+  public float popupPanelHeight { get; set; }
+  public global::UIPopup popup;
   public UIDynamicPopup() {}
 }
 public partial class UIDynamicTextField : global::UIDynamic {
+  public global::UnityEngine.Color backgroundColor { get; set; }
+  public string text { get; set; }
+  public global::UnityEngine.UI.Text UItext;
   public UIDynamicTextField() {}
 }
 public partial class DAZDynamicItem : global::JSONStorableDynamic {
   public string[] tagsArray { get; set; }
+  public string uid { get; set; }
+  public void GetThumbnail(global::DAZDynamicItem.ThumbnailLoadedCallback callback) { }
+  public void OpenUI() { }
+  public string creatorName;
   public string displayName;
+  public string dynamicRuntimeLoadPath;
+  public string internalUid;
+  public string packageUid;
   public DAZDynamicItem() {}
+public delegate void ThumbnailLoadedCallback(global::UnityEngine.Texture2D thumb);
 }
 public partial class DAZCharacterMaterialOptions : global::MaterialOptions {
   public global::DAZSkinV2 skin { get; set; }
@@ -543,29 +676,74 @@ public partial class DAZMergedSkinV2 : global::DAZSkinV2 {
   public DAZMergedSkinV2() {}
 }
 public partial class JSONStorableColor : global::JSONStorableParam {
+  public JSONStorableColor(string paramName, global::HSVColor startingColor, global::JSONStorableColor.SetJSONColorCallback callback) {}
+  public JSONStorableColor(string paramName, global::HSVColor startingColor) {}
+  public global::HSVColor val { get; set; }
+  public global::HSVColorPicker colorPicker { get; set; }
+  public global::HSVColor defaultVal { get; set; }
+  public global::JSONStorableColor.SetJSONColorCallback setJSONCallbackFunction;
   public JSONStorableColor() {}
 public delegate void SetHSVColorCallback(float h, float s, float v);
+public delegate void SetJSONColorCallback(global::JSONStorableColor jc);
 }
 public partial struct HSVColor {
+  public float H;
+  public float S;
+  public float V;
 }
 public partial class UIDynamicColorPicker : global::UIDynamic {
+  public string label { get; set; }
+  public bool showLabel { get; set; }
+  public global::HSVColorPicker colorPicker;
   public UIDynamicColorPicker() {}
 }
 public partial class HSVColorPicker : global::TwoDPicker {
+  public static global::HSVColor RGBToHSV(float r, float g, float b) { return default; }
+  public void SetHSV(global::HSVColor hc, bool noCallback = default) { }
+  public global::HSVColorPicker.OnColorChanged onColorChangedHandlers;
+  public global::HSVColorPicker.OnHSVColorChanged onHSVColorChangedHandlers;
   public HSVColorPicker() {}
+public delegate void OnColorChanged(global::UnityEngine.Color color);
+public delegate void OnHSVColorChanged(float hue, float saturation, float value);
 }
 public partial class UIPopup : global::UnityEngine.MonoBehaviour {
+  public bool visible { get; set; }
+  public string currentValue { get; set; }
+  public string currentValueNoCallback { get; set; }
+  public string label { get; set; }
+  public float popupPanelHeight { get; set; }
+  public bool showSlider { get; set; }
+  public global::UnityEngine.UI.Text labelText;
+  public global::UIPopup.OnOpenPopup onOpenPopupHandlers;
+  public global::UIPopup.OnValueChange onValueChangeHandlers;
+  public global::UnityEngine.RectTransform popupPanel;
+  public global::UnityEngine.Color selectColor;
+  public global::UnityEngine.UI.Button topButton;
   public UIPopup() {}
 public delegate void OnOpenPopup();
+public delegate void OnValueChange(string value);
 }
 public partial class NamedAudioClip {
+  public string uid { get; set; }
   public NamedAudioClip() {}
 }
 public partial class AudioClipManager : global::JSONStorable {
+  public global::System.Collections.Generic.List<string> GetCategories() { return new global::System.Collections.Generic.List<string>(); }
+  public global::System.Collections.Generic.List<global::NamedAudioClip> GetCategoryClips(string category) { return new global::System.Collections.Generic.List<global::NamedAudioClip>(); }
+  public global::NamedAudioClip GetClip(string uid) { return default; }
   public AudioClipManager() {}
 }
 public partial class Trigger {
   public Trigger() {}
+  public virtual global::SimpleJSON.JSONClass GetJSON() { return default; }
+  public virtual void OpenTriggerActionsPanel() { }
+  public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc) { }
+  public bool active { get; set; }
+  public string displayName { get; set; }
+  public virtual void SyncAtomNames() { }
+  public virtual void Validate() { }
+  public global::TriggerHandler handler;
+  public global::UnityEngine.Transform triggerActionsParent;
 }
 public partial interface TriggerHandler {
 }
@@ -579,17 +757,188 @@ public partial class TriggerActionTransitionUI : global::TriggerActionUI {
   public TriggerActionTransitionUI() {}
 }
 public partial class ImageLoaderThreaded : global::UnityEngine.MonoBehaviour {
+  public bool DeregisterTextureUse(global::UnityEngine.Texture2D tex) { return default; }
+  public global::UnityEngine.Texture2D GetCachedThumbnail(string path) { return default; }
+  public void QueueImage(global::ImageLoaderThreaded.QueuedImage qi) { }
+  public void QueueThumbnail(global::ImageLoaderThreaded.QueuedImage qi) { }
+  public void QueueThumbnailImmediate(global::ImageLoaderThreaded.QueuedImage qi) { }
+  public bool RegisterTextureUse(global::UnityEngine.Texture2D tex) { return default; }
+  public static global::ImageLoaderThreaded singleton;
   public ImageLoaderThreaded() {}
 public delegate void ImageLoaderCallback(global::ImageLoaderThreaded.QueuedImage qi);
 public partial class QueuedImage {
   public QueuedImage() {}
+  public float bumpStrength;
+  public global::ImageLoaderThreaded.ImageLoaderCallback callback;
+  public bool compress;
+  public bool createAlphaFromGrayscale;
+  public bool createMipMaps;
+  public bool createNormalFromBump;
+  public bool fillBackground;
+  public bool forceReload;
+  public bool hadError;
+  public string imgPath;
+  public bool invert;
+  public bool isNormalMap;
+  public bool isThumbnail;
+  public bool linear;
+  public bool skipCache;
+  public global::UnityEngine.Texture2D tex;
 }
 }
 public partial class LineDrawer {
   public LineDrawer() {}
 }
 public partial class MVRScriptUI : global::UIProvider {
+  public global::UnityEngine.UI.Button closeButton;
   public MVRScriptUI() {}
+}
+public partial class CameraTarget : global::UnityEngine.MonoBehaviour {
+  public static global::CameraTarget centerTarget;
+  public CameraTarget() {}
+}
+public partial class JSONStorableDynamic : global::UnityEngine.MonoBehaviour {
+  public bool ready { get; set; }
+  public JSONStorableDynamic() {}
+}
+public static partial class OVRInput {
+  public static global::UnityEngine.Vector3 GetLocalControllerPosition(global::OVRInput.Controller controllerType) { return default; }
+  public static global::UnityEngine.Quaternion GetLocalControllerRotation(global::OVRInput.Controller controllerType) { return default; }
+public enum Controller : int {
+  None = 0,
+  LTouch = 1,
+  RTouch = 2,
+  Touch = 3,
+  Remote = 4,
+  Gamepad = 16,
+  Touchpad = 134217728,
+  LTrackedRemote = 16777216,
+  RTrackedRemote = 33554432,
+  Active = -2147483648,
+  All = -1,
+}
+}
+public partial class OVRCameraRig : global::UnityEngine.MonoBehaviour {
+  public global::UnityEngine.Transform trackingSpace { get; set; }
+  public OVRCameraRig() {}
+}
+public partial class UISideAlign : global::UnityEngine.MonoBehaviour {
+  public UISideAlign() {}
+public enum Side : int {
+  Left = 0,
+  Right = 1,
+}
+}
+public partial class DAZCharacterTextureControl : global::JSONStorable {
+  public DAZCharacterTextureControl() {}
+}
+public partial class AQUAS_Parameters {
+  public AQUAS_Parameters() {}
+}
+public partial class UITabSelector : global::UnityEngine.MonoBehaviour {
+  public void SetActiveTab(string name) { }
+  public UITabSelector() {}
+}
+public partial class MVRScriptControllerUI : global::UIProvider {
+  public global::UnityEngine.UI.Text label;
+  public global::UnityEngine.UI.Button openUIButton;
+  public MVRScriptControllerUI() {}
+}
+public partial class JSONStorableVector3 : global::JSONStorableParam {
+  public JSONStorableVector3(string paramName, global::UnityEngine.Vector3 startingValue, global::UnityEngine.Vector3 minValue, global::UnityEngine.Vector3 maxValue, bool constrain = default, bool interactable = default) {}
+  public global::UnityEngine.Vector3 defaultVal { get; set; }
+  public global::UnityEngine.Vector3 max { get; set; }
+  public global::UnityEngine.Vector3 min { get; set; }
+  public global::UnityEngine.Vector3 val { get; set; }
+  public global::JSONStorableVector3.SetJSONVector3Callback setJSONCallbackFunction;
+  public JSONStorableVector3() {}
+public delegate void SetJSONVector3Callback(global::JSONStorableVector3 jf);
+}
+public partial class MotionAnimationMaster : global::JSONStorableTriggerHandler {
+  public bool loop { get; set; }
+  public float playbackCounter { get; set; }
+  public void ResetAnimation() { }
+  public void StartPlayback() { }
+  public void StartRecordMode() { }
+  public void StopPlayback() { }
+  public void StopRecordMode() { }
+  public global::UnityEngine.GameObject activeWhilePlaying;
+  public global::UnityEngine.GameObject activeWhileStopped;
+  public MotionAnimationMaster() {}
+}
+public partial class EmbeddedAudioClipManager : global::AudioClipManager {
+  public static global::EmbeddedAudioClipManager singleton;
+  public EmbeddedAudioClipManager() {}
+}
+public partial class URLAudioClipManager : global::AudioClipManager {
+  public global::URLAudioClip QueueClip(string url, string displayName = default, bool fromRestore = default) { return default; }
+  public static global::URLAudioClipManager singleton;
+  public URLAudioClipManager() {}
+}
+public partial class JSONStorableActionStringChooser {
+  public global::JSONStorableActionStringChooser.StringChoiceActionCallback actionCallback;
+  public JSONStorableActionStringChooser() {}
+public delegate void StringChoiceActionCallback(string choice);
+}
+public partial class JSONStorableActionPresetFilePath {
+  public void Browse(global::JSONStorableString.SetStringCallback callback) { }
+  public JSONStorableActionPresetFilePath() {}
+}
+public partial class JSONStorableActionAudioClip {
+  public global::JSONStorableActionAudioClip.AudioClipActionCallback actionCallback;
+  public JSONStorableActionAudioClip() {}
+public delegate void AudioClipActionCallback(global::NamedAudioClip nac);
+}
+public partial class MemoryOptimizer : global::UnityEngine.MonoBehaviour {
+  public void TriggerOptimize() { }
+  public static global::MemoryOptimizer singleton;
+  public MemoryOptimizer() {}
+}
+public partial class AudioSourceControl : global::VariableTrigger {
+  public void ClearQueue() { }
+  public void Pause() { }
+  public void PlayNow(global::NamedAudioClip nac) { }
+  public void QueueClip(global::NamedAudioClip nac) { }
+  public void Stop() { }
+  public void TogglePause() { }
+  public void UnPause() { }
+  public AudioSourceControl() {}
+}
+public partial class MotionAnimationControl : global::JSONStorable {
+  public void PlaybackStep(float playbackCounter) { }
+  public global::MotionAnimationClip clip;
+  public global::FreeControllerV3 controller;
+  public MotionAnimationControl() {}
+}
+public partial class MotionAnimationClip {
+  public global::System.Collections.Generic.List<global::MotionAnimationStep> steps { get; set; }
+  public MotionAnimationClip() {}
+}
+public partial class MotionAnimationStep {
+  public global::UnityEngine.Quaternion rotation;
+  public MotionAnimationStep() {}
+}
+public partial class URLAudioClip : global::NamedAudioClip {
+  public bool ready { get; set; }
+  public URLAudioClip() {}
+}
+public partial class MultiButtonPanel : global::UnityEngine.MonoBehaviour {
+  public MultiButtonPanel() {}
+}
+public partial class UITab : global::UnityEngine.MonoBehaviour {
+  public UITab() {}
+}
+public partial class DAZHairGroupControl : global::JSONStorable {
+  public DAZHairGroupControl() {}
+}
+public partial class DAZSkinWrapMaterialOptions : global::MaterialOptions {
+  public DAZSkinWrapMaterialOptions() {}
+}
+public partial class DAZBones : global::ScaleChangeReceiverJSONStorable {
+  public DAZBones() {}
+}
+public partial class SubScene : global::JSONStorable {
+  public SubScene() {}
 }
 public partial class PhysicsSimulatorJSONStorable : global::ScaleChangeReceiverJSONStorable {
   public PhysicsSimulatorJSONStorable() {}
@@ -598,9 +947,6 @@ public partial interface RenderSuspend {
 }
 public partial class PhysicsSimulator : global::ScaleChangeReceiver {
   public PhysicsSimulator() {}
-}
-public partial class JSONStorableDynamic : global::UnityEngine.MonoBehaviour {
-  public JSONStorableDynamic() {}
 }
 public partial class TwoDPicker : global::UnityEngine.MonoBehaviour {
   public TwoDPicker() {}
@@ -616,24 +962,26 @@ public partial class TriggerActionUI : global::UIProvider {
 public partial class UIProvider : global::UnityEngine.MonoBehaviour {
   public UIProvider() {}
 }
+public partial class GPUCollidersConsumer : global::UnityEngine.MonoBehaviour {
+  public GPUCollidersConsumer() {}
+}
+public partial class JSONStorableTriggerHandler : global::JSONStorable {
+  public JSONStorableTriggerHandler() {}
+}
+public partial interface AnimationTimelineTriggerHandler {
+}
+public partial class VariableTrigger : global::JSONStorableTriggerHandler {
+  public VariableTrigger() {}
+}
 public partial class ScaleChangeReceiverJSONStorable : global::JSONStorable {
   public ScaleChangeReceiverJSONStorable() {}
+}
+public partial interface PhysicsResetter {
 }
 public partial class ScaleChangeReceiver : global::UnityEngine.MonoBehaviour {
   public ScaleChangeReceiver() {}
 }
 namespace UnityEngine {
-public partial class RenderTexture : global::UnityEngine.Texture {
-  public RenderTexture(int width, int height, int depth, global::UnityEngine.RenderTextureFormat format) {}
-  public RenderTexture(int width, int height, int depth, global::UnityEngine.RenderTextureFormat format, global::UnityEngine.RenderTextureReadWrite readWrite) {}
-  public bool Create() { return default; }
-  public void GenerateMips() { }
-  public static global::UnityEngine.RenderTexture active { get; set; }
-  public void Release() { }
-  public bool autoGenerateMips { get; set; }
-  public bool useMipMap { get; set; }
-  public RenderTexture() {}
-}
 public sealed partial class GL {
   public static void Begin(int mode) { }
   public static void Clear(bool clearDepth, bool clearColor, global::UnityEngine.Color backgroundColor) { }
@@ -646,35 +994,6 @@ public sealed partial class GL {
   public static void TexCoord2(float x, float y) { }
   public static void Vertex3(float x, float y, float z) { }
   public GL() {}
-}
-public enum RenderTextureFormat : int {
-  ARGB32 = 0,
-  Depth = 1,
-  ARGBHalf = 2,
-  Shadowmap = 3,
-  RGB565 = 4,
-  ARGB4444 = 5,
-  ARGB1555 = 6,
-  Default = 7,
-  ARGB2101010 = 8,
-  DefaultHDR = 9,
-  ARGB64 = 10,
-  ARGBFloat = 11,
-  RGFloat = 12,
-  RGHalf = 13,
-  RFloat = 14,
-  RHalf = 15,
-  R8 = 16,
-  ARGBInt = 17,
-  RGInt = 18,
-  RInt = 19,
-  BGRA32 = 20,
-  RGB111110Float = 22,
-  RG32 = 23,
-  RGBAUShort = 24,
-  RG16 = 25,
-  BGRA10101010_XR = 26,
-  BGR101010_XR = 27,
 }
 public partial class Collision {
   public global::UnityEngine.Collider collider { get; set; }
@@ -715,9 +1034,14 @@ public partial class Material : global::UnityEngine.Object {
   public global::UnityEngine.Texture GetTexture(string name) { return default; }
   public global::UnityEngine.Vector2 GetTextureOffset(string name) { return default; }
   public global::UnityEngine.Vector2 GetTextureScale(string name) { return default; }
+  public global::UnityEngine.Vector4 GetVector(string name) { return default; }
   public bool HasProperty(string name) { return default; }
+  public global::UnityEngine.Color color { get; set; }
+  public int renderQueue { get; set; }
   public global::UnityEngine.Shader shader { get; set; }
+  public void SetColor(string name, global::UnityEngine.Color value) { }
   public void SetFloat(string name, float value) { }
+  public void SetInt(string name, int value) { }
   public bool SetPass(int pass) { return default; }
   public void SetTexture(string name, global::UnityEngine.Texture value) { }
   public void SetTextureOffset(string name, global::UnityEngine.Vector2 value) { }
@@ -749,22 +1073,6 @@ public sealed partial class SystemInfo {
   public static bool supportsAsyncGPUReadback { get; set; }
   public SystemInfo() {}
 }
-public enum RenderTextureReadWrite : int {
-  Default = 0,
-  Linear = 1,
-  sRGB = 2,
-}
-public enum TextureWrapMode : int {
-  Repeat = 0,
-  Clamp = 1,
-  Mirror = 2,
-  MirrorOnce = 3,
-}
-public enum FilterMode : int {
-  Point = 0,
-  Bilinear = 1,
-  Trilinear = 2,
-}
 public enum ColorSpace : int {
   Uninitialized = -1,
   Gamma = 0,
@@ -772,12 +1080,14 @@ public enum ColorSpace : int {
 }
 public sealed partial class RectTransformUtility {
   public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam) { return default; }
+  public static bool ScreenPointToLocalPointInRectangle(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam, out global::UnityEngine.Vector2 localPoint) { localPoint = default; return default; }
   public RectTransformUtility() {}
 }
 public partial interface ICanvasRaycastFilter {
   bool IsRaycastLocationValid(global::UnityEngine.Vector2 sp, global::UnityEngine.Camera eventCamera);
 }
 public partial class Renderer : global::UnityEngine.Component {
+  public global::UnityEngine.Material material { get; set; }
   public global::UnityEngine.Material[] materials { get; set; }
   public bool enabled { get; set; }
   public global::UnityEngine.Material[] sharedMaterials { get; set; }
@@ -785,8 +1095,12 @@ public partial class Renderer : global::UnityEngine.Component {
 }
 public partial struct Ray {
   public Ray(global::UnityEngine.Vector3 origin, global::UnityEngine.Vector3 direction) {}
+  public global::UnityEngine.Vector3 direction { get; set; }
+  public global::UnityEngine.Vector3 origin { get; set; }
+  public global::UnityEngine.Vector3 GetPoint(float distance) { return default; }
 }
 public partial class Physics {
+  public static int OverlapSphereNonAlloc(global::UnityEngine.Vector3 position, float radius, global::UnityEngine.Collider[] results) { return default; }
   public static int RaycastNonAlloc(global::UnityEngine.Ray ray, global::UnityEngine.RaycastHit[] results, float maxDistance) { return default; }
   public Physics() {}
 }
@@ -794,6 +1108,7 @@ public partial struct RaycastHit {
   public global::UnityEngine.Collider collider { get; set; }
 }
 public static partial class ImageConversion {
+  public static byte[] EncodeToPNG(global::UnityEngine.Texture2D tex) { return new byte[0]; }
   public static bool LoadImage(global::UnityEngine.Texture2D tex, byte[] data) { return true; }
 }
 public sealed partial class AudioSource : global::UnityEngine.AudioBehaviour {
@@ -852,12 +1167,18 @@ public enum SendMessageOptions : int {
   DontRequireReceiver = 1,
 }
 public sealed partial class Sprite : global::UnityEngine.Object {
+  public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit, uint extrude, global::UnityEngine.SpriteMeshType meshType, global::UnityEngine.Vector4 border) { return default; }
+  public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit) { return default; }
+  public global::UnityEngine.Texture2D texture { get; set; }
   public Sprite() {}
 }
 public partial class AsyncOperation : global::UnityEngine.YieldInstruction {
   public AsyncOperation() {}
 }
 public sealed partial class CanvasGroup : global::UnityEngine.Component {
+  public float alpha { get; set; }
+  public bool blocksRaycasts { get; set; }
+  public bool interactable { get; set; }
   public CanvasGroup() {}
 }
 public sealed partial class CanvasRenderer : global::UnityEngine.Component {
@@ -870,6 +1191,42 @@ public partial struct UICharInfo {
 }
 public partial struct UIVertex {
 }
+public partial struct Plane {
+  public Plane(global::UnityEngine.Vector3 inNormal, global::UnityEngine.Vector3 inPoint) {}
+  public bool Raycast(global::UnityEngine.Ray ray, out float enter) { enter = default; return default; }
+}
+public enum SpriteMeshType : int {
+  FullRect = 0,
+  Tight = 1,
+}
+public sealed partial class RequireComponent : global::System.Attribute {
+  public RequireComponent(global::System.Type requiredComponent) {}
+  public RequireComponent() {}
+}
+public sealed partial class Projector : global::UnityEngine.Behaviour {
+  public global::UnityEngine.Material material { get; set; }
+  public Projector() {}
+}
+public sealed partial class Graphics {
+  public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat) { }
+  public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest) { }
+  public Graphics() {}
+}
+public sealed partial class WaitUntil : global::UnityEngine.CustomYieldInstruction {
+  public WaitUntil(global::System.Func<bool> predicate) {}
+  public WaitUntil() {}
+}
+public sealed partial class WaitWhile : global::UnityEngine.CustomYieldInstruction {
+  public WaitWhile(global::System.Func<bool> predicate) {}
+  public WaitWhile() {}
+}
+public sealed partial class WaitForFixedUpdate : global::UnityEngine.YieldInstruction {
+  public WaitForFixedUpdate() {}
+}
+public partial class WaitForSecondsRealtime : global::UnityEngine.CustomYieldInstruction {
+  public WaitForSecondsRealtime(float time) {}
+  public WaitForSecondsRealtime() {}
+}
 public partial interface ISerializationCallbackReceiver {
 }
 public partial class AudioBehaviour : global::UnityEngine.Behaviour {
@@ -877,6 +1234,9 @@ public partial class AudioBehaviour : global::UnityEngine.Behaviour {
 }
 public partial class YieldInstruction {
   public YieldInstruction() {}
+}
+public abstract partial class CustomYieldInstruction {
+  public CustomYieldInstruction() {}
 }
 }
 namespace UnityEngine.SceneManagement {
@@ -915,17 +1275,54 @@ public partial class FileManager : global::UnityEngine.MonoBehaviour {
 }
 namespace MeshVR {
 public partial class PresetManager : global::UnityEngine.MonoBehaviour {
+  public string presetName { get; set; }
+  public void LoadPresetFromJSON(global::SimpleJSON.JSONClass inputJSON, bool isMerge = default) { }
+  public void RefreshStorables() { }
+  public global::SimpleJSON.JSONClass lastLoadedJSON;
   public global::UnityEngine.Events.UnityEvent postLoadEvent;
+  public global::MeshVR.PresetManager.SpecificStorable[] specificStorables;
   public PresetManager() {}
+public partial class SpecificStorable {
+  public SpecificStorable() {}
+  public bool includeChildren;
+  public bool isSpecificKeyAnObject;
+  public string specificKey;
+  public global::UnityEngine.Transform specificStorableBucket;
+  public string storeId;
+}
 }
 public partial class AssetLoader : global::UnityEngine.MonoBehaviour {
+  public static void DoneWithAssetBundleFromFile(string path) { }
+  public static void QueueLoadAssetBundleFromFile(global::MeshVR.AssetLoader.AssetBundleFromFileRequest abffr) { }
   public AssetLoader() {}
+public delegate void LoadBundleFromFileCallback(global::MeshVR.AssetLoader.AssetBundleFromFileRequest abffr);
 public partial class AssetBundleFromFileRequest {
   public AssetBundleFromFileRequest() {}
+  public global::UnityEngine.AssetBundle assetBundle;
+  public global::MeshVR.AssetLoader.LoadBundleFromFileCallback callback;
+  public string path;
 }
 }
 public partial class Selector : global::UnityEngine.MonoBehaviour {
   public Selector() {}
+}
+public partial class PresetManagerControl : global::JSONStorable {
+  public bool lockParams { get; set; }
+  public PresetManagerControl() {}
+}
+public partial class HandModelControl : global::JSONStorable {
+  public bool leftHandEnabled { get; set; }
+  public bool rightHandEnabled { get; set; }
+  public bool useCollision { get; set; }
+  public void ToggleCollision() { }
+  public HandModelControl() {}
+}
+public partial class PerfMon : global::UnityEngine.MonoBehaviour {
+  public global::UnityEngine.UI.Toggle onToggle;
+  public PerfMon() {}
+}
+public partial class LeapHandModelControl : global::MeshVR.HandModelControl {
+  public LeapHandModelControl() {}
 }
 public partial interface IBinaryStorable {
 }
@@ -938,24 +1335,130 @@ public partial class PreCalcMeshProvider : global::UnityEngine.MonoBehaviour {
 }
 namespace uFileBrowser {
 public partial class FileBrowser : global::UnityEngine.MonoBehaviour {
+  public void ActivateFileNameField() { }
+  public bool IsHidden() { return default; }
+  public void SetTextEntry(bool b) { }
+  public void Show(global::uFileBrowser.FileBrowserFullCallback fullCallback, bool changeDirectory = default) { }
+  public string defaultPath;
+  public global::UnityEngine.UI.InputField fileEntryField;
+  public bool hideExtension;
+  public global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts;
+  public bool showDirs;
+  public bool showFiles;
   public FileBrowser() {}
 }
 public delegate void FileBrowserCallback(string path);
+public delegate void FileBrowserFullCallback(string path, bool didClose);
 }
 namespace MVR.FileManagementSecure {
 public partial class FileManagerSecure {
+  public static void CopyFile(string oldPath, string newPath) { }
+  public static void CreateDirectory(string path) { }
+  public static void DeleteFile(string path) { }
+  public static bool DirectoryExists(string path, bool onlySystemDirectories = default) { return default; }
+  public static bool FileExists(string path, bool onlySystemFiles = default) { return default; }
+  public static string[] GetDirectories(string dir, string pattern = default) { return new string[0]; }
+  public static string GetDirectoryName(string path, bool returnSlashPath = default) { return ""; }
+  public static string GetFileName(string path) { return ""; }
+  public static string[] GetFiles(string dir, string pattern = default) { return new string[0]; }
+  public static string GetFullPath(string path) { return ""; }
+  public static global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> GetShortCutsForDirectory(string dir, bool allowNavigationAboveRegularDirectories = default, bool useFullPaths = default, bool generateAllFlattenedShortcut = default, bool includeRegularDirsInFlattenedShortcut = default) { return new global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut>(); }
+  public static bool IsFileInPackage(string path) { return default; }
+  public static string NormalizeLoadPath(string path) { return ""; }
+  public static string NormalizePath(string path) { return ""; }
+  public static string ReadAllText(string path) { return ""; }
+  public static void WriteAllBytes(string path, byte[] bytes) { }
+  public static void WriteAllText(string path, string text) { }
   public FileManagerSecure() {}
+}
+public partial class ShortCut {
+  public ShortCut() {}
+  public string displayName;
+  public string path;
 }
 }
 namespace AssetBundles {
 public abstract partial class AssetBundleLoadAssetOperation : global::AssetBundles.AssetBundleLoadOperation {
+  public virtual T GetAsset<T>() { return default; }
   public AssetBundleLoadAssetOperation() {}
 }
 public partial class AssetBundleManager : global::UnityEngine.MonoBehaviour {
+  public static global::AssetBundles.AssetBundleLoadAssetOperation LoadAssetAsync(string assetBundleName, string assetName, global::System.Type type) { return default; }
   public AssetBundleManager() {}
 }
 public abstract partial class AssetBundleLoadOperation {
   public AssetBundleLoadOperation() {}
+}
+}
+namespace GPUTools.Cloth.Scripts {
+public partial class ClothSettings : global::GPUCollidersConsumer {
+  public bool BreakEnabled;
+  public ClothSettings() {}
+}
+}
+namespace Leap.Unity {
+public abstract partial class HandModelBase : global::UnityEngine.MonoBehaviour {
+  public virtual global::Leap.Hand GetLeapHand() { return default; }
+  public HandModelBase() {}
+}
+public static partial class ListAndArrayExtensions {
+  public static T RemoveLast<T>(global::System.Collections.Generic.List<T> list) { return default; }
+}
+public partial class RiggedHand : global::Leap.Unity.HandModel {
+  public RiggedHand() {}
+}
+public abstract partial class HandModel : global::Leap.Unity.HandModelBase {
+  public HandModel() {}
+}
+}
+namespace Leap {
+public partial class Hand {
+  public float TimeVisible;
+  public global::Leap.Vector WristPosition;
+  public Hand() {}
+}
+public partial struct Vector {
+  public float x;
+  public float y;
+  public float z;
+}
+}
+namespace UnityEngine.Windows.Speech {
+public static partial class PhraseRecognitionSystem {
+  public static global::UnityEngine.Windows.Speech.SpeechSystemStatus Status { get; set; }
+  public static void Restart() { }
+}
+public sealed partial class KeywordRecognizer : global::UnityEngine.Windows.Speech.PhraseRecognizer {
+  public KeywordRecognizer(string[] keywords, global::UnityEngine.Windows.Speech.ConfidenceLevel minimumConfidence) {}
+  public KeywordRecognizer() {}
+}
+public abstract partial class PhraseRecognizer {
+  public void add_OnPhraseRecognized(global::UnityEngine.Windows.Speech.PhraseRecognizer.PhraseRecognizedDelegate value) { }
+  public virtual void Dispose() { }
+  public void remove_OnPhraseRecognized(global::UnityEngine.Windows.Speech.PhraseRecognizer.PhraseRecognizedDelegate value) { }
+  public void Start() { }
+  public void Stop() { }
+  public PhraseRecognizer() {}
+public delegate void PhraseRecognizedDelegate(global::UnityEngine.Windows.Speech.PhraseRecognizedEventArgs args);
+}
+public partial struct PhraseRecognizedEventArgs {
+  public string text;
+}
+public enum SpeechSystemStatus : int {
+  Stopped = 0,
+  Running = 1,
+  Failed = 2,
+}
+public enum ConfidenceLevel : int {
+  High = 0,
+  Medium = 1,
+  Low = 2,
+  Rejected = 3,
+}
+}
+namespace UnityEngine.XR {
+public static partial class XRSettings {
+  public static bool enabled { get; set; }
 }
 }
 namespace MVR {
@@ -965,5 +1468,386 @@ public partial class ObjectAllocator : global::UnityEngine.MonoBehaviour {
 }
 namespace GPUTools.Skinner.Scripts.Abstract {
 public partial interface IMeshProvider {
+}
+}
+namespace UnityEngine {
+public partial class Object {
+  public static T FindObjectOfType<T>() { return default; }
+}
+public partial class Component {
+  public void BroadcastMessage(string methodName, object parameter, global::UnityEngine.SendMessageOptions options) { }
+  public void SendMessage(string methodName, object value) { }
+  public void SendMessage(string methodName, object value, global::UnityEngine.SendMessageOptions options) { }
+  public void SendMessage(string methodName, global::UnityEngine.SendMessageOptions options) { }
+}
+public partial class GameObject {
+  public static global::UnityEngine.GameObject CreatePrimitive(global::UnityEngine.PrimitiveType type) { return default; }
+  public global::UnityEngine.GameObject gameObject { get; set; }
+  public T GetComponentInParent<T>() { return default; }
+}
+public partial class Canvas {
+  public static void ForceUpdateCanvases() { }
+  public global::UnityEngine.Camera worldCamera { get; set; }
+  public bool pixelPerfect { get; set; }
+  public float planeDistance { get; set; }
+}
+public partial class RectTransform {
+  public void GetWorldCorners(global::UnityEngine.Vector3[] fourCornersArray) { }
+  public void SetInsetAndSizeFromParentEdge(global::UnityEngine.RectTransform.Edge edge, float inset, float size) { }
+  public void SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis axis, float size) { }
+public enum Edge : int {
+  Left = 0,
+  Right = 1,
+  Top = 2,
+  Bottom = 3,
+}
+public enum Axis : int {
+  Horizontal = 0,
+  Vertical = 1,
+}
+}
+public partial class Transform {
+  public global::UnityEngine.Vector3 right { get; set; }
+  public bool IsChildOf(global::UnityEngine.Transform parent) { return default; }
+  public void LookAt(global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector3 worldUp) { }
+  public void Rotate(float xAngle, float yAngle, float zAngle) { }
+  public void RotateAround(global::UnityEngine.Vector3 point, global::UnityEngine.Vector3 axis, float angle) { }
+  public global::UnityEngine.Vector3 localEulerAngles { get; set; }
+  public void SetAsFirstSibling() { }
+  public void Translate(global::UnityEngine.Vector3 translation) { }
+  public void Translate(float x, float y, float z) { }
+  public void Translate(float x, float y, float z, global::UnityEngine.Space relativeTo) { }
+}
+public static partial class Resources {
+  public static T[] FindObjectsOfTypeAll<T>() { return new T[0]; }
+  public static global::UnityEngine.Object[] FindObjectsOfTypeAll(global::System.Type type) { return new global::UnityEngine.Object[0]; }
+}
+public partial class Event {
+  public int clickCount { get; set; }
+}
+public static partial class Debug {
+  public static void LogException(global::System.Exception exception) { }
+}
+public partial class RenderTexture {
+  public bool Create() { return default; }
+  public bool autoGenerateMips { get; set; }
+  public bool useMipMap { get; set; }
+}
+public partial class Texture2D {
+  public static global::UnityEngine.Texture2D whiteTexture { get; set; }
+  public byte[] GetRawTextureData() { return new byte[0]; }
+  public void ReadPixels(global::UnityEngine.Rect source, int destX, int destY, bool recalculateMipMaps) { }
+  public void SetPixels(global::UnityEngine.Color[] colors) { }
+}
+public static partial class Input {
+  public static float GetAxis(string axisName) { return default; }
+}
+public partial class Camera {
+  public int pixelWidth { get; set; }
+  public void Render() { }
+  public global::UnityEngine.Ray ScreenPointToRay(global::UnityEngine.Vector3 pos) { return default; }
+  public global::UnityEngine.Color backgroundColor { get; set; }
+  public bool orthographic { get; set; }
+  public global::UnityEngine.RenderTexture targetTexture { get; set; }
+  public bool useOcclusionCulling { get; set; }
+  public global::UnityEngine.Vector3 ViewportToWorldPoint(global::UnityEngine.Vector3 position) { return default; }
+}
+public static partial class Application {
+  public static string dataPath { get; set; }
+}
+}
+namespace UnityEngine.UI {
+public partial class Graphic {
+  public int depth { get; set; }
+  public global::UnityEngine.Texture mainTexture { get; set; }
+  public global::UnityEngine.Material material { get; set; }
+}
+public partial class Image {
+  public global::UnityEngine.Sprite sprite { get; set; }
+  public float alphaHitTestMinimumThreshold { get; set; }
+  public float fillAmount { get; set; }
+  public global::UnityEngine.UI.Image.FillMethod fillMethod { get; set; }
+  public int fillOrigin { get; set; }
+  public global::UnityEngine.UI.Image.Type type { get; set; }
+public enum Type : int {
+  Simple = 0,
+  Sliced = 1,
+  Tiled = 2,
+  Filled = 3,
+}
+public enum FillMethod : int {
+  Horizontal = 0,
+  Vertical = 1,
+  Radial90 = 2,
+  Radial180 = 3,
+  Radial360 = 4,
+}
+}
+}
+public partial class SuperController {
+  public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked) { return default; }
+  public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid) { return default; }
+  public void DoSaveScreenshot(string saveName, global::SuperController.ScreenShotCallback callback = default) { }
+  public global::SuperController.ActiveUI activeUI { get; set; }
+  public string currentLoadDir { get; set; }
+  public bool disableAllNavigation { get; set; }
+  public bool disableGrabNavigation { get; set; }
+  public bool disableTeleport { get; set; }
+  public bool freeMoveFollowFloor { get; set; }
+  public global::SuperController.GameMode gameMode { get; set; }
+  public bool IsMonitorOnly { get; set; }
+  public bool IsMonitorRigActive { get; set; }
+  public bool lockHeightDuringNavigate { get; set; }
+  public float playerHeightAdjust { get; set; }
+  public bool showHiddenAtoms { get; set; }
+  public bool teleportAllowRotation { get; set; }
+  public global::UISideAlign.Side UISide { get; set; }
+  public float worldScale { get; set; }
+  public global::UnityEngine.GameObject GetCachedPrefab(string assetBundleName, string assetName) { return default; }
+  public void GetDirectoryPathDialog(global::uFileBrowser.FileBrowserCallback callback, string suggestedFolder = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool fullComputerBrowse = default) { }
+  public string[] GetFilesAtPath(string path, string pattern = default) { return new string[0]; }
+  public bool GetLeftGrab() { return default; }
+  public bool GetLeftGrabRelease() { return default; }
+  public bool GetLeftSelect() { return default; }
+  public void GetMediaPathDialog(global::uFileBrowser.FileBrowserCallback callback, string filter = default, string suggestedFolder = default, bool fullComputerBrowse = default, bool showDirs = default, bool showKeepOpt = default, string fileRemovePrefix = default, bool hideExtenstion = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool browseVarFilesAsDirectories = default, bool showInstallFolderInDirectoryList = default) { }
+  public void GetMediaPathDialog(global::uFileBrowser.FileBrowserFullCallback callback, string filter = default, string suggestedFolder = default, bool fullComputerBrowse = default, bool showDirs = default, bool showKeepOpt = default, string fileRemovePrefix = default, bool hideExtenstion = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool browseVarFilesAsDirectories = default, bool showInstallFolderInDirectoryList = default) { }
+  public bool GetRightGrab() { return default; }
+  public bool GetRightGrabRelease() { return default; }
+  public bool GetRightSelect() { return default; }
+  public global::SimpleJSON.JSONClass GetSaveJSON(global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default) { return default; }
+  public global::FreeControllerV3 GetSelectedController() { return default; }
+  public void HideMainHUD() { }
+  public void Load(string saveName = default) { }
+  public global::SimpleJSON.JSONNode LoadJSON(string saveName) { return default; }
+  public void LoadMerge(string saveName = default) { }
+  public string NormalizeDirectoryPath(string path) { return ""; }
+  public string NormalizeLoadPath(string path) { return ""; }
+  public string NormalizeMediaPath(string path) { return ""; }
+  public string NormalizePath(string path) { return ""; }
+  public void OpenHub() { }
+  public void PushOverrideLoadDirFromFilePath(string path) { }
+  public void Quit() { }
+  public string ReadFileIntoString(string path) { return ""; }
+  public void Save(string saveName = default, global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default, global::SuperController.ScreenShotCallback callback = default, bool isOverwrite = default) { }
+  public void SaveJSON(global::SimpleJSON.JSONClass jc, string saveName) { }
+  public void SaveStringIntoFile(string path, string contents) { }
+  public void SelectController(string atomName, string controllerName, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
+  public void SelectController(global::FreeControllerV3 controller, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
+  public float freeMoveMultiplier { get; set; }
+  public float grabNavigationPositionMultiplier { get; set; }
+  public float grabNavigationRotationMultiplier { get; set; }
+  public void SetFreezeAnimation(bool freeze) { }
+  public void SetOnlyShowControllers(global::System.Collections.Generic.HashSet<global::FreeControllerV3> onlyControllers) { }
+  public void ShowMainHUDAuto() { }
+  public void SyncMonitorRigPosition() { }
+  public void ToggleTargetsOnWithButton() { }
+  public global::CameraTarget centerCameraTarget;
+  public global::MeshVR.HandModelControl commonHandModelControl;
+  public global::uFileBrowser.FileBrowser fileBrowserUI;
+  public global::UnityEngine.UI.Toggle freezeAnimationToggle;
+  public global::UnityEngine.UI.Text helpHUDText;
+  public global::UnityEngine.Camera hiResScreenshotCamera;
+  public global::UnityEngine.Transform hiResScreenshotPreview;
+  public global::UnityEngine.Transform leapHandLeft;
+  public global::UnityEngine.Transform leapHandRight;
+  public global::UnityEngine.Camera leftControllerCamera;
+  public global::UnityEngine.Transform leftHand;
+  public global::UnityEngine.Transform leftHandAlternate;
+  public global::UnityEngine.Transform loadingIcon;
+  public global::UnityEngine.Transform loadingUI;
+  public global::SimpleJSON.JSONNode loadJson;
+  public global::UnityEngine.Camera lookCamera;
+  public global::UnityEngine.Transform mainHUD;
+  public global::UITabSelector mainMenuTabSelector;
+  public global::uFileBrowser.FileBrowser mediaFileBrowserUI;
+  public global::UnityEngine.Camera MonitorCenterCamera;
+  public global::MotionAnimationMaster motionAnimationMaster;
+  public global::UnityEngine.Transform navigationRig;
+  public global::SuperController.OnAtomUIDRename onAtomUIDRenameHandlers;
+  public global::UnityEngine.UI.Button overwriteConfirmButton;
+  public global::UnityEngine.Transform overwriteConfirmPanel;
+  public global::UnityEngine.UI.Text overwriteConfirmPathText;
+  public global::UnityEngine.Camera OVRCenterCamera;
+  public global::UnityEngine.Camera rightControllerCamera;
+  public global::UnityEngine.Transform rightHand;
+  public global::UnityEngine.Transform rightHandAlternate;
+  public string savesDir;
+  public global::UnityEngine.Camera screenshotCamera;
+  public global::UnityEngine.Transform screenshotPreview;
+  public global::MeshVR.PresetManagerControl sessionPresetManagerControl;
+  public global::UnityEngine.Transform touchObjectLeft;
+  public global::UnityEngine.Transform touchObjectRight;
+  public global::UnityEngine.Camera ViveCenterCamera;
+  public global::UnityEngine.Transform viveObjectLeft;
+  public global::UnityEngine.Transform viveObjectRight;
+public delegate void ScreenShotCallback(string imgPath);
+public enum GameMode : int {
+  Edit = 0,
+  Play = 1,
+}
+public enum ActiveUI : int {
+  None = 0,
+  MainMenu = 1,
+  MainMenuOnly = 2,
+  SelectedOptions = 3,
+  MultiButtonPanel = 4,
+  EmbeddedScenePanel = 5,
+  OnlineBrowser = 6,
+  PackageBuilder = 7,
+  PackageManager = 8,
+  PackageDownloader = 9,
+  Custom = 10,
+}
+}
+public partial class Atom {
+  public global::SubScene containingSubScene { get; set; }
+  public global::MotionAnimationControl[] motionAnimationControls { get; set; }
+  public global::System.Collections.Generic.List<global::MeshVR.PresetManagerControl> presetManagerControls { get; set; }
+  public void LateRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool restoreCore = default, bool isSubSceneRestore = default, bool setMissingToDefault = default, bool isTheSubSceneAtom = default) { }
+  public void LoadAppearancePreset(string saveName = default) { }
+  public void LoadPhysicalPreset(string saveName = default) { }
+  public void LoadPreset(string saveName = default) { }
+  public void PostRestore() { }
+  public void PreRestore() { }
+  public void Remove() { }
+  public void ResetAppearance() { }
+  public void Restore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool restoreCore = default, global::SimpleJSON.JSONArray presetAtoms = default, bool isClear = default, bool isSubSceneRestore = default, bool setMissingToDefault = default, bool isTheSubSceneAtom = default) { }
+  public void RestoreTransform(global::SimpleJSON.JSONClass jc, bool setUnlistedToDefault = default) { }
+  public global::Atom parentAtom { get; set; }
+  public void SetLastRestoredData(global::SimpleJSON.JSONClass jc, bool isAppearance = default, bool isPhysical = default) { }
+  public void SetUID(string val) { }
+  public void ToggleOn() { }
+  public string category;
+  public global::JSONStorableBool collisionEnabledJSON;
+  public global::JSONStorableBool keepParamLocksWhenPuttingBackInPoolJSON;
+  public global::MeshVR.PresetManagerControl mainPresetControl;
+}
+public partial class JSONStorable {
+  public void DeregisterAction(global::JSONStorableAction action) { }
+  public void DeregisterColor(global::JSONStorableColor param) { }
+  public void DeregisterFloat(global::JSONStorableFloat param) { }
+  public void DeregisterUrl(global::JSONStorableUrl param) { }
+  public global::System.Collections.Generic.List<string> GetActionNames() { return new global::System.Collections.Generic.List<string>(); }
+  public global::System.Collections.Generic.List<string> GetAllParamAndActionNames() { return new global::System.Collections.Generic.List<string>(); }
+  public global::JSONStorableActionAudioClip GetAudioClipAction(string name) { return default; }
+  public virtual bool GetBoolParamValue(string param) { return default; }
+  public global::JSONStorableColor GetColorJSONParam(string name) { return default; }
+  public global::System.Collections.Generic.List<string> GetColorParamNames() { return new global::System.Collections.Generic.List<string>(); }
+  public virtual global::HSVColor GetColorParamValue(string param) { return default; }
+  public virtual float GetFloatParamValue(string param) { return default; }
+  public global::JSONStorableActionPresetFilePath GetPresetFilePathAction(string name) { return default; }
+  public global::JSONStorableActionStringChooser GetStringChooserAction(string name) { return default; }
+  public virtual global::System.Collections.Generic.List<string> GetStringChooserJSONParamChoices(string param) { return new global::System.Collections.Generic.List<string>(); }
+  public virtual string GetStringParamValue(string param) { return ""; }
+  public global::JSONStorableUrl GetUrlJSONParam(string name) { return default; }
+  public global::System.Collections.Generic.List<string> GetUrlParamNames() { return new global::System.Collections.Generic.List<string>(); }
+  public virtual string GetUrlParamValue(string param) { return ""; }
+  public global::JSONStorableVector3 GetVector3JSONParam(string name) { return default; }
+  public global::System.Collections.Generic.List<string> GetVector3ParamNames() { return new global::System.Collections.Generic.List<string>(); }
+  public virtual void PostRestore() { }
+  public virtual void PreRestore() { }
+  public void RegisterColor(global::JSONStorableColor param) { }
+  public void RegisterUrl(global::JSONStorableUrl param) { }
+  public void RestoreAllFromDefaults() { }
+  public virtual void SetColorParamValue(string param, global::HSVColor value) { }
+  public virtual void Validate() { }
+public enum Type : int {
+  None = 0,
+  Bool = 1,
+  Float = 2,
+  Vector3 = 3,
+  String = 4,
+  Url = 5,
+  StringChooser = 6,
+  Color = 7,
+  Action = 8,
+  AudioClipAction = 9,
+  SceneFilePathAction = 10,
+  PresetFilePathAction = 11,
+  StringChooserAction = 12,
+}
+}
+public partial class FreeControllerV3 {
+  public global::UnityEngine.Rigidbody linkToRB { get; set; }
+  public virtual void SetLinkToAtom(string atomUID) { }
+}
+public partial class DAZCharacter {
+  public global::DAZSkinV2 skin { get; set; }
+  public string UVname;
+}
+public partial class JSONStorableFloat {
+  public global::UnityEngine.UI.Slider slider { get; set; }
+  public void RegisterSlider(global::UnityEngine.UI.Slider s, bool isAlt = default) { }
+}
+public partial class JSONStorableString {
+  public global::UnityEngine.UI.InputField inputField { get; set; }
+  public global::UnityEngine.UI.Text text { get; set; }
+  public void RegisterText(global::UnityEngine.UI.Text t, bool isAlt = default) { }
+}
+public partial class DAZCharacterSelector {
+  public global::DAZClothingItem GetClothingItem(string itemId) { return default; }
+  public global::UnityEngine.Transform femaleMorphBank1Prefab;
+  public global::UnityEngine.Transform femaleMorphBank2Prefab;
+  public global::UnityEngine.Transform femaleMorphBank3Prefab;
+  public global::UnityEngine.Transform maleMorphBank1Prefab;
+  public global::UnityEngine.Transform maleMorphBank2Prefab;
+  public global::UnityEngine.Transform maleMorphBank3Prefab;
+  public global::GenerateDAZMorphsControlUI morphsControlFemaleUI;
+  public global::GenerateDAZMorphsControlUI morphsControlMaleUI;
+  public global::DAZBones rootBones;
+}
+public partial class JSONStorableBool {
+  public global::UnityEngine.UI.Toggle toggle { get; set; }
+  public void RegisterToggle(global::UnityEngine.UI.Toggle t, bool isAlt = default) { }
+}
+public partial class GenerateDAZMorphsControlUI {
+  public global::DAZMorph GetMorphByUid(string morphUid) { return default; }
+  public void ZeroAll() { }
+  public void ZeroMorph() { }
+  public void ZeroNearZero() { }
+  public void ZeroNearZeroMore() { }
+  public void ZeroPose() { }
+}
+public partial class DAZMorph {
+  public string uid { get; set; }
+  public bool isInPackage;
+  public string overrideName;
+  public string packageLicense;
+  public string packageUid;
+  public string version;
+}
+public partial class JSONStorableAction {
+  public string name;
+}
+public partial class JSONStorableStringChooser {
+  public global::System.Collections.Generic.List<string> displayChoices { get; set; }
+  public global::UIPopup popup { get; set; }
+  public void RegisterPopup(global::UIPopup p, bool isAlt = default) { }
+  public override bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
+public delegate void PopupOpenCallback();
+}
+public partial class DAZMorphBank {
+  public void Init() { }
+  public global::DAZBones morphBones;
+}
+public abstract partial class JSONStorableParam {
+  public virtual bool NeedsRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default) { return default; }
+  public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool setMissingToDefault = default) { }
+  public virtual void SetDefaultFromCurrent() { }
+  public virtual void SetValToDefault() { }
+  public virtual bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
+  public global::JSONStorable.Type type;
+}
+namespace SimpleJSON {
+public abstract partial class JSONNode {
+  public global::System.Collections.Generic.IEnumerable<global::SimpleJSON.JSONNode> Childs { get; set; }
+  public static global::SimpleJSON.JSONNode Parse(string aJSON) { return default; }
+  public virtual global::SimpleJSON.JSONNode Remove(string aKey) { return default; }
+  public virtual global::SimpleJSON.JSONNode Remove(int aIndex) { return default; }
+}
+}
+namespace UnityEngine.EventSystems {
+public partial class UIBehaviour {
+  public virtual bool IsActive() { return default; }
 }
 }

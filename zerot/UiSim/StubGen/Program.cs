@@ -97,6 +97,15 @@ internal static class Program
 			foreach (var n in g) Emit(sb, n);
 			if (g.Key != "") sb.AppendLine("}");
 		}
+		// members a plugin needs that a hand-written (partial) shim type lacks: add them as default-bodied partial members
+		var aug = needs.Values.Where(n => n.existsInShim && n.def.DeclaringType == null && !n.def.IsValueType && !n.def.IsEnum && !n.def.IsInterface && !IsDelegate(n.def) && !n.def.HasGenericParameters
+			&& (n.methods.Any(m => !shimMembers[n.def.FullName].Contains(m.Name)) || n.fields.Any(f => !shimMembers[n.def.FullName].Contains(f.Name)) || needs.Values.Any(x => x.def.DeclaringType != null && x.def.DeclaringType.FullName == n.def.FullName && !x.existsInShim))).ToList();
+		foreach (var g in aug.GroupBy(n => n.def.Namespace))
+		{
+			if (g.Key != "") sb.AppendLine("namespace " + g.Key + " {");
+			foreach (var n in g) Emit(sb, n, shimMembers[n.def.FullName]);
+			if (g.Key != "") sb.AppendLine("}");
+		}
 		File.WriteAllText(outFile, sb.ToString());
 		int stubbed = needs.Values.Count(n => !n.existsInShim);
 		Console.WriteLine("stubbed " + stubbed + " type(s)");
@@ -168,7 +177,7 @@ internal static class Program
 
 	private static string SimpleName(TypeDefinition d) { string n = d.Name; int t = n.IndexOf('`'); return t >= 0 ? n.Substring(0, t) : n; }
 
-	private static void Emit(StringBuilder sb, Need n)
+	private static void Emit(StringBuilder sb, Need n, HashSet<string> have = null)
 	{
 		var d = n.def;
 		string nm = SimpleName(d) + GenericDecl(d);
@@ -189,18 +198,30 @@ internal static class Program
 		string mods = "public " + (d.IsAbstract && d.IsSealed ? "static " : d.IsAbstract && !d.IsInterface ? "abstract " : "") + (kind == "class" && !d.IsAbstract && d.IsSealed ? "sealed " : "");
 		string bases = "";
 		if (kind == "class" && d.BaseType != null && d.BaseType.FullName != "System.Object") bases = " : " + Name(d.BaseType);
+		if (have != null)
+		{
+			bases = "";
+			var sd = shim.Types.Concat(shim.Types.SelectMany(t => AllTypes(t.NestedTypes))).FirstOrDefault(t => t.FullName == d.FullName);
+			if (sd != null)
+			{
+				kind = sd.IsInterface ? "interface" : sd.IsValueType ? "struct" : "class";
+				mods = "public " + (sd.IsAbstract && sd.IsSealed ? "static " : sd.IsAbstract && !sd.IsInterface ? "abstract " : "");
+			}
+		}
 		sb.AppendLine(mods + "partial " + kind + " " + nm + bases + " {");
 		var props = new Dictionary<string, PropertyDefinition>();
 		var emittedProps = new HashSet<string>();
 		bool hasCtor = false;
 		foreach (var m in n.methods.OrderBy(x => x.Name))
 		{
+			if (have != null && (m.IsConstructor || have.Contains(m.Name))) continue;
 			if (m.IsConstructor && !m.IsStatic) { hasCtor = true; sb.AppendLine("  public " + SimpleName(d) + "(" + Params(m) + ") " + (d.BaseType != null && !d.IsValueType && NeedsBase(d) ? ": base(" + BaseArgs(d) + ") " : "") + "{}"); continue; }
 			if (m.IsStatic && m.IsConstructor) continue;
 			var prop = d.Properties.FirstOrDefault(p => (p.GetMethod != null && p.GetMethod.FullName == m.FullName) || (p.SetMethod != null && p.SetMethod.FullName == m.FullName));
 			if (prop != null)
 			{
 				if (!emittedProps.Add(prop.Name)) continue;
+				if (have != null && (have.Contains(prop.Name) || (prop.GetMethod != null && have.Contains(prop.GetMethod.Name)) || (prop.SetMethod != null && have.Contains(prop.SetMethod.Name)))) continue;
 				var acc = (n.methods.Any(x => prop.GetMethod != null && x.FullName == prop.GetMethod.FullName) ? "get; " : "") + (n.methods.Any(x => prop.SetMethod != null && x.FullName == prop.SetMethod.FullName) ? "set; " : "");
 				acc = "get; set; ";
 				string pinit = (!prop.PropertyType.IsValueType && prop.PropertyType.Name.Contains("Event") && !prop.PropertyType.Name.StartsWith("EventFunction") && !(prop.PropertyType is GenericParameter)) ? " = new " + Name(prop.PropertyType) + "();" : "";
@@ -210,19 +231,35 @@ internal static class Program
 			if (d.IsInterface) { sb.AppendLine("  " + Name(m.ReturnType) + " " + m.Name + GenericM(m) + "(" + Params(m) + ");"); continue; }
 			string outs = string.Concat(m.Parameters.Where(p => p.IsOut).Select(p => (string.IsNullOrEmpty(p.Name) ? "p" + p.Index : p.Name) + " = default; "));
 			string body = m.ReturnType.FullName == "System.Void" ? "{ " + outs + "}" : "{ " + outs + "return " + DefaultExpr(m) + "; }";
-			string ov = m.IsVirtual && !m.IsNewSlot && d.BaseType != null && !m.IsAbstract && m.Name != "Finalize" ? "override " : "";
+			string ov = m.IsVirtual && !m.IsNewSlot && d.BaseType != null && !m.IsAbstract && m.Name != "Finalize" ? (StubBaseDeclares(d, m) ? "override " : "virtual ") : "";
 			if (m.IsVirtual && m.IsNewSlot && !d.IsSealed) ov = "virtual ";
 			sb.AppendLine("  public " + (m.IsStatic ? "static " : "") + ov + Name(m.ReturnType) + " " + m.Name + GenericM(m) + "(" + Params(m) + ") " + body);
 		}
 		foreach (var f in n.fields.OrderBy(x => x.Name))
 		{
 			if (d.IsEnum) continue;
+			if (have != null && have.Contains(f.Name)) continue;
 			sb.AppendLine("  public " + (f.IsStatic ? "static " : "") + (f.IsLiteral ? "" : "") + Name(f.FieldType) + " " + f.Name + ";");
 		}
-		if (kind == "class" && !(d.IsAbstract && d.IsSealed) && !n.methods.Any(x => x.IsConstructor && !x.IsStatic && x.Parameters.Count == 0)) sb.AppendLine("  public " + SimpleName(d) + "() {}");
+		if (have == null && kind == "class" && !(d.IsAbstract && d.IsSealed) && !n.methods.Any(x => x.IsConstructor && !x.IsStatic && x.Parameters.Count == 0)) sb.AppendLine("  public " + SimpleName(d) + "() {}");
 		foreach (var nt in d.NestedTypes)
 			if (needs.TryGetValue(nt.FullName, out var nn) && !nn.existsInShim) Emit(sb, nn);
 		sb.AppendLine("}");
+	}
+
+	// an override is only valid when a base type that exists in the output (hand-written shim type or stub) really declares that method;
+	// stubs are generated lazily, so otherwise declare it virtual on this type instead of overriding something that is not there
+	private static bool StubBaseDeclares(TypeDefinition d, MethodDefinition m)
+	{
+		var b = d.BaseType == null ? null : d.BaseType.Resolve();
+		while (b != null)
+		{
+			string bn = b.FullName;
+			if (shimMembers.TryGetValue(bn, out var set) && set.Contains(m.Name)) return true;
+			if (needs.TryGetValue(bn, out var nb) && nb.methods.Any(x => x.Name == m.Name && x.IsVirtual)) return true;
+			b = b.BaseType == null ? null : b.BaseType.Resolve();
+		}
+		return false;
 	}
 
 	private static string DefaultExpr(MethodDefinition m)

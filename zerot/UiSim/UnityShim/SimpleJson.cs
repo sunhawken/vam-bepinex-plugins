@@ -6,7 +6,7 @@ using System.Text;
 // Small working SimpleJSON (the subset VaM scripts use): parse, build, serialize.
 namespace SimpleJSON
 {
-	public abstract class JSONNode
+	public abstract partial class JSONNode
 	{
 		public virtual JSONNode this[string key] { get { return null; } set { } }
 		public virtual JSONNode this[int index] { get { return null; } set { } }
@@ -48,7 +48,7 @@ namespace SimpleJSON
 		}
 	}
 
-	public class JSONData : JSONNode
+	public partial class JSONData : JSONNode
 	{
 		private string data;
 		public JSONData(string v) { data = v; }
@@ -59,7 +59,7 @@ namespace SimpleJSON
 		internal override void Write(StringBuilder sb) { Esc(sb, data ?? ""); }
 	}
 
-	public class JSONClass : JSONNode
+	public partial class JSONClass : JSONNode
 	{
 		private readonly Dictionary<string, JSONNode> dict = new Dictionary<string, JSONNode>();
 		private readonly List<string> order = new List<string>();
@@ -86,7 +86,7 @@ namespace SimpleJSON
 		}
 	}
 
-	public class JSONArray : JSONNode
+	public partial class JSONArray : JSONNode
 	{
 		private readonly List<JSONNode> list = new List<JSONNode>();
 		public override JSONNode this[int index] { get { return list[index]; } set { list[index] = value; } }

@@ -103,7 +103,7 @@ namespace UnityEngine.UI
 			var canvases = new List<GameObject>();
 			foreach (var go in Sim.AllObjects) { var c = go.GetComponent<Canvas>(); if (c != null && go.activeInHierarchy && go.transform.parent == null) canvases.Add(go); }
 			canvases.Sort((a, b) => a.GetComponent<Canvas>().sortingOrder.CompareTo(b.GetComponent<Canvas>().sortingOrder));
-			using (var g = Graphics.FromImage(bmp))
+			using (var g = System.Drawing.Graphics.FromImage(bmp))
 			{
 				g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
 				foreach (var cgo in canvases)
@@ -115,7 +115,7 @@ namespace UnityEngine.UI
 			}
 		}
 
-		private static void DrawNode(Graphics g, Transform t, float s, int screenH, RectangleF clip, List<Issue> issues, int depth)
+		private static void DrawNode(System.Drawing.Graphics g, Transform t, float s, int screenH, RectangleF clip, List<Issue> issues, int depth)
 		{
 			var go = t.gameObject;
 			if (!go.activeSelf) return;
@@ -152,7 +152,7 @@ namespace UnityEngine.UI
 			foreach (var ch in t.children.ToArray()) DrawNode(g, ch, s, screenH, childClip, issues, depth + 1);
 		}
 
-		private static void DrawText(Graphics g, Text t, RectangleF screen, float s, RectangleF clip, List<Issue> issues)
+		private static void DrawText(System.Drawing.Graphics g, Text t, RectangleF screen, float s, RectangleF clip, List<Issue> issues)
 		{
 			var style = new GUIStyle { fontSize = t.fontSize, fontStyle = t.fontStyle, wordWrap = t.horizontalOverflow == HorizontalWrapMode.Wrap, richText = t.supportRichText };
 			float rw = screen.Width / s, rh = screen.Height / s;   // logical units: text is laid out before canvas scaling

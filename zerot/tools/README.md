@@ -11,6 +11,8 @@
 | `unpack` / `pack` | .var <-> folder (forward-slash entries, meta.json validated) |
 | `cslcheck <var\|folder>` | compile the .cs/.cslist scripts with Roslyn against the real `VaM_Data\Managed` assemblies |
 | `simbuild` | rebuild the simulator after changing it (regenerates the VaM API stubs) |
+| `simtargets` | compile the real scripts of DecalMaker / BodyLanguage_Lite / UIAssist from your AddonPackages into `UiSim/in/targets` (needed by the Harmony-helper scenarios; never committed) |
+| `cslbuild <var> <out.dll>` | same, for any package |
 
 ## What the simulator is
 `zerot/UiSim` holds a small re-implementation of UnityEngine + the VaM classes plugins use (no Unity, no VaM).
@@ -32,9 +34,17 @@ Covered today: BodyWeight, MicroPhysics Fixer, ExtraAutoGenitals, PersonGuard (l
 2. New scenario -> add a method to `Scenarios.cs`, `vamdev.py simbuild`, `vamsim.exe <dll>`.
 3. New plugin project -> add it to the table at the top of `vamdev.py`.
 
+## Harmony helpers (DecalMaker / BodyLanguage / UIAssist)
+These patch script code that only exists inside VaM, so `vamdev.py simtargets` compiles the REAL scripts from the newest matching
+`.var` in AddonPackages into a script assembly. The scenario (`HelperScenarios.cs`) loads that assembly into the simulator, runs the
+helper with real Harmony (Lib.Harmony, with a call-signature fix-up for the helpers' Harmony 2.0 build), and then runs the PATCHED
+methods: MSAA argument 8 -> 1, the wrong `Release()` -> `ReleaseTemporary`, throttles, exception containment, name-check caches.
+Each scenario first asserts the *unpatched* behaviour (e.g. "temporaries use 8x MSAA", "GameControlUI.Update throws") so a pass
+shows the helper changed it. Harmony patching JITs the patched method, so every Unity/VaM member in those methods must exist in the
+shim - that is why the structs (Vector3/Quaternion) now have real maths in `UnityShim/Math3D.cs`.
+
 ## Limits (be honest about what a pass means)
-* Behaviour is simulated, not VaM: no physics, no rendering, no real DAZ morph pipeline. A pass proves the plugin logic and its
-  config/lifecycle handling, not that it looks right in VaM.
-* Harmony helpers (DecalMaker/BodyLanguage/UIAssist helpers) are not run: they patch VaM script assemblies that only exist inside VaM.
-  Verify those with `cslcheck` on the package plus reading the patched methods.
+* Behaviour is simulated, not VaM: no physics, no rendering, no real DAZ morph pipeline. A pass proves the plugin/patch logic and its
+  config/lifecycle handling, not that it looks or feels right in VaM.
+* Helper scenarios exercise the patched methods in isolation (render textures are counters, not GPU textures).
 * Text metrics for UiSim assume Arial 13 px.

@@ -153,9 +153,9 @@ public partial class JSONStorableStringChooser : JSONStorableParam
 	public delegate void SetJSONStringCallback(JSONStorableStringChooser jsc);
 	public SetStringCallback setCallbackFunction;
 	public SetJSONStringCallback setJSONCallbackFunction;
-	public List<string> choices = new List<string>();
+	public List<string> choices { get; set; } = new List<string>();
 	public string defaultVal;
-	public string label;
+	public string label { get; set; }
 	private string _val;
 	public JSONStorableStringChooser() { }
 	public JSONStorableStringChooser(string paramName, List<string> options, string startingValue, string label, SetStringCallback callback = null)
@@ -225,8 +225,8 @@ public partial class FreeControllerV3 : JSONStorable
 	public bool globalCollisionEnabled { get; set; } = true;
 	public enum PositionState { Off, On, Following, ParentLink, PhysicsLink, Hold, Lock }
 	public enum RotationState { Off, On, Following, ParentLink, PhysicsLink, Hold, Lock }
-	public PositionState currentPositionState = PositionState.On;
-	public RotationState currentRotationState = RotationState.On;
+	public PositionState currentPositionState { get; set; } = PositionState.On;
+	public RotationState currentRotationState { get; set; } = RotationState.On;
 	public void ResetControl() { }
 	public void SelectLinkToRigidbody(Rigidbody rb) { }
 }
@@ -236,10 +236,10 @@ public partial class Atom : JSONStorable
 	public string type;
 	public string uid { get; set; }
 	public bool on { get; set; } = true;
-	public bool hidden;
+	public bool hidden { get; set; }
 	public bool destroyed;
 	public bool collisionEnabled { get; set; } = true;
-	public bool tempFreezePhysics;
+	public bool tempFreezePhysics { get; set; }
 	public bool isPhysicsFrozen;
 	public FreeControllerV3[] freeControllers { get; set; } = new FreeControllerV3[0];
 	public Rigidbody[] rigidbodies { get; set; } = new Rigidbody[0];
@@ -457,5 +457,37 @@ public static class SimWorld
 	{
 		foreach (var rb in a.rigidbodies) if (rb.name == name) return rb;
 		return null;
+	}
+}
+
+namespace UnityEngine
+{
+	public enum RenderTextureFormat { ARGB32 = 0, Depth = 1, ARGBHalf = 2, Shadowmap = 3, RGB565 = 4, ARGB4444 = 5, ARGB1555 = 6, Default = 7 }
+	public enum RenderTextureReadWrite { Default = 0, Linear = 1, sRGB = 2 }
+	public enum FilterMode { Point = 0, Bilinear = 1, Trilinear = 2 }
+	public enum TextureWrapMode { Repeat = 0, Clamp = 1 }
+
+	// Records how render textures are created and released so a scenario can assert on it.
+	public partial class RenderTexture : Texture
+	{
+		public static int Created, TemporaryAcquired, TemporaryReleased, Released;
+		public static List<int> TemporaryAntiAliasing = new List<int>();
+		public static RenderTexture active { get; set; }
+		public int antiAliasing { get; set; } = 1;
+		public RenderTextureFormat format { get; set; }
+		public bool IsTemporary;
+		public RenderTexture(int width, int height, int depth) { this.width = width; this.height = height; Created++; }
+		public RenderTexture(int width, int height, int depth, RenderTextureFormat format) : this(width, height, depth) { this.format = format; }
+		public RenderTexture(int width, int height, int depth, RenderTextureFormat format, RenderTextureReadWrite rw) : this(width, height, depth, format) { }
+		public static RenderTexture GetTemporary(int width, int height, int depth, RenderTextureFormat format, RenderTextureReadWrite rw, int antiAliasing)
+		{
+			TemporaryAcquired++; TemporaryAntiAliasing.Add(antiAliasing);
+			var rt = new RenderTexture(width, height, depth, format); Created--; rt.antiAliasing = antiAliasing; rt.IsTemporary = true; return rt;
+		}
+		public static RenderTexture GetTemporary(int width, int height, int depth, RenderTextureFormat format) => GetTemporary(width, height, depth, format, RenderTextureReadWrite.Default, 1);
+		public static void ReleaseTemporary(RenderTexture rt) { TemporaryReleased++; }
+		public void Release() { Released++; }
+		public void GenerateMips() { }
+		public static void ResetCounters() { Created = TemporaryAcquired = TemporaryReleased = Released = 0; TemporaryAntiAliasing.Clear(); }
 	}
 }

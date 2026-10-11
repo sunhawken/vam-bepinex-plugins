@@ -51,7 +51,8 @@ P = {
     'extraautogenitals': ('ExtraAutoGenitalsStandalone/ZeroT.ExtraAutoGenitalsStandalone.csproj', 'ZeroT.ExtraAutoGenitalsStandalone.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'personguard', 'microphysics', 'bodyweight', 'extraautogenitals'}
+HEADLESS = {'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HELPERS = {'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}   # Harmony helpers: need the script assemblies from `simtargets`
 UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook'}
 
@@ -87,6 +88,11 @@ def build(name):
 
 
 def sim_logic(name):
+    if name in HELPERS and not all(os.path.exists(os.path.join(SIM, 'in', 'targets', t + '.dll')) for t in TARGETS):
+        print('building the script assemblies the helpers patch (simtargets)...')
+        cmd_simtargets()
+        run(['powershell', '-NoProfile', '-File', os.path.join(SIM, 'regen.ps1')], cwd=SIM, quiet=True)
+        run(['dotnet', 'build', os.path.join(SIM, 'VamSim', 'VamSim.csproj'), '-c', 'Release', '--nologo', '-v', 'q'], quiet=True)
     dll = os.path.join(ART, P[name][1])
     if not os.path.exists(VAMSIM):
         print('vamsim not built: run  vamdev.py simbuild')
@@ -202,7 +208,7 @@ def cmd_pack(folder, out):
     print('packed %d files -> %s' % (n, out))
 
 
-def cmd_cslcheck(target):
+def cmd_cslcheck(target, out=None):
     work = tempfile.mkdtemp(prefix='cslcheck_')
     if target.lower().endswith('.var'):
         src = os.path.join(work, 'var')
@@ -230,9 +236,10 @@ def cmd_cslcheck(target):
         if f.endswith('.dll') and (f.startswith('UnityEngine') or f in ('Assembly-CSharp.dll', 'Assembly-CSharp-firstpass.dll', 'SimpleJSON.dll', 'Leap.dll', 'LeapCSharp.NET3.5.dll', 'LeapCSharp.dll')):
             refs.append('<Reference Include="%s"><HintPath>%s</HintPath></Reference>' % (f[:-4], os.path.join(managed, f)))
     items = '\n'.join('<Compile Include="%s" />' % c for c in cs)
-    open(os.path.join(work, 'Program.cs'), 'w').write('static class P{static void Main(){}}')
+    asm = os.path.splitext(os.path.basename(out))[0] if out else 'chk'
+    open(os.path.join(work, 'Program.cs'), 'w').write('static class P{static void Main(){}}' if not out else '')
     open(os.path.join(work, 'chk.csproj'), 'w').write(
-        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion>'
+        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>' + ('Library' if out else 'Exe') + '</OutputType><AssemblyName>' + asm + '</AssemblyName><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion>'
         '<EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0108;CS0114;CS0168;CS0219;CS0649;CS0169;CS0414;CS0618;CS1998;CS0659;CS0661;CS0162;CS0105;CS1591</NoWarn></PropertyGroup>'
         '<ItemGroup>%s<Compile Include="Program.cs" />%s<Reference Include="System.Core" /></ItemGroup></Project>' % (items, '\n'.join(refs)))
     r = run(['dotnet', 'build', os.path.join(work, 'chk.csproj'), '--nologo', '-v', 'q'], quiet=True)
@@ -246,8 +253,50 @@ def cmd_cslcheck(target):
         print('(note: VaM compiles with mcs, which is stricter about newer C# syntax - keep to C# 6 style)')
     else:
         print('compiles clean against VaM_Data\\Managed')
+        if out:
+            built = None
+            for root, _, files in os.walk(os.path.join(work, 'bin')):
+                for f in files:
+                    if f == asm + '.dll':
+                        built = os.path.join(root, f)
+            if built:
+                os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+                shutil.copy(built, out)
+                print('wrote ' + out)
     shutil.rmtree(work, ignore_errors=True)
     return not errs
+
+
+# packages whose script code the Harmony helpers patch -> built into UiSim/in/targets so the simulator can load them
+TARGETS = {
+    'DecalMakerScripts': 'Chokaphi.DecalMaker.*.var',
+    'BodyLanguageScripts': 'CheesyFX.BodyLanguage_Lite.*.var',
+    'UIAssistScripts': 'JayJayWon.UIAssist(Patron).*.var',
+}
+
+
+def newest_var(pattern):
+    import fnmatch
+    best = None
+    for root, _, files in os.walk(os.path.join(VAM, 'AddonPackages')):
+        for f in files:
+            if fnmatch.fnmatch(f, pattern):
+                n = int(re.findall(r'\.(\d+)\.var$', f)[-1]) if re.findall(r'\.(\d+)\.var$', f) else 0
+                if best is None or n > best[0]:
+                    best = (n, os.path.join(root, f))
+    return best[1] if best else None
+
+
+def cmd_simtargets():
+    ok = True
+    for name, pat in TARGETS.items():
+        v = newest_var(pat)
+        if not v:
+            print('SKIP %s (no %s in AddonPackages)' % (name, pat))
+            continue
+        print('== %s <- %s' % (name, os.path.basename(v)))
+        ok = cmd_cslcheck(v, os.path.join(SIM, 'in', 'targets', name + '.dll')) and ok
+    return ok
 
 
 def main(argv):
@@ -276,6 +325,10 @@ def main(argv):
         cmd_pack(a[0], a[1])
     elif c == 'cslcheck':
         return 0 if cmd_cslcheck(a[0]) else 1
+    elif c == 'cslbuild':
+        return 0 if cmd_cslcheck(a[0], a[1]) else 1
+    elif c == 'simtargets':
+        return 0 if cmd_simtargets() else 1
     else:
         print(__doc__)
         return 2
