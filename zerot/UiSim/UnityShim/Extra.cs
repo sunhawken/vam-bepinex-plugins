@@ -62,8 +62,32 @@ namespace UnityEngine
 	public partial class Transform { public Vector3 eulerAngles { get; set; } public Vector3 up => Vector3.up; public Quaternion rotation { get; set; } = Quaternion.identity; }
 	public partial struct Vector3 { public static float Distance(Vector3 a, Vector3 b) => (a - b).magnitude; }
 	public partial class Object { public static T[] FindObjectsOfType<T>() where T : Object => new T[0]; }
-	public static partial class Mathf { public static float Sign(float f) => f >= 0 ? 1f : -1f; }
+	public static partial class Mathf
+	{
+		public static float Sign(float f) => f >= 0 ? 1f : -1f;
+		public static float InverseLerp(float a, float b, float v) => a == b ? 0f : Clamp01((v - a) / (b - a));
+		// Unity's SmoothDamp (critically damped spring), same formula
+		public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime) { return SmoothDamp(current, target, ref currentVelocity, smoothTime, float.PositiveInfinity, Time.deltaTime); }
+		public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime, float maxSpeed, float deltaTime)
+		{
+			smoothTime = Max(0.0001f, smoothTime);
+			float omega = 2f / smoothTime, x = omega * deltaTime;
+			float exp = 1f / (1f + x + 0.48f * x * x + 0.235f * x * x * x);
+			float change = current - target, original = target;
+			float maxChange = maxSpeed * smoothTime;
+			change = Clamp(change, -maxChange, maxChange);
+			target = current - change;
+			float temp = (currentVelocity + omega * change) * deltaTime;
+			currentVelocity = (currentVelocity - omega * temp) * exp;
+			float output = target + (change + temp) * exp;
+			if (original - current > 0f == output > original) { output = original; currentVelocity = (output - original) / deltaTime; }
+			return output;
+		}
+	}
+	public partial struct Vector2 { public float sqrMagnitude => x * x + y * y; }
 	public static partial class Time { public static float fixedDeltaTime { get; set; } = 0.02f; }
 	public static partial class GUI { public static Color backgroundColor2 => Color.white; }
 	public static partial class GUIUtility { }
 }
+
+namespace UnityEngine { public partial class GameObject { public T GetComponentInChildren<T>() where T : class => GetComponentInChildren<T>(true); } }

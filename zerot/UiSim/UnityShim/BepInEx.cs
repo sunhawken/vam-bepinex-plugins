@@ -59,21 +59,33 @@ namespace BepInEx.Logging
 
 namespace BepInEx.Configuration
 {
-	public abstract class ConfigEntryBase { public ConfigFile ConfigFile; public string Section, Key; }
+	public abstract class ConfigEntryBase { public ConfigFile ConfigFile; public string Section, Key; public abstract void SetFromString(string s); public abstract object BoxedValue { get; } }
 
 	public class ConfigEntry<T> : ConfigEntryBase
 	{
 		private T val;
 		public event EventHandler SettingChanged;
+		internal void Raise() { SettingChanged?.Invoke(this, EventArgs.Empty); ConfigFile?.RaiseSettingChanged(this); }
 		public T DefaultValue;
+		public override object BoxedValue => val;
+		public override void SetFromString(string s) { Value = (T)Convert.ChangeType(s, typeof(T), System.Globalization.CultureInfo.InvariantCulture); }
 		public ConfigEntry(T v) { val = v; DefaultValue = v; }
 		public T Value
 		{
 			get => val;
-			set { if (!Equals(val, value)) { val = value; SettingChanged?.Invoke(this, EventArgs.Empty); } }
+			set { if (!Equals(val, value)) { val = value; Raise(); } }
 		}
 	}
 
+	public struct KeyboardShortcut
+	{
+		public KeyCode MainKey; public KeyCode[] Modifiers;
+		public KeyboardShortcut(KeyCode main, params KeyCode[] modifiers) { MainKey = main; Modifiers = modifiers; }
+		public bool IsDown() { return false; }
+		public bool IsPressed() { return false; }
+		public bool IsUp() { return false; }
+	}
+	public class SettingChangedEventArgs : EventArgs { public ConfigEntryBase ChangedSetting { get; set; } public SettingChangedEventArgs(ConfigEntryBase s) { ChangedSetting = s; } }
 	public class ConfigDescription { public ConfigDescription(string d) { } }
 
 	public class ConfigFile
@@ -96,6 +108,10 @@ namespace BepInEx.Configuration
 			entries[id] = e;
 			return e;
 		}
+		public event EventHandler<SettingChangedEventArgs> SettingChanged;
+		internal void RaiseSettingChanged(ConfigEntryBase e) { SettingChanged?.Invoke(this, new SettingChangedEventArgs(e)); }
+		public ConfigEntryBase Find(string section, string key) { object o; return entries.TryGetValue(section + "." + key, out o) ? (ConfigEntryBase)o : null; }
+		public IEnumerable<ConfigEntryBase> All() { foreach (var o in entries.Values) yield return (ConfigEntryBase)o; }
 		public void Save() { }
 		public bool SaveOnConfigSet { get; set; }
 	}

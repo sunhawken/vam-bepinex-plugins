@@ -7,7 +7,7 @@ namespace UnityEngine
 {
 	public enum HideFlags { None = 0, HideInHierarchy = 1, HideInInspector = 2, DontSaveInEditor = 4, NotEditable = 8, DontSaveInBuild = 16, DontUnloadUnusedAsset = 32, DontSave = 52, HideAndDontSave = 61 }
 	public enum RuntimePlatform { WindowsEditor = 7, WindowsPlayer = 2 }
-	public enum KeyCode { None = 0, F1 = 282, F8 = 289, F9 = 290, Escape = 27 }
+	public enum KeyCode { None = 0, F1 = 282, F8 = 289, F9 = 290, Escape = 27, M = 109, LeftControl = 306, LeftAlt = 308, LeftShift = 304 }
 	public enum EventType { MouseDown = 0, MouseUp = 1, MouseMove = 2, MouseDrag = 3, KeyDown = 4, KeyUp = 5, ScrollWheel = 6, Repaint = 7, Layout = 8, DragUpdated = 9, DragPerform = 10, Ignore = 11, Used = 12, ValidateCommand = 13, ExecuteCommand = 14, ContextClick = 16 }
 	public enum TextAnchor { UpperLeft, UpperCenter, UpperRight, MiddleLeft, MiddleCenter, MiddleRight, LowerLeft, LowerCenter, LowerRight }
 	public enum FontStyle { Normal, Bold, Italic, BoldAndItalic }
@@ -396,6 +396,7 @@ namespace UnityEngine
 		{
 			Now += dt;
 			Time.realtimeSinceStartup = Time.unscaledTime = Time.time = Now;
+			Time.deltaTime = Time.unscaledDeltaTime = dt;
 			Lifecycle.Flush();
 			foreach (var r in Routines.ToArray())
 			{
@@ -413,7 +414,19 @@ namespace UnityEngine
 				foreach (var c in go.comps.ToArray())
 					if (c is MonoBehaviour m && m.isActiveAndEnabled && !m.destroyed && Lifecycle.Started.Contains(m))
 						Lifecycle.Call(m, "Update");
+			// physics ticks (FixedUpdate) at Time.fixedDeltaTime
+			FixedAccum += dt;
+			float fdt = Time.fixedDeltaTime <= 0f ? 0.02f : Time.fixedDeltaTime;
+			while (FixedAccum >= fdt - 1e-6f)
+			{
+				FixedAccum -= fdt;
+				foreach (var go in AllObjects.ToArray())
+					foreach (var c in go.comps.ToArray())
+						if (c is MonoBehaviour m && m.isActiveAndEnabled && !m.destroyed && Lifecycle.Started.Contains(m))
+							Lifecycle.Call(m, "FixedUpdate");
+			}
 		}
+		public static float FixedAccum;
 
 		private static IEnumerator Chain(IEnumerator inner, IEnumerator outer)
 		{

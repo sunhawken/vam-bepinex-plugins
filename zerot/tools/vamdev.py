@@ -1,0 +1,286 @@
+#!/usr/bin/env python
+"""vamdev - fast build / sim-test / deploy / pack loop for the VaM BepInEx plugins and .var packages.
+
+  python zerot/tools/vamdev.py list
+  python zerot/tools/vamdev.py test  <name|all>      build, then run the logic scenario (vamsim) and the UI check (uisim)
+  python zerot/tools/vamdev.py build <name|all>
+  python zerot/tools/vamdev.py ship  <name>          build + test + deploy (stops if a test fails)
+  python zerot/tools/vamdev.py deploy <name> [--force]   copy to T:\\New folder\\BepInEx\\plugins (keeps one .bak)
+  python zerot/tools/vamdev.py simbuild              rebuild the simulator (UnityShim, vamsim, uisim) and regenerate stubs
+  python zerot/tools/vamdev.py unpack <file.var> [dest]
+  python zerot/tools/vamdev.py pack <folder> <out.var>   zip with forward slashes + a fresh meta.json check
+  python zerot/tools/vamdev.py cslcheck <file.var|folder>  Roslyn compile check of VaM .cs/.cslist scripts against the real VaM assemblies
+VaM install is read from VAM_DIR (default T:\\New folder).
+"""
+import json, os, re, shutil, subprocess, sys, tempfile, zipfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ZEROT = os.path.dirname(HERE)
+REPO = os.path.dirname(ZEROT)
+ART = os.path.join(REPO, 'artifacts', 'Release')
+VAM = os.environ.get('VAM_DIR', 'T:\\New folder')
+PLUGINS = os.path.join(VAM, 'BepInEx', 'plugins')
+SIM = os.path.join(ZEROT, 'UiSim')
+VAMSIM = os.path.join(SIM, 'VamSim', 'bin', 'Release', 'net8.0-windows', 'vamsim.exe')
+UISIM = os.path.join(SIM, 'bin', 'uisim.exe')
+
+# name: (project folder/csproj, built dll name, live dll name or None = same, scenario or None)
+P = {
+    'givemefps': ('GiveMeFPSStandalone/ZeroT.GiveMeFPSStandalone.csproj', 'ZeroT.GiveMeFPSStandalone.dll', None),
+    'sceneperformance': ('ScenePerformanceStandalone/ZeroT.ScenePerformanceStandalone.csproj', 'ZeroT.ScenePerformanceStandalone.dll', None),
+    'deeper': ('DeeperPluginStandalone/DeeperPluginStandalone.csproj', 'ZeroT.DeeperPluginStandalone.dll', None),
+    'movecontrols': ('MoveControlsToBody/MoveControlsToBodyStandalone.csproj', 'MoveControlsToBodyStandalone.dll', None),
+    'smartwardrobe': ('SmartWardrobeUi91/SmartWardrobeUi91.csproj', 'Bplus.SmartWardrobeStandalone.9.1.0.dll', None),
+    'xrayslap': ('XRaySlap10/ZeroT.XRaySlapStandalone.1.0.0.csproj', 'ZeroT.XRaySlapStandalone.dll', 'ZeroT.XRaySlapStandalone.1.0.0.dll'),
+    'counterthrust': ('CounterThrust/Hasno.CounterThrustStandalone.4.2.4.csproj', 'Hasno.CounterThrustStandalone.4.2.4.dll', None),
+    'iamjoi': ('IamjoiGarments/ZeroT.IamjoiGarmentsStandalone.1.1.0.SmallUI.csproj', 'ZeroT.IamjoiGarmentsStandalone.dll', 'ZeroT.IamjoiGarmentsStandalone.1.1.0.SmallUI.dll'),
+    'orifice': ('OrificeDynamicsStandalone/OrificeDynamicsStandalone.csproj', 'Skynet.OrificeDynamicsStandalone.1.0.0.dll', None),
+    'fluidbridge': ('FluidBridgeHelper/ZeroT.FluidBridgeHelper.1.1.0.csproj', 'ZeroT.FluidBridgeHelper.1.1.0.dll', None),
+    'anus': ('AnusPhysicsControl/Charlestone.AnusPhysicsControlStandalone.1.2.0.csproj', 'Charlestone.AnusPhysicsControlStandalone.1.2.0.dll', None),
+    'penetrationcounter': ('PenetrationCounterUi/PenetrationCounterUi.csproj', 'PenetrationCounter.BepInEx.0.8.3.dll', None),
+    'ppa': ('PenisPathAlignmentUi/PenisPathAlignmentUi.csproj', 'HelicalPink.PenisPathAlignmentStandalone.10.1.2.dll', None),
+    'slaps': ('ProceduralSlaps/RidgeRock.ProceduralSlaps.Standalone.csproj', 'RidgeRock.ProceduralSlaps.Standalone.dll', None),
+    'vpbrandomlook': ('VpbRandomLook/VpbRandomLook.csproj', 'VpbRandomLook.dll', None),
+    'ppuiskin': ('PpUiSkin/PpUiSkin.csproj', 'ZeroT.ParticlePinnacleUiSkin.dll', None),
+    'decalmakerhelper': ('DecalMakerHelper/ZeroT.DecalMakerHelper.csproj', 'ZeroT.DecalMakerHelper.dll', None),
+    'bodylanguagehelper': ('BodyLanguageHelper/ZeroT.BodyLanguageHelper.csproj', 'ZeroT.BodyLanguageHelper.dll', None),
+    'uiassisthelper': ('UIAssistHelper/ZeroT.UIAssistHelper.csproj', 'ZeroT.UIAssistHelper.dll', None),
+    'personguard': ('PersonGuard/ZeroT.PersonGuard.csproj', 'ZeroT.PersonGuard.dll', None),
+    'microphysics': ('MicroPhysicsFixerStandalone/ZeroT.MicroPhysicsFixerStandalone.csproj', 'ZeroT.MicroPhysicsFixerStandalone.dll', None),
+    'bodyweight': ('BodyWeightStandalone/ZeroT.BodyWeightStandalone.csproj', 'ZeroT.BodyWeightStandalone.dll', None),
+    'extraautogenitals': ('ExtraAutoGenitalsStandalone/ZeroT.ExtraAutoGenitalsStandalone.csproj', 'ZeroT.ExtraAutoGenitalsStandalone.dll', None),
+}
+# plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
+HEADLESS = {'personguard', 'microphysics', 'bodyweight', 'extraautogenitals'}
+UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
+              'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook'}
+
+
+def run(cmd, cwd=None, quiet=False):
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding='utf-8', errors='replace')
+    if not quiet:
+        out = (r.stdout or '') + (r.stderr or '')
+        sys.stdout.write(out)
+    return r
+
+
+def names(arg):
+    if arg == 'all':
+        return list(P)
+    if arg not in P:
+        sys.exit('unknown plugin %r; try: list' % arg)
+    return [arg]
+
+
+def build(name):
+    proj, dll, _ = P[name]
+    r = run(['dotnet', 'build', os.path.join(ZEROT, proj), '-c', 'Release', '--nologo', '-v', 'q'], quiet=True)
+    text = (r.stdout or '') + (r.stderr or '')
+    errs = sorted(set(l.strip() for l in text.splitlines() if ' error ' in l))
+    if r.returncode != 0 or errs:
+        print('BUILD FAILED  ' + name)
+        for e in errs[:12]:
+            print('  ' + e[:240])
+        return False
+    print('built  %-20s %s' % (name, dll))
+    return True
+
+
+def sim_logic(name):
+    dll = os.path.join(ART, P[name][1])
+    if not os.path.exists(VAMSIM):
+        print('vamsim not built: run  vamdev.py simbuild')
+        return False
+    r = run([VAMSIM, dll], quiet=True)
+    out = r.stdout or ''
+    print(out.rstrip())
+    return r.returncode == 0
+
+
+def sim_ui(name):
+    if not os.path.exists(os.path.join(SIM, 'check.ps1')):
+        return True
+    inp = os.path.join(SIM, 'in')
+    os.makedirs(inp, exist_ok=True)
+    shutil.copy(os.path.join(ART, P[name][1]), inp)
+    base = os.path.splitext(P[name][1])[0]
+    r = run(['powershell', '-NoProfile', '-File', os.path.join(SIM, 'check.ps1'), '-Only', base.replace('.', '\\.')], quiet=True)
+    lines = [l for l in (r.stdout or '').splitlines() if l.strip()]
+    bad = [l for l in lines if 'CLIPPED' in l or 'CLIP ' in l or 'ERR' in l]
+    print('ui check  %-18s %s' % (name, 'clean' if not bad else '%d issue line(s)' % len(bad)))
+    for l in bad[:8]:
+        print('  ' + l[:200])
+    return not bad
+
+
+def cmd_test(arg):
+    ok = True
+    for n in names(arg):
+        if not build(n):
+            ok = False
+            continue
+        if n in HEADLESS:
+            ok = sim_logic(n) and ok
+        elif n in UI_PLUGINS:
+            ok = sim_ui(n) and ok
+        else:
+            print('(no sim for %s; build only)' % n)
+    print('TESTS PASSED' if ok else 'TESTS FAILED')
+    return ok
+
+
+def live_path(name):
+    _, dll, live = P[name]
+    live = live or dll
+    for sub in ('New folder', ''):
+        p = os.path.join(PLUGINS, sub, live)
+        if os.path.exists(p):
+            return p
+    return os.path.join(PLUGINS, 'New folder', live)
+
+
+def vam_running():
+    r = run(['tasklist'], quiet=True)
+    return 'VaM.exe' in (r.stdout or '')
+
+
+def cmd_deploy(name, force=False):
+    src = os.path.join(ART, P[name][1])
+    if not os.path.exists(src):
+        sys.exit('not built: ' + src)
+    dst = live_path(name)
+    if os.path.exists(dst) and not os.path.exists(dst + '.bak'):
+        shutil.copy2(dst, dst + '.bak')
+    try:
+        shutil.copy2(src, dst)
+    except PermissionError:
+        sys.exit('locked (VaM running?): ' + dst + '  -> close VaM, or stage it in zerot/UiKit/staged and run install_staged.ps1')
+    print('deployed ' + dst + ('   (VaM is running: takes effect next launch)' if vam_running() else ''))
+
+
+def cmd_ship(name):
+    if not build(name):
+        sys.exit(1)
+    if name in HEADLESS and not sim_logic(name):
+        sys.exit('sim failed - not deployed')
+    if name in UI_PLUGINS and not sim_ui(name):
+        sys.exit('ui check failed - not deployed')
+    cmd_deploy(name)
+
+
+def cmd_simbuild():
+    for p in ('UnityShim/UnityShim.csproj',):
+        pass
+    r = run(['powershell', '-NoProfile', '-File', os.path.join(SIM, 'regen.ps1')], cwd=SIM)
+    r2 = run(['dotnet', 'build', os.path.join(SIM, 'VamSim', 'VamSim.csproj'), '-c', 'Release', '--nologo', '-v', 'q'], quiet=True)
+    print('vamsim build', 'ok' if r2.returncode == 0 else 'FAILED')
+    if r2.returncode != 0:
+        print((r2.stdout or '')[-1500:])
+
+
+def cmd_unpack(var, dest=None):
+    dest = dest or os.path.splitext(os.path.basename(var))[0]
+    with zipfile.ZipFile(var) as z:
+        z.extractall(dest)
+        print('%d entries -> %s' % (len(z.namelist()), dest))
+
+
+def cmd_pack(folder, out):
+    if not os.path.exists(os.path.join(folder, 'meta.json')):
+        sys.exit('meta.json missing in ' + folder)
+    json.load(open(os.path.join(folder, 'meta.json'), encoding='utf-8-sig'))
+    n = 0
+    with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
+        for root, _, files in os.walk(folder):
+            for f in sorted(files):
+                full = os.path.join(root, f)
+                rel = os.path.relpath(full, folder).replace(os.sep, '/')
+                z.write(full, rel)
+                n += 1
+    with zipfile.ZipFile(out) as z:
+        assert z.testzip() is None
+    print('packed %d files -> %s' % (n, out))
+
+
+def cmd_cslcheck(target):
+    work = tempfile.mkdtemp(prefix='cslcheck_')
+    if target.lower().endswith('.var'):
+        src = os.path.join(work, 'var')
+        cmd_unpack(target, src)
+    else:
+        src = target
+    cs = []
+    for root, _, files in os.walk(src):
+        for f in files:
+            if f.lower().endswith('.cslist'):
+                base = root
+                for line in open(os.path.join(root, f), encoding='utf-8-sig').read().splitlines():
+                    line = line.strip()
+                    if line and not line.startswith('//'):
+                        p = os.path.normpath(os.path.join(base, line.replace('\\', '/')))
+                        if os.path.exists(p):
+                            cs.append(p)
+    if not cs:
+        for root, _, files in os.walk(src):
+            cs += [os.path.join(root, f) for f in files if f.lower().endswith('.cs')]
+    cs = sorted(set(cs))
+    managed = os.path.join(VAM, 'VaM_Data', 'Managed')
+    refs = []
+    for f in sorted(os.listdir(managed)):
+        if f.endswith('.dll') and (f.startswith('UnityEngine') or f in ('Assembly-CSharp.dll', 'Assembly-CSharp-firstpass.dll', 'SimpleJSON.dll', 'Leap.dll', 'LeapCSharp.NET3.5.dll', 'LeapCSharp.dll')):
+            refs.append('<Reference Include="%s"><HintPath>%s</HintPath></Reference>' % (f[:-4], os.path.join(managed, f)))
+    items = '\n'.join('<Compile Include="%s" />' % c for c in cs)
+    open(os.path.join(work, 'Program.cs'), 'w').write('static class P{static void Main(){}}')
+    open(os.path.join(work, 'chk.csproj'), 'w').write(
+        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion>'
+        '<EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0108;CS0114;CS0168;CS0219;CS0649;CS0169;CS0414;CS0618;CS1998;CS0659;CS0661;CS0162;CS0105;CS1591</NoWarn></PropertyGroup>'
+        '<ItemGroup>%s<Compile Include="Program.cs" />%s<Reference Include="System.Core" /></ItemGroup></Project>' % (items, '\n'.join(refs)))
+    r = run(['dotnet', 'build', os.path.join(work, 'chk.csproj'), '--nologo', '-v', 'q'], quiet=True)
+    text = (r.stdout or '') + (r.stderr or '')
+    errs = sorted(set(l.strip() for l in text.splitlines() if ' error ' in l))
+    print('%d source files' % len(cs))
+    if errs:
+        print('COMPILE ERRORS (%d)' % len(errs))
+        for e in errs[:40]:
+            print('  ' + e.replace(src, '')[:230])
+        print('(note: VaM compiles with mcs, which is stricter about newer C# syntax - keep to C# 6 style)')
+    else:
+        print('compiles clean against VaM_Data\\Managed')
+    shutil.rmtree(work, ignore_errors=True)
+    return not errs
+
+
+def main(argv):
+    if len(argv) < 2 or argv[1] in ('-h', '--help', 'help'):
+        print(__doc__)
+        return 0
+    c = argv[1]
+    a = argv[2:]
+    if c == 'list':
+        for n in P:
+            print('%-20s %s%s' % (n, P[n][1], '  [logic sim]' if n in HEADLESS else ('  [ui sim]' if n in UI_PLUGINS else '')))
+    elif c == 'build':
+        ok = all([build(n) for n in names(a[0])])
+        return 0 if ok else 1
+    elif c == 'test':
+        return 0 if cmd_test(a[0]) else 1
+    elif c == 'ship':
+        cmd_ship(a[0])
+    elif c == 'deploy':
+        cmd_deploy(a[0], '--force' in a)
+    elif c == 'simbuild':
+        cmd_simbuild()
+    elif c == 'unpack':
+        cmd_unpack(a[0], a[1] if len(a) > 1 else None)
+    elif c == 'pack':
+        cmd_pack(a[0], a[1])
+    elif c == 'cslcheck':
+        return 0 if cmd_cslcheck(a[0]) else 1
+    else:
+        print(__doc__)
+        return 2
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
