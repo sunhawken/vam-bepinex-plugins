@@ -146,3 +146,64 @@ namespace UnityEngine
 		}
 	}
 }
+
+namespace MVR.FileManagementSecure
+{
+	// an in-memory file system, with call counters, standing in for VaM's package-aware one
+	public partial class FileManagerSecure
+	{
+		public static readonly System.Collections.Generic.HashSet<string> SimFiles = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+		public static readonly System.Collections.Generic.HashSet<string> SimDirs = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+		public static int FileExistsCalls, DirExistsCalls, GetFilesCalls, GetDirectoriesCalls;
+		private static string Norm(string p) { return (p ?? "").Replace((char)92, '/').TrimEnd('/'); }
+		public static void SimReset() { SimFiles.Clear(); SimDirs.Clear(); FileExistsCalls = DirExistsCalls = GetFilesCalls = GetDirectoriesCalls = 0; }
+		public static void SimAddFile(string path)
+		{
+			path = Norm(path); SimFiles.Add(path);
+			for (int i = path.LastIndexOf('/'); i > 0; i = path.LastIndexOf('/', i - 1)) SimDirs.Add(path.Substring(0, i));
+		}
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static bool FileExists(string path, bool onlySystemFiles) { FileExistsCalls++; return SimFiles.Contains(Norm(path)); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static bool DirectoryExists(string path, bool onlySystemDirectories) { DirExistsCalls++; return SimDirs.Contains(Norm(path)); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static string[] GetFiles(string dir, string pattern)
+		{
+			GetFilesCalls++;
+			var r = new System.Collections.Generic.List<string>(); string d = Norm(dir);
+			foreach (var f in SimFiles)
+			{
+				int i = f.LastIndexOf('/');
+				if (i < 0 || !string.Equals(f.Substring(0, i), d, System.StringComparison.OrdinalIgnoreCase)) continue;
+				string name = f.Substring(i + 1);
+				if (string.IsNullOrEmpty(pattern) || pattern == "*" || string.Equals(name, pattern, System.StringComparison.OrdinalIgnoreCase)) r.Add(f);
+			}
+			r.Sort(System.StringComparer.OrdinalIgnoreCase);
+			return r.ToArray();
+		}
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static string[] GetDirectories(string dir, string pattern)
+		{
+			GetDirectoriesCalls++;
+			var r = new System.Collections.Generic.List<string>(); string d = Norm(dir);
+			foreach (var x in SimDirs)
+			{
+				int i = x.LastIndexOf('/');
+				if (i >= 0 && string.Equals(x.Substring(0, i), d, System.StringComparison.OrdinalIgnoreCase)) r.Add(x);
+			}
+			r.Sort(System.StringComparer.OrdinalIgnoreCase);
+			return r.ToArray();
+		}
+	}
+}
+
+namespace MVR.FileManagement
+{
+	public partial class FileManager : UnityEngine.MonoBehaviour
+	{
+		public static readonly System.Collections.Generic.List<string> SimPackageUids = new System.Collections.Generic.List<string>();
+		public static System.DateTime SimRefreshTime = new System.DateTime(2026, 1, 1);
+		public static System.Collections.Generic.List<string> GetPackageUids() { return new System.Collections.Generic.List<string>(SimPackageUids); }
+		public static System.DateTime lastPackageRefreshTime { get { return SimRefreshTime; } }
+	}
+}

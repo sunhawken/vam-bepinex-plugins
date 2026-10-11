@@ -262,6 +262,8 @@ internal static class Program
 		{ "UnityEngine.Mesh", new HashSet<string> { ".ctor", "get_vertices", "set_vertices", "SetIndices", "Clear", "RecalculateBounds" } },
 		{ "UnityEngine.Material", new HashSet<string> { ".ctor", "get_color", "set_color", "SetFloat", "GetFloat" } },
 		{ "UnityEngine.Graphics", new HashSet<string> { "DrawMesh" } },
+		{ "MVR.FileManagementSecure.FileManagerSecure", new HashSet<string> { "FileExists", "DirectoryExists", "GetFiles", "GetDirectories" } },
+		{ "MVR.FileManagement.FileManager", new HashSet<string> { "GetPackageUids", "get_lastPackageRefreshTime" } },
 	};
 
 	// reference-typed members the real engine always fills (RectOffset padding, UnityEvents...) start as live objects, not null

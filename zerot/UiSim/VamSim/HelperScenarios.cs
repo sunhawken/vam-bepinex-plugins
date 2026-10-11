@@ -361,4 +361,170 @@ public static class HelperScenarios
 		tick.Invoke(null, null);
 		h.Check(Writes.Count == 2, "autosave: un-favoriting is saved too");
 	}
+
+	private static System.Collections.IEnumerator FakeLoad(JSONStorableStringChooser c, System.Collections.Generic.List<string> seen) { seen.Add(c.val); yield return null; seen.Add(c.val); yield return null; }
+	private static System.Collections.IEnumerator ThrowingLoad(JSONStorableStringChooser c) { yield return null; throw new InvalidOperationException("boom"); }
+
+	[Scenario("appearanceloaderhelper", "ZeroT.AppearanceLoaderHelper")]
+	public static void AppearanceLoaderHelper(Harness h)
+	{
+		h.Unpatch("com.zerot.appearanceloader.helper");
+		var asm = h.LoadTarget("AppearanceLoaderScripts");
+		var al = T(asm, "ky1001.AppearanceLoader");
+		Func<object> makeLoader = () =>
+		{
+			var l = Activator.CreateInstance(al, true);
+			Field(al, "missingItem").SetValue(l, new JSONStorableString("", ""));
+			Field(al, "message").SetValue(l, new JSONStorableString("", ""));
+			Field(al, "_searchMissingTextures_Bool").SetValue(l, new JSONStorableBool("search", false));
+			Field(al, "loadDir").SetValue(l, "Saves/scene/");
+			return l;
+		};
+		Func<object, string, object> call = (l, name) => al.GetMethod(name, All).Invoke(l, null);
+		Func<object, string, string, object> call1 = (l, name, arg) => al.GetMethod(name, All).Invoke(l, new object[] { arg });
+
+		// a small library: package Pack.Tex is installed at version 5 only; Other.Thing at 2
+		MVR.FileManagementSecure.FileManagerSecure.SimReset();
+		MVR.FileManagement.FileManager.SimPackageUids.Clear();
+		MVR.FileManagement.FileManager.SimPackageUids.Add("Pack.Tex.5"); MVR.FileManagement.FileManager.SimPackageUids.Add("Other.Thing.2");
+		MVR.FileManagementSecure.FileManagerSecure.SimAddFile("Pack.Tex.5:/Textures/a.png");
+		MVR.FileManagementSecure.FileManagerSecure.SimAddFile("Custom/Atom/Person/Textures/a/x.png");
+		MVR.FileManagementSecure.FileManagerSecure.SimAddFile("Custom/Atom/Person/Textures/a/other.png");
+		MVR.FileManagementSecure.FileManagerSecure.SimAddFile("Custom/Atom/Person/Textures/b/c/x.png");
+		MVR.FileManagementSecure.FileManagerSecure.SimAddFile("Custom/Atom/Person/Textures/b/y.png");
+		var fm = typeof(MVR.FileManagementSecure.FileManagerSecure);
+		Action resetCounters = () => { MVR.FileManagementSecure.FileManagerSecure.FileExistsCalls = 0; MVR.FileManagementSecure.FileManagerSecure.DirExistsCalls = 0; MVR.FileManagementSecure.FileManagerSecure.GetFilesCalls = 0; MVR.FileManagementSecure.FileManagerSecure.GetDirectoriesCalls = 0; };
+
+		// ---- baseline (the loader as it is)
+		var l0 = makeLoader();
+		resetCounters();
+		string v0 = (string)call1(l0, "checkVarDir", "Pack.Tex.latest:/Textures/");
+		int dirCalls0 = MVR.FileManagementSecure.FileManagerSecure.DirExistsCalls;
+		resetCounters();
+		string p0 = (string)call1(l0, "checkPath", "Pack.Tex.3:/Textures/a.png");
+		int fileCalls0 = MVR.FileManagementSecure.FileManagerSecure.FileExistsCalls;
+		resetCounters();
+		string m0 = (string)call1(l0, "checkPath", "Gone.Pkg.9:/Textures/zz.png");
+		int missCalls0 = MVR.FileManagementSecure.FileManagerSecure.FileExistsCalls;
+		((JSONStorableBool)Field(al, "_searchMissingTextures_Bool").GetValue(l0)).val = true;
+		resetCounters();
+		string s0a = (string)call1(l0, "checkPath", "Gone.Pkg.9:/Textures/x.png");
+		string s0b = (string)call1(l0, "checkPath", "Gone.Pkg.9:/Textures/y.png");
+		string s0c = (string)call1(l0, "checkPath", "Gone.Pkg.9:/Textures/nowhere.png");
+		int listCalls0 = MVR.FileManagementSecure.FileManagerSecure.GetFilesCalls;
+		h.Check(v0 == "Pack.Tex.5:/Textures/" && p0 == "Pack.Tex.5:/Textures/a.png" && m0 == "", "baseline results: newest installed version found, missing path -> empty");
+		h.Check(dirCalls0 > 900 && fileCalls0 > 900 && missCalls0 > 900, "baseline: " + dirCalls0 + " / " + fileCalls0 + " / " + missCalls0 + " file-system questions for three paths");
+		h.Check(s0a == "Custom/Atom/Person/Textures/a/x.png" && s0b == "Custom/Atom/Person/Textures/b/y.png" && s0c == "", "baseline search results: first match in folder order, empty when absent");
+
+		// ---- an error in the middle of a load: sim stays off
+		Func<Atom, JSONStorableBool> simOf = a => a.GetStorableByID("ClothA").GetBoolJSONParam("simEnabled");
+		Func<object, Atom> prepareFailing = l =>
+		{
+			var person = h.Person("Person" + Guid.NewGuid().ToString("N").Substring(0, 4));
+			var st = new GameObject("ClothA").AddComponent<JSONStorable>(); st.RegisterBool(new JSONStorableBool("simEnabled", true)); person.storables["ClothA"] = st;
+			Field(al, "TargetAtom").SetValue(l, person);
+			((System.Collections.Generic.List<string>)Field(al, "simClothingList").GetValue(l)).Add("ClothA");
+			((System.Collections.Generic.Dictionary<string, bool>)Field(al, "simClothingDic").GetValue(l))["ClothA"] = true;
+			simOf(person).val = false;   // what applyData does first
+			return person;
+		};
+		var failer0 = makeLoader(); var pf0 = prepareFailing(failer0);
+		var en0 = (System.Collections.IEnumerator)call(failer0, "applyData");
+		bool threw0 = false;
+		try { en0.MoveNext(); } catch (Exception) { threw0 = true; }
+		h.Check(threw0 && !simOf(pf0).val, "baseline: an error escapes the load and the clothing sim stays OFF");
+
+		// ---- waits as they are
+		var m1 = makeLoader();
+		var person1 = h.Person("MorphPerson");
+		Field(al, "TargetAtom").SetValue(m1, person1);
+		Field(al, "scale_Bool").SetValue(m1, new JSONStorableBool("scale", false));
+		Field(al, "morphs_Bool").SetValue(m1, new JSONStorableBool("morphs", true));
+		Field(al, "asArray").SetValue(m1, new SimpleJSON.JSONArray());
+		Field(al, "idListVap").SetValue(m1, new System.Collections.Generic.List<string>());
+		Func<object, float> firstWait = l =>
+		{
+			var en = (System.Collections.IEnumerator)call(l, "changeMorph");
+			en.MoveNext();
+			return ((WaitForSeconds)en.Current).seconds;
+		};
+		float morphWait0 = firstWait(m1);
+		h.Near(morphWait0, 1f, "baseline: morph apply waits a fixed 1 s");
+
+		// ---- start the helper
+		h.Start();
+		h.Step(3f);
+		h.Check(h.LogHas("AppearanceLoader patched"), "helper reports the patches were applied");
+		var hooks = h.Asm.GetType("ZeroT.AppearanceLoaderHelper.Hooks", true);
+		int transpiled = (int)hooks.GetField("Transpiled").GetValue(null);
+		h.Check(transpiled == 3, "wait sites rewritten inside the loader's coroutines: " + transpiled + " (2 morph pauses + 1 texture timeout)");
+
+		// speed: same answers, a handful of questions
+		var l1 = makeLoader();
+		resetCounters();
+		string v1 = (string)call1(l1, "checkVarDir", "Pack.Tex.latest:/Textures/");
+		int dirCalls1 = MVR.FileManagementSecure.FileManagerSecure.DirExistsCalls;
+		resetCounters();
+		string p1 = (string)call1(l1, "checkPath", "Pack.Tex.3:/Textures/a.png");
+		int fileCalls1 = MVR.FileManagementSecure.FileManagerSecure.FileExistsCalls;
+		resetCounters();
+		string m1r = (string)call1(l1, "checkPath", "Gone.Pkg.9:/Textures/zz.png");
+		int missCalls1 = MVR.FileManagementSecure.FileManagerSecure.FileExistsCalls;
+		h.Check(v1 == v0 && p1 == p0 && m1r == m0, "same results with the helper");
+		h.Check(dirCalls1 <= 4 && fileCalls1 <= 6 && missCalls1 <= 6, "package versions: " + dirCalls1 + " / " + fileCalls1 + " / " + missCalls1 + " file-system questions instead of " + dirCalls0 + " / " + fileCalls0 + " / " + missCalls0);
+		// a package that appears later is noticed (refresh time changes)
+		MVR.FileManagement.FileManager.SimPackageUids.Add("Pack.Tex.7"); MVR.FileManagement.FileManager.SimRefreshTime = MVR.FileManagement.FileManager.SimRefreshTime.AddMinutes(1);
+		MVR.FileManagementSecure.FileManagerSecure.SimAddFile("Pack.Tex.7:/Textures/a.png");
+		string p7 = (string)call1(l1, "checkPath", "Pack.Tex.3:/Textures/a.png");
+		h.Check(p7 == "Pack.Tex.7:/Textures/a.png", "a newly installed newer version is picked up after a package refresh");
+
+		// missing-texture search: one listing, same files
+		((JSONStorableBool)Field(al, "_searchMissingTextures_Bool").GetValue(l1)).val = true;
+		resetCounters();
+		string s1a = (string)call1(l1, "checkPath", "Gone.Pkg.9:/Textures/x.png");
+		string s1b = (string)call1(l1, "checkPath", "Gone.Pkg.9:/Textures/y.png");
+		string s1c = (string)call1(l1, "checkPath", "Gone.Pkg.9:/Textures/nowhere.png");
+		int listCalls1 = MVR.FileManagementSecure.FileManagerSecure.GetFilesCalls;
+		h.Check(s1a == s0a && s1b == s0b && s1c == s0c, "texture search: identical results and order (" + s1a + ", " + s1b + ")");
+		h.Check(listCalls1 < listCalls0, "texture search: " + listCalls1 + " folder listings for 3 missing textures instead of " + listCalls0);
+		hooks.GetMethod("HandlePrefix").Invoke(null, null);
+		resetCounters();
+		call1(l1, "checkPath", "Gone.Pkg.9:/Textures/x.png");
+		h.Check(MVR.FileManagementSecure.FileManagerSecure.GetFilesCalls > 0, "a new load starts with a fresh listing");
+
+		// failed load: sim restored, loader keeps working
+		var failer1 = makeLoader(); var pf1 = prepareFailing(failer1);
+		var en1 = (System.Collections.IEnumerator)call(failer1, "applyData");
+		bool threw1 = false; bool more = true;
+		try { more = en1.MoveNext(); } catch (Exception) { threw1 = true; }
+		h.Check(!threw1 && !more, "helper: the same error no longer escapes");
+		h.Check(simOf(pf1).val, "helper: the clothing sim is switched back ON");
+		h.Check((int)hooks.GetField("Recovered").GetValue(null) == 1, "helper counted the recovered load");
+		h.Check(h.LogHas("stopped by an error"), "...and logged what happened");
+
+		// the waits
+		float morphWait1 = firstWait(m1);
+		h.Near(morphWait1, 0.5f, "morph apply now waits 0.5 s");
+		h.Near((float)hooks.GetMethod("TextureTimeout").Invoke(null, null), 120f, "skin preset timeout 120 s instead of 300");
+		// item waits: the setting is only lowered while a load runs, and always given back
+		var chooser = new JSONStorableStringChooser("Select Wait Time", new System.Collections.Generic.List<string> { "1", "2", "5", "10", "15", "20" }, "10", "Select Wait Time");
+		var wl = makeLoader(); Field(al, "selectWaitTime").SetValue(wl, chooser);
+		var seen = new System.Collections.Generic.List<string>();
+		Func<System.Collections.IEnumerator> fake = null;
+		fake = () => FakeLoad(chooser, seen);
+		System.Collections.IEnumerator guarded = fake();
+		hooks.GetMethod("ApplyPostfix").Invoke(null, new object[] { wl, guarded });
+		// ApplyPostfix takes the result by ref: call Guard directly for a handle on it
+		var g = (System.Collections.IEnumerator)hooks.GetMethod("Guard").Invoke(null, new object[] { fake(), wl });
+		g.MoveNext(); string whileRunning = chooser.val; while (g.MoveNext()) { }
+		h.Check(whileRunning == "10" && chooser.val == "10", "item waits: 'Select Wait Time' 10 untouched by default (cap off by default)");
+		h.Set("Speed", "MaxItemWaitSeconds", "3");
+		seen.Clear();
+		g = (System.Collections.IEnumerator)hooks.GetMethod("Guard").Invoke(null, new object[] { fake(), wl });
+		g.MoveNext(); whileRunning = chooser.val; while (g.MoveNext()) { }
+		h.Check(whileRunning == "2" && chooser.val == "10", "item waits: capped to the largest offered value <= 3 s (" + whileRunning + ") during the load, the user's 10 s restored after");
+		g = (System.Collections.IEnumerator)hooks.GetMethod("Guard").Invoke(null, new object[] { ThrowingLoad(chooser), wl });
+		while (g.MoveNext()) { }
+		h.Check(chooser.val == "10", "...and also restored when the load fails");
+	}
 }

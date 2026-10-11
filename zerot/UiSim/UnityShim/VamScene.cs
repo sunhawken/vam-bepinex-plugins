@@ -113,7 +113,7 @@ public partial class JSONStorableBool : JSONStorableParam
 	public delegate void SetJSONBoolCallback(JSONStorableBool jb);
 	public SetBoolCallback setCallbackFunction;
 	public SetJSONBoolCallback setJSONCallbackFunction;
-	public bool defaultVal;
+	public bool defaultVal { get; set; }
 	private bool _val;
 	public JSONStorableBool() { }
 	public JSONStorableBool(string paramName, bool startingValue) { name = paramName; _val = startingValue; defaultVal = startingValue; }

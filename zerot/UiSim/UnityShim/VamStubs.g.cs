@@ -241,20 +241,25 @@ public enum FitMode : int {
   PreferredSize = 2,
 }
 }
-public partial class ToggleGroup : global::UnityEngine.EventSystems.UIBehaviour {
-  public ToggleGroup() {}
-}
 public partial class GridLayoutGroup : global::UnityEngine.UI.LayoutGroup {
   public global::UnityEngine.Vector2 cellSize { get; set; }
   public global::UnityEngine.UI.GridLayoutGroup.Constraint constraint { get; set; }
   public int constraintCount { get; set; }
   public global::UnityEngine.Vector2 spacing { get; set; }
+  public global::UnityEngine.UI.GridLayoutGroup.Axis startAxis { get; set; }
   public GridLayoutGroup() {}
+public enum Axis : int {
+  Horizontal = 0,
+  Vertical = 1,
+}
 public enum Constraint : int {
   Flexible = 0,
   FixedColumnCount = 1,
   FixedRowCount = 2,
 }
+}
+public partial class ToggleGroup : global::UnityEngine.EventSystems.UIBehaviour {
+  public ToggleGroup() {}
 }
 public partial interface ICanvasElement {
 }
@@ -715,8 +720,8 @@ public partial class DAZMergedSkinV2 : global::DAZSkinV2 {
   public DAZMergedSkinV2() {}
 }
 public partial class JSONStorableColor : global::JSONStorableParam {
-  public JSONStorableColor(string paramName, global::HSVColor startingColor, global::JSONStorableColor.SetJSONColorCallback callback) {}
   public JSONStorableColor(string paramName, global::HSVColor startingColor) {}
+  public JSONStorableColor(string paramName, global::HSVColor startingColor, global::JSONStorableColor.SetJSONColorCallback callback) {}
   public JSONStorableColor(string paramName, global::HSVColor startingColor, global::JSONStorableColor.SetHSVColorCallback callback) {}
   public global::HSVColorPicker colorPicker { get; set; }
   public global::HSVColorPicker colorPickerAlt { get; set; }
@@ -724,6 +729,8 @@ public partial class JSONStorableColor : global::JSONStorableParam {
   public global::HSVColor val { get; set; }
   public void InternalSetVal(float h, float s, float v, bool doCallback) { }
   public global::HSVColor valNoCallback { get; set; }
+  public void SetColor(global::UnityEngine.Color c) { }
+  public void SetVal(float h, float s, float v) { }
   public global::HSVColor _defaultVal;
   public global::HSVColor _val;
   public global::JSONStorableColor.SetHSVColorCallback setCallbackFunction;
@@ -876,9 +883,36 @@ public partial class MVRScriptUI : global::UIProvider {
   public global::UnityEngine.RectTransform rightUIContent;
   public MVRScriptUI() {}
 }
+public partial class JSONStorableVector3 : global::JSONStorableParam {
+  public JSONStorableVector3(string paramName, global::UnityEngine.Vector3 startingValue, global::UnityEngine.Vector3 minValue, global::UnityEngine.Vector3 maxValue, bool constrain = default, bool interactable = default) {}
+  public global::UnityEngine.Vector3 val { get; set; }
+  public global::UnityEngine.Vector3 defaultVal { get; set; }
+  public global::UnityEngine.Vector3 max { get; set; }
+  public global::UnityEngine.Vector3 min { get; set; }
+  public void SetVal(global::UnityEngine.Vector3 value) { }
+  public global::JSONStorableVector3.SetVector3Callback setCallbackFunction;
+  public global::JSONStorableVector3.SetJSONVector3Callback setJSONCallbackFunction;
+  public JSONStorableVector3() {}
+public delegate void SetJSONVector3Callback(global::JSONStorableVector3 jf);
+public delegate void SetVector3Callback(global::UnityEngine.Vector3 v);
+}
+public partial class AudioSourceControl : global::VariableTrigger {
+  public void ClearQueue() { }
+  public void Pause() { }
+  public void PlayNow(global::NamedAudioClip nac) { }
+  public void QueueClip(global::NamedAudioClip nac) { }
+  public void Stop() { }
+  public void TogglePause() { }
+  public void UnPause() { }
+  public AudioSourceControl() {}
+}
 public partial class CameraTarget : global::UnityEngine.MonoBehaviour {
   public static global::CameraTarget centerTarget;
   public CameraTarget() {}
+}
+public partial class TwoDPicker : global::UnityEngine.MonoBehaviour {
+  public global::UnityEngine.UI.Image Selector;
+  public TwoDPicker() {}
 }
 public partial class JSONStorableDynamic : global::UnityEngine.MonoBehaviour {
   public bool ready { get; set; }
@@ -931,18 +965,6 @@ public partial class MVRScriptControllerUI : global::UIProvider {
   public global::UnityEngine.UI.Button openUIButton;
   public MVRScriptControllerUI() {}
 }
-public partial class JSONStorableVector3 : global::JSONStorableParam {
-  public JSONStorableVector3(string paramName, global::UnityEngine.Vector3 startingValue, global::UnityEngine.Vector3 minValue, global::UnityEngine.Vector3 maxValue, bool constrain = default, bool interactable = default) {}
-  public global::UnityEngine.Vector3 val { get; set; }
-  public global::UnityEngine.Vector3 defaultVal { get; set; }
-  public global::UnityEngine.Vector3 max { get; set; }
-  public global::UnityEngine.Vector3 min { get; set; }
-  public global::JSONStorableVector3.SetVector3Callback setCallbackFunction;
-  public global::JSONStorableVector3.SetJSONVector3Callback setJSONCallbackFunction;
-  public JSONStorableVector3() {}
-public delegate void SetJSONVector3Callback(global::JSONStorableVector3 jf);
-public delegate void SetVector3Callback(global::UnityEngine.Vector3 v);
-}
 public partial class MotionAnimationMaster : global::JSONStorableTriggerHandler {
   public bool loop { get; set; }
   public float playbackCounter { get; set; }
@@ -984,16 +1006,6 @@ public partial class MemoryOptimizer : global::UnityEngine.MonoBehaviour {
   public void TriggerOptimize() { }
   public static global::MemoryOptimizer singleton;
   public MemoryOptimizer() {}
-}
-public partial class AudioSourceControl : global::VariableTrigger {
-  public void ClearQueue() { }
-  public void Pause() { }
-  public void PlayNow(global::NamedAudioClip nac) { }
-  public void QueueClip(global::NamedAudioClip nac) { }
-  public void Stop() { }
-  public void TogglePause() { }
-  public void UnPause() { }
-  public AudioSourceControl() {}
 }
 public partial class MotionAnimationControl : global::JSONStorable {
   public void PlaybackStep(float playbackCounter) { }
@@ -1307,9 +1319,6 @@ public partial interface RenderSuspend {
 public partial class PhysicsSimulator : global::ScaleChangeReceiver {
   public PhysicsSimulator() {}
 }
-public partial class TwoDPicker : global::UnityEngine.MonoBehaviour {
-  public TwoDPicker() {}
-}
 public partial interface TriggerActionHandler {
 }
 public partial class TriggerActionUI : global::UIProvider {
@@ -1377,6 +1386,7 @@ public sealed partial class AssetBundle : global::UnityEngine.Object {
   public T[] LoadAllAssets<T>() { return new T[0]; }
   public global::UnityEngine.Object[] LoadAllAssets() { return new global::UnityEngine.Object[0]; }
   public T LoadAsset<T>(string name) { return default; }
+  public global::UnityEngine.Object LoadAsset(string name) { return default; }
   public static global::UnityEngine.AssetBundle LoadFromMemory(byte[] binary) { return default; }
   public void Unload(bool unloadAllLoadedObjects) { }
   public AssetBundle() {}
@@ -1571,6 +1581,18 @@ public enum SpriteMeshType : int {
   FullRect = 0,
   Tight = 1,
 }
+public sealed partial class Graphics {
+  public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat) { }
+  public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest) { }
+  public Graphics() {}
+}
+public enum MeshTopology : int {
+  Triangles = 0,
+  Quads = 2,
+  Lines = 3,
+  LineStrip = 4,
+  Points = 5,
+}
 public sealed partial class RequireComponent : global::System.Attribute {
   public RequireComponent(global::System.Type requiredComponent) {}
   public RequireComponent() {}
@@ -1579,22 +1601,10 @@ public sealed partial class Projector : global::UnityEngine.Behaviour {
   public global::UnityEngine.Material material { get; set; }
   public Projector() {}
 }
-public sealed partial class Graphics {
-  public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat) { }
-  public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest) { }
-  public Graphics() {}
-}
 public sealed partial class ColorUtility {
   public static string ToHtmlStringRGB(global::UnityEngine.Color color) { return ""; }
   public static bool TryParseHtmlString(string htmlString, out global::UnityEngine.Color color) { color = default; return default; }
   public ColorUtility() {}
-}
-public enum MeshTopology : int {
-  Triangles = 0,
-  Quads = 2,
-  Lines = 3,
-  LineStrip = 4,
-  Points = 5,
 }
 public sealed partial class ComputeShader : global::UnityEngine.Object {
   public void Dispatch(int kernelIndex, int threadGroupsX, int threadGroupsY, int threadGroupsZ) { }
@@ -1760,12 +1770,8 @@ public partial class FileManagerSecure {
   public static void CopyFile(string oldPath, string newPath) { }
   public static void CreateDirectory(string path) { }
   public static void DeleteFile(string path) { }
-  public static bool DirectoryExists(string path, bool onlySystemDirectories = default) { return default; }
-  public static bool FileExists(string path, bool onlySystemFiles = default) { return default; }
-  public static string[] GetDirectories(string dir, string pattern = default) { return new string[0]; }
   public static string GetDirectoryName(string path, bool returnSlashPath = default) { return ""; }
   public static string GetFileName(string path) { return ""; }
-  public static string[] GetFiles(string dir, string pattern = default) { return new string[0]; }
   public static string GetFullPath(string path) { return ""; }
   public static global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> GetShortCutsForDirectory(string dir, bool allowNavigationAboveRegularDirectories = default, bool useFullPaths = default, bool generateAllFlattenedShortcut = default, bool includeRegularDirsInFlattenedShortcut = default) { return new global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut>(); }
   public static bool IsDirectoryInPackage(string path) { return default; }
@@ -2110,6 +2116,7 @@ public enum FillMethod : int {
 }
 public partial class SuperController {
   public global::UnityEngine.Transform AddAtom(global::Atom atom, string useuid = default, bool userInvoked = default, bool forceSelect = default, bool forceFocus = default, bool instantiate = default) { return default; }
+  public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked, bool forceSelect) { return default; }
   public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked) { return default; }
   public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid) { return default; }
   public void Alert(string alertMessage, global::UnityEngine.Events.UnityAction okAlertCallback, global::SuperController.DisplayUIChoice displayUIChoice = default) { }
@@ -2128,6 +2135,7 @@ public partial class SuperController {
   public global::Atom isolatedAtom { get; set; }
   public string LoadedSceneName { get; set; }
   public bool lockHeightDuringNavigate { get; set; }
+  public bool MainHUDVisible { get; set; }
   public float playerHeightAdjust { get; set; }
   public bool showHiddenAtoms { get; set; }
   public bool teleportAllowRotation { get; set; }
@@ -2157,21 +2165,24 @@ public partial class SuperController {
   public string NormalizeMediaPath(string path) { return ""; }
   public string NormalizePath(string path) { return ""; }
   public void OpenHub() { }
+  public void PauseSimulation(int numFrames, string pauseName) { }
   public void PushOverrideLoadDirFromFilePath(string path) { }
   public void Quit() { }
   public string ReadFileIntoString(string path) { return ""; }
   public void RegisterPrefab(string assetBundleName, string assetName, global::UnityEngine.GameObject prefab) { }
+  public global::UnityEngine.Rigidbody RigidbodyNameToRigidbody(string rigidbodyName) { return default; }
   public void Save(string saveName = default, global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default, global::SuperController.ScreenShotCallback callback = default, bool isOverwrite = default) { }
   public void SaveJSON(global::SimpleJSON.JSONClass jc, string saveName) { }
   public void SaveStringIntoFile(string path, string contents) { }
-  public void SelectController(string atomName, string controllerName, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
   public void SelectController(global::FreeControllerV3 controller, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
+  public void SelectController(string atomName, string controllerName, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
   public float freeMoveMultiplier { get; set; }
   public float grabNavigationPositionMultiplier { get; set; }
   public float grabNavigationRotationMultiplier { get; set; }
   public void SetFreezeAnimation(bool freeze) { }
   public void SetMainMenuTab(string tabName) { }
   public void SetOnlyShowControllers(global::System.Collections.Generic.HashSet<global::FreeControllerV3> onlyControllers) { }
+  public void ShowMainHUD(bool setAnchors = default, bool forceMonitor = default) { }
   public void ShowMainHUDAuto() { }
   public void StartIsolateEditAtom(global::Atom atom) { }
   public void SyncMonitorRigPosition() { }
@@ -2314,6 +2325,7 @@ public enum Type : int {
 }
 public partial class FreeControllerV3 {
   public global::UnityEngine.Rigidbody linkToRB { get; set; }
+  public void SelectLinkToRigidbody(global::UnityEngine.Rigidbody rb, global::FreeControllerV3.SelectLinkState linkState, bool usePhysicalLink = default, bool modifyState = default) { }
   public virtual void SetLinkToAtom(string atomUID) { }
   public global::UnityEngine.Mesh deselectedMesh;
   public float deselectedMeshScale;
@@ -2321,6 +2333,11 @@ public partial class FreeControllerV3 {
   public global::UnityEngine.Material linkLineMaterial;
   public float selectedScale;
   public float unhighlightedScale;
+public enum SelectLinkState : int {
+  PositionAndRotation = 0,
+  Position = 1,
+  Rotation = 2,
+}
 }
 public partial class DAZCharacter {
   public global::DAZSkinV2 skin { get; set; }
@@ -2330,6 +2347,7 @@ public partial class JSONStorableFloat {
   public global::UnityEngine.UI.Slider slider { get; set; }
   public global::UnityEngine.UI.Slider sliderAlt { get; set; }
   public void RegisterSlider(global::UnityEngine.UI.Slider s, bool isAlt = default) { }
+  public void SetVal(float value) { }
 }
 public partial class JSONStorableString {
   public global::UIDynamicTextField dynamicText { get; set; }
@@ -2337,9 +2355,13 @@ public partial class JSONStorableString {
   public global::UnityEngine.UI.Text text { get; set; }
   public global::UnityEngine.UI.Text textAlt { get; set; }
   public void RegisterText(global::UnityEngine.UI.Text t, bool isAlt = default) { }
+  public void SetVal(string value) { }
 }
 public partial class DAZCharacterSelector {
   public global::DAZClothingItem[] clothingItems { get; set; }
+  public global::DAZClothingItem[] femaleClothingItems { get; set; }
+  public global::DAZClothingItem[] maleClothingItems { get; set; }
+  public global::DAZHairGroup GetHairItem(string itemId) { return default; }
   public void SetActiveClothingItem(global::DAZClothingItem item, bool active, bool fromRestore = default) { }
   public global::GenerateDAZClothingSelectorUI clothingSelectorFemaleUI;
   public global::GenerateDAZClothingSelectorUI clothingSelectorMaleUI;
@@ -2361,6 +2383,7 @@ public partial class JSONStorableBool {
   public global::UnityEngine.UI.Toggle toggle { get; set; }
   public global::UnityEngine.UI.Toggle toggleAlt { get; set; }
   public void RegisterToggle(global::UnityEngine.UI.Toggle t, bool isAlt = default) { }
+  public void SetVal(bool value) { }
   public bool _defaultVal;
 }
 public partial class JSONStorableUrl {
@@ -2385,6 +2408,7 @@ public delegate void BeginBrowseWithObjectCallback(global::JSONStorableUrl jsurl
 public delegate void EndBrowseWithObjectCallback(global::JSONStorableUrl jsurl);
 }
 public partial class GenerateDAZMorphsControlUI {
+  public void DefaultMorph() { }
   public global::DAZMorph GetMorphByUid(string morphUid) { return default; }
   public void ZeroAll() { }
   public void ZeroMorph() { }
@@ -2398,6 +2422,7 @@ public partial class DAZMorph {
   public string uid { get; set; }
   public global::DAZMorphFormula[] formulas;
   public bool isInPackage;
+  public bool isPoseControl;
   public string overrideName;
   public string packageLicense;
   public string packageUid;
@@ -2419,6 +2444,7 @@ public partial class JSONStorableStringChooser {
   public global::UIPopup popup { get; set; }
   public global::UIPopup popupAlt { get; set; }
   public void RegisterPopup(global::UIPopup p, bool isAlt = default) { }
+  public void SetVal(string value) { }
   public override bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
 public delegate void PopupOpenCallback();
 }

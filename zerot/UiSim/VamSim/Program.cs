@@ -106,6 +106,13 @@ internal static class Program
 			if (args[i] == "--set") { string kv = args[++i]; int eq = kv.IndexOf('='); overrides[kv.Substring(0, eq)] = kv.Substring(eq + 1); }
 			else rest.Add(args[i]);
 		}
+		if (rest[0] == "--linkcheck")
+		{
+			string lw = Path.Combine(Path.GetTempPath(), "vamsim_link_" + Environment.ProcessId);
+			Directory.CreateDirectory(lw);
+			File.Copy(typeof(GameObject).Assembly.Location, Path.Combine(lw, "UnityShim.dll"), true);
+			return LinkCheck.Run(Path.GetFullPath(rest[1]), lw);
+		}
 		if (rest[0] == "--scene")
 		{
 			int vi = rest.IndexOf("--vam");
