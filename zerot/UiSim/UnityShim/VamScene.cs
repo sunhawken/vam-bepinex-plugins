@@ -257,6 +257,10 @@ public partial class FreeControllerV3 : JSONStorable
 	public enum RotationState { Off, On, Following, ParentLink, PhysicsLink, Hold, Lock }
 	public PositionState currentPositionState { get; set; } = PositionState.On;
 	public RotationState currentRotationState { get; set; } = RotationState.On;
+	private bool _hidden;
+	public int hiddenWrites;   // how often the scene's code assigned .hidden (changed or not): what a per-frame loop costs
+	public bool hidden { get { return _hidden; } set { hiddenWrites++; _hidden = value; } }
+	public bool highlighted { get; set; }
 	public void ResetControl() { }
 	public void SelectLinkToRigidbody(Rigidbody rb) { }
 }
@@ -304,6 +308,16 @@ public partial class SuperController : MonoBehaviour
 	public static List<string> Messages = new List<string>();
 	public static List<string> Errors = new List<string>();
 	public Atom selectedAtom;
+	public bool targetShow;
+	public int allControllersCalls;   // how often something asked for the full list (it is rebuilt on every call in VaM)
+	public bool GetTargetShow() { return targetShow; }
+	public List<FreeControllerV3> GetAllFreeControllers()
+	{
+		allControllersCalls++;
+		var l = new List<FreeControllerV3>();
+		foreach (var a in atoms) if (a.freeControllers != null) foreach (var c in a.freeControllers) l.Add(c);
+		return l;
+	}
 	public List<Atom> GetAtoms() => atoms;
 	public List<string> GetAtomUIDs() => atoms.ConvertAll(a => a.uid);
 	public Atom GetAtomByUid(string uid) => atoms.Find(a => a.uid == uid);

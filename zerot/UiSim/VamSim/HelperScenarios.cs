@@ -191,4 +191,62 @@ public static class HelperScenarios
 		var hf = HarmonyLib.Harmony.GetPatchInfo(heel.GetMethod("UpdateExistingHAFiles", All));
 		h.Check(hf != null && hf.Prefixes.Count == 1, "HeelAdjustTool.UpdateExistingHAFiles carries the throttle");
 	}
+
+	[Scenario("uxplushelper", "ZeroT.UXPlusHelper")]
+	public static void UXPlus(Harness h)
+	{
+		h.Unpatch("com.zerot.uxplus.helper");
+		var asm = h.LoadTarget("UXPlusScripts");
+		var hover = T(asm, "everlaster.UX.ShowTargetOnHover.ShowTargetOnHover");
+		var f1 = h.Person("Female1"); var f2 = h.Person("Female2");
+		UserPreferences.singleton = new UserPreferences();
+		var mod = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(hover);   // only OnUpdate is exercised: no module Awake/UI needed
+		hover.GetField("_sc", All).SetValue(mod, h.Sc);
+		var onUpdate = hover.GetMethod("OnUpdate", All);
+		int total = 0; foreach (var a in h.Sc.atoms) total += a.freeControllers.Length;
+		f1.freeControllers[3].highlighted = true;           // one controller under the mouse
+
+		// baseline: UXPlus's own loop asks for the list and writes every controller, every frame
+		for (int i = 0; i < 3; i++) onUpdate.Invoke(mod, null);
+		int writes = 0; foreach (var a in h.Sc.atoms) foreach (var c in a.freeControllers) writes += c.hiddenWrites;
+		h.Check(writes == 3 * total, "baseline: 3 frames = " + (3 * total) + " controller writes (got " + writes + ")");
+		h.Check(h.Sc.allControllersCalls == 3, "baseline: the controller list is rebuilt every frame (3 calls)");
+		h.Check(f1.freeControllers[3].hidden == false && f1.freeControllers[4].hidden == true, "baseline result: highlighted target visible, the rest hidden");
+
+		// reset counters/state, start the helper
+		foreach (var a in h.Sc.atoms) foreach (var c in a.freeControllers) { c.hiddenWrites = 0; c.hidden = false; c.hiddenWrites = 0; }
+		h.Sc.allControllersCalls = 0;
+		h.Start();
+		h.Step(3f);
+		h.Check(h.LogHas("Show Target On Hover patched"), "helper reports the patch was applied");
+		var info = HarmonyLib.Harmony.GetPatchInfo(onUpdate);
+		h.Check(info != null && info.Prefixes.Count == 1, "ShowTargetOnHover.OnUpdate carries the optimisation");
+		for (int i = 0; i < 3; i++) onUpdate.Invoke(mod, null);
+		writes = 0; foreach (var a in h.Sc.atoms) foreach (var c in a.freeControllers) writes += c.hiddenWrites;
+		h.Check(writes == total - 1, "patched: 3 frames write only what changed (" + (total - 1) + " controllers once, got " + writes + ")");
+		h.Check(h.Sc.allControllersCalls == 1, "patched: the controller list is asked for once, not every frame (got " + h.Sc.allControllersCalls + ")");
+		h.Check(f1.freeControllers[3].hidden == false && f1.freeControllers[4].hidden == true && f2.freeControllers[5].hidden == true, "patched result identical: highlighted visible, the rest hidden");
+
+		// hover moves: the new target shows, the old one hides again, same frame
+		f1.freeControllers[3].highlighted = false; f2.freeControllers[5].highlighted = true;
+		onUpdate.Invoke(mod, null);
+		h.Check(f1.freeControllers[3].hidden == true && f2.freeControllers[5].hidden == false, "hover change is applied immediately");
+		// play mode / targets shown: untouched
+		h.Sc.gameMode = SuperController.GameMode.Play;
+		f2.freeControllers[5].highlighted = false;
+		onUpdate.Invoke(mod, null);
+		h.Check(f2.freeControllers[5].hidden == false, "Play mode: nothing is touched");
+		h.Sc.gameMode = SuperController.GameMode.Edit;
+		// hide-inactive-targets preference
+		UserPreferences.singleton.hideInactiveTargets = true;
+		f1.freeControllers[7].currentPositionState = FreeControllerV3.PositionState.Off; f1.freeControllers[7].currentRotationState = FreeControllerV3.RotationState.Off;
+		onUpdate.Invoke(mod, null);
+		h.Check(f1.freeControllers[7].hidden == true, "inactive target stays hidden when the preference says so");
+		// a person removed: a stale controller in the cached list is skipped, no exception, list refreshed next frame
+		h.Sc.RemoveAtom(f2);
+		foreach (var c in f2.freeControllers) UnityEngine.Object.Destroy(c.gameObject);
+		bool threw = false;
+		try { onUpdate.Invoke(mod, null); onUpdate.Invoke(mod, null); } catch (Exception) { threw = true; }
+		h.Check(!threw, "a removed person does not break the update");
+	}
 }

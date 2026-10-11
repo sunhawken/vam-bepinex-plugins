@@ -45,14 +45,15 @@ P = {
     'decalmakerhelper': ('DecalMakerHelper/ZeroT.DecalMakerHelper.csproj', 'ZeroT.DecalMakerHelper.dll', None),
     'bodylanguagehelper': ('BodyLanguageHelper/ZeroT.BodyLanguageHelper.csproj', 'ZeroT.BodyLanguageHelper.dll', None),
     'uiassisthelper': ('UIAssistHelper/ZeroT.UIAssistHelper.csproj', 'ZeroT.UIAssistHelper.dll', None),
+    'uxplushelper': ('UXPlusHelper/ZeroT.UXPlusHelper.csproj', 'ZeroT.UXPlusHelper.dll', None),
     'personguard': ('PersonGuard/ZeroT.PersonGuard.csproj', 'ZeroT.PersonGuard.dll', None),
     'microphysics': ('MicroPhysicsFixerStandalone/ZeroT.MicroPhysicsFixerStandalone.csproj', 'ZeroT.MicroPhysicsFixerStandalone.dll', None),
     'bodyweight': ('BodyWeightStandalone/ZeroT.BodyWeightStandalone.csproj', 'ZeroT.BodyWeightStandalone.dll', None),
     'extraautogenitals': ('ExtraAutoGenitalsStandalone/ZeroT.ExtraAutoGenitalsStandalone.csproj', 'ZeroT.ExtraAutoGenitalsStandalone.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
-HELPERS = {'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}   # Harmony helpers: need the script assemblies from `simtargets`
+HEADLESS = {'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HELPERS = {'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper'}   # Harmony helpers: need the script assemblies from `simtargets`
 UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook'}
 
@@ -239,7 +240,7 @@ def cmd_cslcheck(target, out=None):
     asm = os.path.splitext(os.path.basename(out))[0] if out else 'chk'
     open(os.path.join(work, 'Program.cs'), 'w').write('static class P{static void Main(){}}' if not out else '')
     open(os.path.join(work, 'chk.csproj'), 'w').write(
-        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>' + ('Library' if out else 'Exe') + '</OutputType><AssemblyName>' + asm + '</AssemblyName><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion>'
+        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>' + ('Library' if out else 'Exe') + '</OutputType><AssemblyName>' + asm + '</AssemblyName><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion><DefineConstants>VAM_GT_1_20;VAM_GT_1_20_77_13;VAM_GT_1_21;VAM_1_22</DefineConstants>'
         '<EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0108;CS0114;CS0168;CS0219;CS0649;CS0169;CS0414;CS0618;CS1998;CS0659;CS0661;CS0162;CS0105;CS1591</NoWarn></PropertyGroup>'
         '<ItemGroup>%s<Compile Include="Program.cs" />%s<Reference Include="System.Core" /></ItemGroup></Project>' % (items, '\n'.join(refs)))
     r = run(['dotnet', 'build', os.path.join(work, 'chk.csproj'), '--nologo', '-v', 'q'], quiet=True)
@@ -272,6 +273,7 @@ TARGETS = {
     'DecalMakerScripts': 'Chokaphi.DecalMaker.*.var',
     'BodyLanguageScripts': 'CheesyFX.BodyLanguage_Lite.*.var',
     'UIAssistScripts': 'JayJayWon.UIAssist(Patron).*.var',
+    'UXPlusScripts': 'everlaster.UXPlus.*.var',
 }
 
 
@@ -356,7 +358,7 @@ def compile_one(var, entry, out):
             refs.append('<Reference Include="%s"><HintPath>%s</HintPath></Reference>' % (f[:-4], os.path.join(managed, f)))
     asm = os.path.splitext(os.path.basename(out))[0]
     open(os.path.join(work, 'chk.csproj'), 'w').write(
-        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Library</OutputType><AssemblyName>' + asm + '</AssemblyName><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion>'
+        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Library</OutputType><AssemblyName>' + asm + '</AssemblyName><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion><DefineConstants>VAM_GT_1_20;VAM_GT_1_20_77_13;VAM_GT_1_21;VAM_1_22</DefineConstants>'
         '<EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0108;CS0114;CS0168;CS0219;CS0649;CS0169;CS0414;CS0618;CS1998;CS0659;CS0661;CS0162;CS0105;CS1591</NoWarn></PropertyGroup>'
         '<ItemGroup>%s%s<Reference Include="System.Core" /></ItemGroup></Project>' % (chr(10).join('<Compile Include="%s" />' % c for c in cs), chr(10).join(refs)))
     r = run(['dotnet', 'build', os.path.join(work, 'chk.csproj'), '--nologo', '-v', 'q'], quiet=True)
