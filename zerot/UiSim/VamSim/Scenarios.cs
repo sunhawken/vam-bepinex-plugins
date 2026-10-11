@@ -411,4 +411,75 @@ public static class Scenarios
 		h.Check(mL.shader == back, "after a scene load the new person is patched");
 		h.Check(f.GetStorableByID("ZeroT.ClothingBackface") != null, "...with its controls");
 	}
+
+	[Scenario("forcepersoncache", "ZeroT.ForcePersonCacheStandalone")]
+	public static void ForcePersonCache(Harness h)
+	{
+		var sc = h.Sc;
+		var core = new GameObject("CoreControl").AddComponent<Atom>(); core.type = "SessionPluginManager"; core.uid = core.name = "CoreControl"; core.containingAtom = core; sc.AddAtom(core);
+		h.Start();
+		h.Step(0.5f);
+		h.Check(sc.SimAddLog.Count == 0, "nothing happens straight away (a delay after VaM is ready)");
+		h.Step(1.0f);
+		h.Check(sc.SimAddLog.Count >= 1 && sc.SimAddLog[0] == "add Person Person", "scene without a person: AddAtomByType(\"Person\", \"Person\") is called");
+		h.Check(sc.GetAtomByUid("Person") == null || sc.SimAddLog.Count == 1, "...the atom does not exist at the instant of the call (it takes a few frames)");
+		h.Step(0.5f);
+		h.Check(sc.SimAddLog.SequenceEqual(new[] { "add Person Person", "remove Person" }), "...and when it exists it is removed again: " + string.Join(" > ", sc.SimAddLog));
+		h.Check(sc.GetAtoms().All(a => a.type != "Person"), "the scene is left as it was (no Person)");
+		h.Step(5f);
+		h.Check(sc.SimAddLog.Count == 2, "it runs once, not again and again");
+
+		// Hard Reset: the session plugin used to start again
+		sc.SimAddLog.Clear();
+		sc.HardReset();
+		h.Step(0.4f); h.Check(sc.SimAddLog.Count == 0, "Hard Reset: waits the delay first");
+		h.Step(1.2f); h.Step(0.5f);
+		h.Check(sc.SimAddLog.SequenceEqual(new[] { "add Person Person", "remove Person" }), "Hard Reset: warms up again");
+
+		// a person (or an atom called Person) already there: nothing to do
+		sc.SimAddLog.Clear();
+		sc.HardReset(); h.Step(0.3f);
+		var existing = h.Person("Female1");               // category People
+		h.Step(2.5f);
+		h.Check(sc.SimAddLog.Count == 0, "a Person atom (category People) is in the scene: nothing is created");
+		sc.RemoveAtom(existing); sc.SimAddLog.Clear();
+		sc.HardReset(); h.Step(0.3f);
+		var lookalike = new GameObject("Person").AddComponent<Atom>(); lookalike.type = "Empty"; lookalike.uid = lookalike.name = "Person"; lookalike.containingAtom = lookalike; sc.AddAtom(lookalike);
+		h.Step(2.5f);
+		h.Check(sc.SimAddLog.Count == 0, "an atom named 'Person' (any type) counts too, like the .var");
+		sc.RemoveAtom(lookalike);
+
+		// a call that does not produce an atom
+		sc.SimAddLog.Clear(); sc.SimAddFails = true;
+		sc.HardReset(); h.Step(2.5f);
+		h.Check(sc.SimAddLog.Count == 1 && sc.GetAtoms().Count == 1, "AddAtomByType that yields no atom: no exception, the scene is untouched");
+		sc.SimAddFails = false;
+
+		// no overlapping runs
+		sc.SimAddLog.Clear();
+		sc.HardReset(); h.Step(1.1f);                  // run starts
+		sc.HardReset(); h.Step(2.5f);                  // second reset while it is busy / after
+		int adds = sc.SimAddLog.Count(x => x.StartsWith("add"));
+		h.Check(adds >= 1 && adds <= 2 && sc.SimAddLog.Count(x => x.StartsWith("add")) == sc.SimAddLog.Count(x => x.StartsWith("remove")), "two resets in a row never leave a Person behind (" + string.Join(" > ", sc.SimAddLog) + ")");
+		h.Check(sc.GetAtoms().All(a => a.type != "Person"), "...and never leave a Person behind");
+
+		// settings
+		sc.SimAddLog.Clear();
+		h.Set("General", "RunAfterHardReset", "false");
+		sc.HardReset(); h.Step(3f);
+		h.Check(sc.SimAddLog.Count == 0, "RunAfterHardReset=false: a Hard Reset does not start it");
+		h.Set("General", "RunAfterHardReset", "true");
+		h.Set("General", "Enabled", "false");
+		sc.HardReset(); h.Step(3f);
+		h.Check(sc.SimAddLog.Count == 0, "Enabled=false: nothing at all");
+		h.Set("General", "Enabled", "true");
+
+		// the .var itself loaded in the session: this one steps aside
+		var asm = h.LoadTarget("ForcePersonCacheScripts");
+		h.Check(asm.GetType("JayJayWon.ForcePersonCache") != null, "the original plugin's class is loaded");
+		h.Step(2.5f);
+		sc.SimAddLog.Clear();
+		sc.HardReset(); h.Step(3f);
+		h.Check(sc.SimAddLog.Count == 0 && h.LogHas("steps aside"), "with the .var loaded this one does nothing and says so");
+	}
 }

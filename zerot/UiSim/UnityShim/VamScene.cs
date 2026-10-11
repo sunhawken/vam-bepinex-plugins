@@ -268,6 +268,8 @@ public partial class FreeControllerV3 : JSONStorable
 public partial class Atom : JSONStorable
 {
 	public string type;
+	public string category;
+	public void Remove() { SuperController.singleton.RemoveAtom(this); }
 	public string uid { get; set; }
 	public bool on { get; set; } = true;
 	public bool hidden { get; set; }
@@ -313,6 +315,20 @@ public partial class SuperController : MonoBehaviour
 	public void SaveJSON(SimpleJSON.JSONClass jc, string saveName) { SimSaved[saveName] = jc == null ? "" : jc.ToString(); }
 	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 	public SimpleJSON.JSONNode LoadJSON(string saveName) { string t; return SimSaved.TryGetValue(saveName, out t) ? SimpleJSON.JSON.Parse(t) : null; }
+	public int HardResetCalls;
+	public bool SimAddFails;
+	public readonly List<string> SimAddLog = new List<string>();   // "add Person Person", "remove Person" in the order VaM was asked
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public void HardReset() { HardResetCalls++; foreach (var a in atoms.ToArray()) if (a.uid != "CoreControl") RemoveAtom(a); }
+	// like VaM: the atom exists a few frames after the call
+	public System.Collections.IEnumerator AddAtomByType(string type, string useuid)
+	{
+		SimAddLog.Add("add " + type + " " + useuid);
+		yield return null; yield return null; yield return null;
+		if (SimAddFails) yield break;
+		if (type == "Person") { SimWorld.NewPerson(this, useuid, false); yield break; }
+		var go = new GameObject(useuid); var at = go.AddComponent<Atom>(); at.type = type; at.uid = at.name = useuid; at.containingAtom = at; AddAtom(at);
+	}
 	public bool targetShow;
 	public int allControllersCalls;   // how often something asked for the full list (it is rebuilt on every call in VaM)
 	public bool GetTargetShow() { return targetShow; }
@@ -332,7 +348,7 @@ public partial class SuperController : MonoBehaviour
 	public static void LogMessage(string msg) { Messages.Add(msg); }
 	public static void LogError(string err) { Errors.Add(err); }
 	public void AddAtom(Atom a) { atoms.Add(a); onAtomAddedHandlers?.Invoke(a); onAtomUIDsChangedHandlers?.Invoke(GetAtomUIDs()); }
-	public void RemoveAtom(Atom a) { atoms.Remove(a); a.destroyed = true; onAtomRemovedHandlers?.Invoke(a); }
+	public void RemoveAtom(Atom a) { SimAddLog.Add("remove " + a.uid); atoms.Remove(a); a.destroyed = true; onAtomRemovedHandlers?.Invoke(a); }
 	// Scene load: atoms are replaced; plugins see isLoading = true meanwhile, then the scene-loaded event.
 	public void BeginLoad() { isLoading = true; }
 	public void EndLoad() { isLoading = false; onSceneLoadedHandlers?.Invoke(); }
@@ -435,7 +451,7 @@ public static class SimWorld
 	{
 		var go = new GameObject(uid);
 		var atom = go.AddComponent<Atom>();
-		atom.type = "Person"; atom.uid = uid; atom.name = uid;
+		atom.type = "Person"; atom.category = "People"; atom.uid = uid; atom.name = uid;
 		atom.containingAtom = atom;
 		var bodies = new List<Rigidbody>();
 		var rbByName = new Dictionary<string, Rigidbody>();

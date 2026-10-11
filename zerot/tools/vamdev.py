@@ -49,6 +49,7 @@ P = {
     'appearanceloaderhelper': ('AppearanceLoaderHelper/ZeroT.AppearanceLoaderHelper.csproj', 'ZeroT.AppearanceLoaderHelper.dll', None),
     'zajeshufflehelper': ('ZajeShuffleHelper/ZeroT.ZajeShuffleHelper.csproj', 'ZeroT.ZajeShuffleHelper.dll', None),
     'clothingbackface': ('ClothingBackfaceStandalone/ZeroT.ClothingBackfaceStandalone.csproj', 'ZeroT.ClothingBackfaceStandalone.dll', None),
+    'forcepersoncache': ('ForcePersonCacheStandalone/ZeroT.ForcePersonCacheStandalone.csproj', 'ZeroT.ForcePersonCacheStandalone.dll', None),
     'uxplushelper': ('UXPlusHelper/ZeroT.UXPlusHelper.csproj', 'ZeroT.UXPlusHelper.dll', None),
     'personguard': ('PersonGuard/ZeroT.PersonGuard.csproj', 'ZeroT.PersonGuard.dll', None),
     'microphysics': ('MicroPhysicsFixerStandalone/ZeroT.MicroPhysicsFixerStandalone.csproj', 'ZeroT.MicroPhysicsFixerStandalone.dll', None),
@@ -56,7 +57,7 @@ P = {
     'extraautogenitals': ('ExtraAutoGenitalsStandalone/ZeroT.ExtraAutoGenitalsStandalone.csproj', 'ZeroT.ExtraAutoGenitalsStandalone.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HEADLESS = {'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
 HELPERS = {'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper', 'appearanceloaderhelper', 'zajeshufflehelper'}   # Harmony helpers: need the script assemblies from `simtargets`
 UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook'}
@@ -192,8 +193,14 @@ def cmd_simbuild():
 def cmd_unpack(var, dest=None):
     dest = dest or os.path.splitext(os.path.basename(var))[0]
     with zipfile.ZipFile(var) as z:
-        z.extractall(dest)
-        print('%d entries -> %s' % (len(z.namelist()), dest))
+        names = z.namelist()
+        for info in z.infolist():
+            n = info.filename
+            if info.is_dir() or (info.file_size == 0 and any(o.startswith(n.rstrip('/') + '/') for o in names)):
+                os.makedirs(os.path.join(dest, n), exist_ok=True)   # some packers list folders without the trailing slash
+                continue
+            z.extract(info, dest)
+        print('%d entries -> %s' % (len(names), dest))
 
 
 def cmd_pack(folder, out):
@@ -281,6 +288,7 @@ TARGETS = {
     'ControllersAppearanceScripts': 'Datel.ControllersAppearance.*.var',
     'AppearanceLoaderScripts': 'ky1001.AppearanceLoader.*.var',
     'ZajeShuffleScripts': 'ZeroT.ZajeShuffle.*.var',
+    'ForcePersonCacheScripts': 'JayJayWon.ForcePersonCache.*.var',
     'ClothingBackfaceScripts': 'Nial.?Plugins?_Clothing_backface.*.var',
 }
 

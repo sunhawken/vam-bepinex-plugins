@@ -2110,7 +2110,6 @@ public partial class SuperController {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Transform AddAtom(global::Atom atom, string useuid = default, bool userInvoked = default, bool forceSelect = default, bool forceFocus = default, bool instantiate = default) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked, bool forceSelect) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid, bool userInvoked) { return default; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.IEnumerator AddAtomByType(string type, string useuid) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Alert(string alertMessage, global::UnityEngine.Events.UnityAction okAlertCallback, global::SuperController.DisplayUIChoice displayUIChoice = default) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Alert(string alertMessage, global::UnityEngine.Events.UnityAction okAlertCallback, global::UnityEngine.Events.UnityAction cancelAlertCallback, global::SuperController.DisplayUIChoice displayUIChoice = default) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DoSaveScreenshot(string saveName, global::SuperController.ScreenShotCallback callback = default) { }
@@ -2254,7 +2253,6 @@ public partial class Atom {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadPreset(string saveName = default) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PostRestore() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PreRestore() { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Remove() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ResetAppearance() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Restore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default, bool restoreCore = default, global::SimpleJSON.JSONArray presetAtoms = default, bool isClear = default, bool isSubSceneRestore = default, bool setMissingToDefault = default, bool isTheSubSceneAtom = default) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RestoreTransform(global::SimpleJSON.JSONClass jc, bool setUnlistedToDefault = default) { }
@@ -2262,7 +2260,6 @@ public partial class Atom {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetLastRestoredData(global::SimpleJSON.JSONClass jc, bool isAppearance = default, bool isPhysical = default) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetUID(string val) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ToggleOn() { }
-  public string category;
   public global::UnityEngine.Transform childAtomContainer;
   public global::JSONStorableBool collisionEnabledJSON;
   public global::JSONStorableBool keepParamLocksWhenPuttingBackInPoolJSON;
