@@ -39,7 +39,7 @@ internal static class Program
 			}
 		}
 		Directory.CreateDirectory(outDir);
-		string work = Path.Combine(Path.GetTempPath(), "uisim_work_" + Path.GetFileNameWithoutExtension(dll));
+		string work = Path.Combine(Path.GetTempPath(), "uisim_work_" + Path.GetFileNameWithoutExtension(dll) + "_" + Environment.ProcessId);
 		if (Directory.Exists(work)) Directory.Delete(work, true);
 		Directory.CreateDirectory(work);
 		string shimSrc = typeof(GameObject).Assembly.Location;
@@ -47,21 +47,17 @@ internal static class Program
 		var hostPatched = hosts.Select(hp => Retarget(hp, work)).ToList();
 		var hostGuidByPatched = new Dictionary<string, string>(); for (int hi = 0; hi < hosts.Count; hi++) hostGuidByPatched[hostPatched[hi]] = hostGuids[hosts[hi]];
 		string patched = Retarget(dll, work);
-		// sibling plugin DLLs (core assemblies the host references)
-		var depFiles = Directory.GetFiles(deps, "*.dll").ToList();
-		string coresDir = Path.Combine(deps, "cores");
-		if (Directory.Exists(coresDir)) depFiles.AddRange(Directory.GetFiles(coresDir, "*.dll"));
-		foreach (var f in depFiles)
-		{
-			string n = Path.GetFileName(f);
-			if (string.Equals(f, dll, StringComparison.OrdinalIgnoreCase)) continue;
-			try { Retarget(f, work); } catch { }
-		}
 		AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
 		{
 			string nm = new AssemblyName(e.Name).Name;
 			string p = Path.Combine(work, nm + ".dll");
 			if (File.Exists(p)) return Assembly.LoadFrom(p);
+			foreach (var dir in new[] { deps, Path.Combine(deps, "cores") })   // sibling/core plugin DLLs are retargeted on first use only
+			{
+				string src = Path.Combine(dir, nm + ".dll");
+				if (File.Exists(src) && !string.Equals(Path.GetFullPath(src), dll, StringComparison.OrdinalIgnoreCase))
+				{ try { return Assembly.LoadFrom(Retarget(src, work)); } catch { } }
+			}
 			string vm = Path.Combine(Environment.GetEnvironmentVariable("VAM_DIR") ?? "T:/New folder", "VaM_Data", "Managed", nm + ".dll");
 			return !nm.StartsWith("UnityEngine") && File.Exists(vm) ? Assembly.LoadFrom(vm) : null;
 		};

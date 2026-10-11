@@ -312,7 +312,7 @@ def cmd_sheet(out=None):
         dll = os.path.join(ART, P[n][1])
         if not os.path.exists(dll):
             continue
-        cmd = [UISIM, dll, '--out', wd, '--tag', 'sheet', '--w', '700', '--h', '420']
+        cmd = [UISIM, dll, '--out', wd, '--tag', 'sheet', '--w', '700', '--h', '420', '--deps', os.path.join(SIM, 'in')]
         for k in ckeys:
             cmd += ['--set', k + '=true']
         if n == 'ppuiskin':
@@ -343,6 +343,59 @@ def cmd_sheet(out=None):
     return out
 
 
+def cmd_simall():
+    """Whole-install check, parallel: every logic scenario (one vamsim process) + every UI plugin x 5 window states (uisim, all cores)."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    t0 = time.time()
+    ok = True
+    ckeys = ['Window.Collapsed', 'GUI.Collapsed', 'Desktop GUI.Collapsed', 'Touch Filters.ControlWindowCollapsed']
+    wk = ['Window.Width', 'Window.ExpandedWidth', 'Window.WindowWidth', 'GUI.WindowWidth', 'Desktop GUI.WindowWidth', 'Touch Filters.ControlWindowWidth']
+    hk = [k.replace('Width', 'Height') for k in wk]
+    sk = ['Window.Scale', 'Window.UIScale', 'Window.UserScale', 'GUI.ManualUIScale', 'Desktop GUI.UIScale', 'Touch Filters.ControlWindowScale']
+    def sets(keys, v):
+        return [x for k in keys for x in ('--set', '%s=%s' % (k, v))]
+    variants = {'default': [], 'collapsed': sets(ckeys, 'true'), 'minsize': sets(wk, 1) + sets(hk, 1),
+                'scale2': sets(sk, 2.0) + ['--w', '2560', '--h', '1440'], 'scalesmall': sets(sk, 0.65)}
+    host = os.path.join(SIM, 'hosts', 'ParticlePinnacleThighCompressor.52.0.1.dll') + '::com.particlepinnacle.thighcompressorandvibrations'
+    jobs = []
+    for n in sorted(UI_PLUGINS | {'ppuiskin'}):
+        dll = os.path.join(ART, P[n][1])
+        if not os.path.exists(dll):
+            continue
+        for v, extra in variants.items():
+            wd = os.path.join(SIM, 'out', 'simall', n + '_' + v)
+            os.makedirs(wd, exist_ok=True)
+            cmd = [UISIM, dll, '--deps', os.path.join(SIM, 'in'), '--out', wd, '--tag', v] + extra + (['--host', host] if n == 'ppuiskin' else [])
+            jobs.append((n, v, cmd))
+    def one(j):
+        r = run(j[2], quiet=True)
+        out = (r.stdout or '') + (r.stderr or '')
+        clips = [l for l in out.splitlines() if l.startswith('CLIP')]
+        errs = [l for l in out.splitlines() if l.startswith('ERR') and 'Update:' not in l and 'coroutine:' not in l]
+        return j[0], j[1], clips, errs
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as ex:
+        logic = ex.submit(run, [VAMSIM, '--all', ART], None, True)
+        res = list(ex.map(one, jobs))
+        lr = logic.result()
+    lo = (lr.stdout or '').splitlines()
+    for l in lo:
+        if l.startswith(('PASS', 'FAIL', 'ALL PASSED')) or 'FAILED' in l:
+            print(l)
+    ok &= lr.returncode == 0
+    clipped = 0
+    for n, v, clips, errs in res:
+        clipped += len(clips)
+        for l in errs[:2]:
+            ok = False
+            print('UI ERR %s/%s %s' % (n, v, l[:200]))
+    bad = sorted(set((n, v, len(c)) for n, v, c, _ in res if c))
+    for n, v, c in bad:
+        print('  clipped %-20s %-10s %d' % (n, v, c))
+    print('ui: %d renders, %d clipped lines; logic: %s; %.1fs' % (len(res), clipped, 'ok' if lr.returncode == 0 else 'FAILED', time.time() - t0))
+    return ok
+
+
 def main(argv):
     if len(argv) < 2 or argv[1] in ('-h', '--help', 'help'):
         print(__doc__)
@@ -371,6 +424,8 @@ def main(argv):
         return 0 if cmd_cslcheck(a[0]) else 1
     elif c == 'cslbuild':
         return 0 if cmd_cslcheck(a[0], a[1]) else 1
+    elif c == 'simall':
+        return 0 if cmd_simall() else 1
     elif c == 'sheet':
         cmd_sheet(a[0] if a else None)
     elif c == 'simtargets':
