@@ -1,0 +1,21 @@
+{
+   "licenseType": "CC BY",
+   "creatorName": "zerot",
+   "packageName": "ToggleHUD",
+   "standardReferenceVersionOption": "Latest",
+   "scriptReferenceVersionOption": "Latest",
+   "description": "Small draggable desktop HUD with four on/off toggles (indicator per state): global Soft Body Physics, GiveMeFPS (GT) plugin enable, and GiveMeFPS Advanced Colliders, and High Quality Physics (mirrors the real VaM setting). Drag the panel anywhere on screen; position and states persist with the scene. Self-contained, no dependencies. v5 adds the High Physics toggle. v4 adds a VR mode: in VR the HUD is a free-floating world-space panel you drag with the laser (header or body), with BRING and PIN buttons, Attach To Left/Right Hand, Always On Top, and a Remember VR Layout setting (scale + placement saved to Saves/PluginData/zerot/ToggleHUD/vr_layout.json). Desktop behaviour is unchanged.",
+   "credits": "Structure modelled on VamEssentials.DockedUI (CC BY).",
+   "instructions": "Add ToggleHUD.cslist to any Atom (a Person or an Empty) as a Session or Scene plugin. A panel appears in the top-left; drag it by the header or body. Click a row to toggle it (Soft Body, GiveMeFPS, Adv Colliders, High Physics). Use the plugin UI sliders for scale, a Show HUD toggle, and Reset HUD Position. v4 adds a VR mode: in VR the HUD is a free-floating world-space panel you drag with the laser (header or body), with BRING and PIN buttons, Attach To Left/Right Hand, Always On Top, and a Remember VR Layout setting (scale + placement saved to Saves/PluginData/zerot/ToggleHUD/vr_layout.json). Desktop behaviour is unchanged.",
+   "promotionalLink": "",
+   "programVersion": "1.22.0.10",
+   "contentList": [
+      "Custom/Scripts/zerot/ToggleHUD"
+   ],
+   "dependencies": {},
+   "customOptions": {
+      "preloadMorphs": "false"
+   },
+   "hadReferenceIssues": "false",
+   "referenceIssues": []
+}

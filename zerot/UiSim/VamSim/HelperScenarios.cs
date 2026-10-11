@@ -775,3 +775,65 @@ public static class UIAStorables
 {
 	public static System.Collections.IList buttonGridsList;
 }
+
+public static class ToggleHudScenario
+{
+	private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+
+	private static UnityEngine.UI.Button Row(string label)
+	{
+		foreach (var b in UnityEngine.Object.FindObjectsOfType<UnityEngine.UI.Button>()) if (b.gameObject.name == "Row_" + label) return b;
+		return null;
+	}
+
+	private static string State(UnityEngine.UI.Button row) { return row.transform.Find("State").GetComponent<UnityEngine.UI.Text>().text; }
+	private static Color Back(UnityEngine.UI.Button row) { return row.GetComponent<UnityEngine.UI.Image>().color; }
+
+	[Scenario("togglehud", "ZeroT.ZajeShuffleHelper")]
+	public static void ToggleHud(Harness h)
+	{
+		var prefs = new GameObject("prefs").AddComponent<UserPreferences>();
+		UserPreferences.singleton = prefs;
+		prefs.softPhysics = true; prefs.physicsHighQuality = false;
+		Camera.main = new GameObject("Main Camera").AddComponent<Camera>();
+		var core = new GameObject("CoreControl").AddComponent<Atom>(); core.type = "CoreControl"; core.uid = core.name = "CoreControl"; core.containingAtom = core; h.Sc.AddAtom(core);
+		var asm = h.LoadTarget("ToggleHUDScripts");
+		var t = asm.GetType("zerot.ToggleHUD", true);
+		var go = new GameObject("plugin#0_ToggleHUD"); go.transform.SetParent(core.transform, false);
+		var hud = (MVRScript)go.AddComponent(t);
+		hud.containingAtom = core;
+		hud.Init();
+		h.Step(1f);
+
+		var hp = Row("HIGH PHYSICS"); var soft = Row("SOFT BODY"); var gt = Row("GIVEMEFPS (GT)"); var ac = Row("ADV COLLIDERS");
+		h.Check(hp != null && soft != null && gt != null && ac != null, "four toggle rows: Soft Body, GiveMeFPS, Adv Colliders, High Physics");
+		var on = Back(soft); var off = Back(hp);
+		h.Check(State(hp) == "OFF" && State(soft) == "ON", "status text from the real settings at start: High Physics OFF, Soft Body ON");
+		h.Check(Back(hp).r > Back(hp).g && Back(soft).g > Back(soft).r, "red when off, green when on - like the other rows");
+		h.Check(hp.transform.Find("Dot") != null && hp.transform.Find("State") != null, "the same parts as the other rows: indicator dot, label, ON/OFF text");
+		var yHp = hp.GetComponent<RectTransform>().anchoredPosition.y; var yAc = ac.GetComponent<RectTransform>().anchoredPosition.y;
+		h.Check(yHp < yAc && Math.Abs((yAc - yHp) - 62f) < 0.5f, "placed under the others with the same 62 spacing (" + yAc + " -> " + yHp + ")");
+		var panel = hp.transform.parent.GetComponent<RectTransform>();
+		h.Check(panel.sizeDelta.y >= 446f, "the panel grew to fit (" + panel.sizeDelta.y + ")");
+
+		hp.onClick.Invoke();
+		h.Check(prefs.physicsHighQuality, "clicking sets the real High Quality Physics preference");
+		h.Check(State(hp) == "ON" && Back(hp).g > Back(hp).r, "...and the row turns green: ON");
+		h.Check(prefs.softPhysics && State(soft) == "ON", "the other rows are untouched");
+		hp.onClick.Invoke();
+		h.Check(!prefs.physicsHighQuality && State(hp) == "OFF", "clicking again switches it back off");
+
+		prefs.physicsHighQuality = true;      // changed in VaM's own settings
+		h.Step(0.8f);
+		h.Check(State(hp) == "ON", "the row follows a change made in VaM's settings (status is the truth, not a remembered click)");
+		prefs.physicsHighQuality = false; h.Step(0.8f);
+		h.Check(State(hp) == "OFF", "...and back");
+
+		soft.onClick.Invoke();
+		h.Check(!prefs.softPhysics && State(soft) == "OFF", "Soft Body still works");
+		var st = (JSONStorableBool)hud.GetBoolJSONParam("High Physics On");
+		h.Check(st != null && !st.val, "the state is a scene-stored storable 'High Physics On'");
+		st.val = true;
+		h.Check(State(hp) == "ON", "setting the storable (scene load / trigger) repaints the row");
+	}
+}

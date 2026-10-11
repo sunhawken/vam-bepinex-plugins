@@ -292,6 +292,7 @@ TARGETS = {
     'ZajeShuffleScripts': 'ZeroT.ZajeShuffle.*.var',
     'ForcePersonCacheScripts': 'JayJayWon.ForcePersonCache.*.var',
     'ClothingBackfaceScripts': 'Nial.?Plugins?_Clothing_backface.*.var',
+    'ToggleHUDScripts': 'zerot.ToggleHUD.*.var',
 }
 
 

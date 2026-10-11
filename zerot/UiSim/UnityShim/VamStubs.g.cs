@@ -279,22 +279,16 @@ public partial interface IMaterialModifier {
 }
 namespace UnityEngine.Events {
 public partial class UnityEvent : global::UnityEngine.Events.UnityEventBase {
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddListener(global::UnityEngine.Events.UnityAction call) { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Invoke() { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemoveListener(global::UnityEngine.Events.UnityAction call) { }
   public UnityEvent() {}
 }
 public delegate void UnityAction();
 public delegate void UnityAction<T0>(T0 arg0);
 public abstract partial class UnityEvent<T0> : global::UnityEngine.Events.UnityEventBase {
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddListener(global::UnityEngine.Events.UnityAction<T0> call) { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemoveListener(global::UnityEngine.Events.UnityAction<T0> call) { }
   public UnityEvent() {}
 }
 public delegate void UnityAction<T0, T1>(T0 arg0, T1 arg1);
 public delegate void UnityAction<T0, T1, T2>(T0 arg0, T1 arg1, T2 arg2);
 public abstract partial class UnityEventBase {
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemoveAllListeners() { }
   public UnityEventBase() {}
 }
 }
@@ -303,6 +297,7 @@ public partial class PointerEventData : global::UnityEngine.EventSystems.BaseEve
   public PointerEventData(global::UnityEngine.EventSystems.EventSystem eventSystem) {}
   public global::UnityEngine.EventSystems.PointerEventData.InputButton button { get; set; }
   public int clickCount { get; set; }
+  public global::UnityEngine.Vector2 delta { get; set; }
   public bool dragging { get; set; }
   public bool eligibleForClick { get; set; }
   public global::UnityEngine.EventSystems.RaycastResult pointerCurrentRaycast { get; set; }
@@ -311,7 +306,6 @@ public partial class PointerEventData : global::UnityEngine.EventSystems.BaseEve
   public global::UnityEngine.Vector2 position { get; set; }
   public global::UnityEngine.Camera pressEventCamera { get; set; }
   public global::UnityEngine.Vector2 pressPosition { get; set; }
-  public global::UnityEngine.Vector2 delta { get; set; }
   public int pointerId { get; set; }
   public global::UnityEngine.EventSystems.RaycastResult pointerPressRaycast { get; set; }
   public global::UnityEngine.GameObject rawPointerPress { get; set; }
@@ -1458,6 +1452,7 @@ public partial struct Ray {
 }
 public partial class Physics {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static int OverlapSphereNonAlloc(global::UnityEngine.Vector3 position, float radius, global::UnityEngine.Collider[] results) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool Raycast(global::UnityEngine.Vector3 origin, global::UnityEngine.Vector3 direction, out global::UnityEngine.RaycastHit hitInfo, float maxDistance) { hitInfo = default; return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool Raycast(global::UnityEngine.Ray ray, out global::UnityEngine.RaycastHit hitInfo) { hitInfo = default; return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static int RaycastNonAlloc(global::UnityEngine.Ray ray, global::UnityEngine.RaycastHit[] results, float maxDistance) { return default; }
   public Physics() {}
@@ -2382,6 +2377,7 @@ public delegate void EndBrowseWithObjectCallback(global::JSONStorableUrl jsurl);
 }
 public partial class GenerateDAZMorphsControlUI {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DefaultMorph() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<global::DAZMorph> GetMorphs() { return new global::System.Collections.Generic.List<global::DAZMorph>(); }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroAll() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroMorph() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroNearZero() { }

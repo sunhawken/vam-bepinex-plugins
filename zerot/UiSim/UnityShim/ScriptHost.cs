@@ -349,3 +349,34 @@ public partial class Trigger
 	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 	public virtual void Remove() { }
 }
+
+// ---- UnityEvent that really calls its listeners (UI buttons, sliders), so a scenario can click things
+namespace UnityEngine.Events
+{
+	public partial class UnityEventBase
+	{
+		public readonly System.Collections.Generic.List<System.Delegate> SimCalls = new System.Collections.Generic.List<System.Delegate>();
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void RemoveAllListeners() { SimCalls.Clear(); }
+	}
+
+	public partial class UnityEvent
+	{
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void AddListener(UnityAction call) { SimCalls.Add(call); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void RemoveListener(UnityAction call) { SimCalls.Remove(call); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void Invoke() { foreach (var d in SimCalls.ToArray()) ((UnityAction)d)(); }
+	}
+
+	public abstract partial class UnityEvent<T0>
+	{
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void AddListener(UnityAction<T0> call) { SimCalls.Add(call); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void RemoveListener(UnityAction<T0> call) { SimCalls.Remove(call); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void Invoke(T0 arg) { foreach (var d in SimCalls.ToArray()) ((UnityAction<T0>)d)(arg); }
+	}
+}
