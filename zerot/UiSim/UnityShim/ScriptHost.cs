@@ -163,12 +163,29 @@ namespace MVR.FileManagementSecure
 		public static readonly System.Collections.Generic.HashSet<string> SimDirs = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
 		public static int FileExistsCalls, DirExistsCalls, GetFilesCalls, GetDirectoriesCalls;
 		private static string Norm(string p) { return (p ?? "").Replace((char)92, '/').TrimEnd('/'); }
-		public static void SimReset() { SimFiles.Clear(); SimDirs.Clear(); FileExistsCalls = DirExistsCalls = GetFilesCalls = GetDirectoriesCalls = 0; }
+		private static bool Glob(string name, string pat)
+		{
+			var re = "^" + System.Text.RegularExpressions.Regex.Escape(pat).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+			return System.Text.RegularExpressions.Regex.IsMatch(name, re, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		}
+		public static void SimReset() { SimText.Clear(); SimFiles.Clear(); SimDirs.Clear(); FileExistsCalls = DirExistsCalls = GetFilesCalls = GetDirectoriesCalls = 0; }
 		public static void SimAddFile(string path)
 		{
 			path = Norm(path); SimFiles.Add(path);
 			for (int i = path.LastIndexOf('/'); i > 0; i = path.LastIndexOf('/', i - 1)) SimDirs.Add(path.Substring(0, i));
 		}
+		public static readonly System.Collections.Generic.Dictionary<string, string> SimText = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
+		public static void SimAddText(string path, string text) { SimAddFile(path); SimText[Norm(path)] = text; }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static string ReadAllText(string path)
+		{
+			string t, p = Norm(path);
+			if (SimText.TryGetValue(p, out t)) return t;
+			if (SuperController.SimSaved.TryGetValue(path, out t)) return t;
+			throw new System.IO.FileNotFoundException(path);
+		}
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static void CreateDirectory(string path) { SimDirs.Add(Norm(path)); }
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 		public static bool FileExists(string path, bool onlySystemFiles) { FileExistsCalls++; return SimFiles.Contains(Norm(path)); }
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
@@ -183,7 +200,7 @@ namespace MVR.FileManagementSecure
 				int i = f.LastIndexOf('/');
 				if (i < 0 || !string.Equals(f.Substring(0, i), d, System.StringComparison.OrdinalIgnoreCase)) continue;
 				string name = f.Substring(i + 1);
-				if (string.IsNullOrEmpty(pattern) || pattern == "*" || string.Equals(name, pattern, System.StringComparison.OrdinalIgnoreCase)) r.Add(f);
+				if (string.IsNullOrEmpty(pattern) || Glob(name, pattern)) r.Add(f);
 			}
 			r.Sort(System.StringComparer.OrdinalIgnoreCase);
 			return r.ToArray();
@@ -217,6 +234,29 @@ namespace MVR.FileManagement
 
 namespace UnityEngine
 {
+	public sealed partial class Random
+	{
+		private static readonly System.Random Rnd = new System.Random(1234);
+		public static Vector3 insideUnitSphere { [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] get { Vector3 v; do { v = new Vector3((float)Rnd.NextDouble() * 2 - 1, (float)Rnd.NextDouble() * 2 - 1, (float)Rnd.NextDouble() * 2 - 1); } while (v.sqrMagnitude > 1f); return v; } }
+	}
+
+	public sealed partial class LineRenderer
+	{
+		public Vector3[] SimPositions = new Vector3[0]; public float SimWidth;
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void SetVertexCount(int n) { System.Array.Resize(ref SimPositions, n); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void SetWidth(float a, float b) { SimWidth = a; }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public void SetPosition(int i, Vector3 v) { if (i >= 0 && i < SimPositions.Length) SimPositions[i] = v; }
+	}
+
+	public partial class GameObject
+	{
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static GameObject CreatePrimitive(PrimitiveType type) { var g = new GameObject(type.ToString()); g.AddComponent<MeshRenderer>(); g.AddComponent<Collider>(); return g; }
+	}
+
 	public sealed partial class Shader : Object
 	{
 		public bool isSupported { get; set; }

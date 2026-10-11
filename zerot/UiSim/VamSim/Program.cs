@@ -175,7 +175,7 @@ internal static class Program
 		try { scenario.Invoke(null, new object[] { h }); }
 		catch (TargetInvocationException e) { h.Checks++; h.Failures++; Console.WriteLine("  FAIL scenario threw: " + (e.InnerException ?? e)); }
 		foreach (var e in Sim.Errors) { h.Checks++; h.Failures++; Console.WriteLine("  FAIL plugin error: " + e); }
-		foreach (var l in BepInEx.Logging.ManualLogSource.Lines.Take(12)) Console.WriteLine("  log  " + l);
+		foreach (var l in BepInEx.Logging.ManualLogSource.Lines.Distinct().Take(40)) Console.WriteLine("  log  " + l);
 		foreach (var m in SuperController.Messages.Take(6)) Console.WriteLine("  VaM message: " + m);
 		foreach (var m in SuperController.Errors.Take(6)) Console.WriteLine("  VaM error: " + m);
 		Console.WriteLine(h.Failures == 0 ? "PASS " + name + " (" + h.Checks + " checks)" : "FAIL " + name + " (" + h.Failures + " of " + h.Checks + " checks failed)");

@@ -1760,7 +1760,6 @@ public delegate void FileBrowserFullCallback(string path, bool didClose);
 namespace MVR.FileManagementSecure {
 public partial class FileManagerSecure {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void CopyFile(string oldPath, string newPath) { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void CreateDirectory(string path) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void DeleteFile(string path) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string GetDirectoryName(string path, bool returnSlashPath = default) { return ""; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string GetFileName(string path) { return ""; }
@@ -1772,7 +1771,6 @@ public partial class FileManagerSecure {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string NormalizePath(string path) { return ""; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool PackageExists(string packageUid) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static byte[] ReadAllBytes(string path) { return new byte[0]; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string ReadAllText(string path) { return ""; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void WriteAllBytes(string path, byte[] bytes) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void WriteAllText(string path, string text) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void WriteAllText(string path, string text, global::MVR.FileManagementSecure.UserActionCallback confirmCallback, global::MVR.FileManagementSecure.UserActionCallback denyCallback, global::MVR.FileManagementSecure.ExceptionCallback exceptionCallback) { }
@@ -1990,7 +1988,6 @@ public partial class Component {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SendMessage(string methodName, global::UnityEngine.SendMessageOptions options) { }
 }
 public partial class GameObject {
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::UnityEngine.GameObject CreatePrimitive(global::UnityEngine.PrimitiveType type) { return default; }
   public global::UnityEngine.GameObject gameObject { get; set; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public T GetComponentInParent<T>() { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public T[] GetComponents<T>() { return new T[0]; }

@@ -55,7 +55,9 @@ namespace UnityEngine
 		public CollisionDetectionMode collisionDetectionMode { get; set; }
 		public float maxDepenetrationVelocity { get; set; } = 10f;
 		public Vector3 worldCenterOfMass => transform.position;
-		public void AddForce(Vector3 force, ForceMode mode) { velocity = velocity + force * (1f / Mathf.Max(0.0001f, mass)); }
+		public Vector3 SimForceSum, SimTorqueSum; public int SimForceCalls, SimTorqueCalls;
+		public void AddForce(Vector3 force, ForceMode mode) { SimForceSum = SimForceSum + force; SimForceCalls++; velocity = velocity + force * (1f / Mathf.Max(0.0001f, mass)); }
+		public void AddTorque(Vector3 torque, ForceMode mode) { SimTorqueSum = SimTorqueSum + torque; SimTorqueCalls++; angularVelocity = angularVelocity + torque; }
 		public Vector3 GetPointVelocity(Vector3 p) => velocity;
 	}
 }
@@ -414,7 +416,7 @@ public static class SimWorld
 {
 	public static readonly string[] Bodies =
 	{
-		"hip", "pelvis", "abdomen", "abdomen2", "chest", "neck", "head",
+		"hip", "pelvis", "abdomen", "abdomen2", "chest", "neck", "head", "lKneeLink", "rKneeLink",
 		"lShldr", "rShldr", "lArm", "rArm", "lHand", "rHand", "lThigh", "rThigh", "lShin", "rShin", "lFoot", "rFoot", "lToe", "rToe",
 		"LGlute", "RGlute", "lPectoral", "rPectoral", "Gen1", "Gen2", "Gen3", "labia", "Testes"
 	};
