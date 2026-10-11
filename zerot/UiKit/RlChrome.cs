@@ -115,9 +115,36 @@ namespace ZeroT.UiKit
 			return cachedDpi;
 		}
 
+		private static Texture2D panelTex;
+		private static Texture2D edgeTex;
+
+		private static Texture2D MakeTex(Color c)
+		{
+			Texture2D t = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+			t.SetPixel(0, 0, c);
+			t.Apply();
+			t.hideFlags = HideFlags.HideAndDontSave;
+			return t;
+		}
+
+		// The shared dark translucent panel (same look as the uGUI windows): near-black fill, 1px grey edge.
+		internal static void Panel(Rect r)
+		{
+			if (panelTex == null)
+			{
+				panelTex = MakeTex(new Color(0.04f, 0.04f, 0.04f, 0.72f));
+				edgeTex = MakeTex(new Color(0.40f, 0.40f, 0.40f, 1f));
+			}
+			GUI.DrawTexture(r, panelTex);
+			GUI.DrawTexture(new Rect(r.x, r.y, r.width, 1f), edgeTex);
+			GUI.DrawTexture(new Rect(r.x, r.yMax - 1f, r.width, 1f), edgeTex);
+			GUI.DrawTexture(new Rect(r.x, r.y, 1f, r.height), edgeTex);
+			GUI.DrawTexture(new Rect(r.xMax - 1f, r.y, 1f, r.height), edgeTex);
+		}
+
 		internal static void Backdrop(float w, float h)
 		{
-			GUI.Box(new Rect(0f, 0f, w, h), "");
+			Panel(new Rect(0f, 0f, w, h));
 		}
 
 		// Returns a bitmask of the buttons clicked this frame.

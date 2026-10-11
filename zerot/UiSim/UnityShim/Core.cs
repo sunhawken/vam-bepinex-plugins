@@ -292,7 +292,6 @@ namespace UnityEngine
 		public Vector3 localPosition { get; set; }
 		public Vector3 localScale { get; set; } = Vector3.one;
 		public Quaternion localRotation { get; set; } = Quaternion.identity;
-		public Vector3 position { get => localPosition; set => localPosition = value; }
 		public int childCount => children.Count;
 		public Transform GetChild(int i) => children[i];
 		public int GetSiblingIndex() => parent == null ? 0 : parent.children.IndexOf(this);
@@ -325,7 +324,8 @@ namespace UnityEngine
 	{
 		public Texture2D(int w, int h) { }
 		public Texture2D(int w, int h, TextureFormat f, bool mip) { }
-		public void SetPixel(int x, int y, Color c) { }
+		public Color Pixel0 = new Color(1, 1, 1, 1);
+		public void SetPixel(int x, int y, Color c) { Pixel0 = c; }
 		public void Apply() { }
 		public void Apply(bool a, bool b) { }
 	}

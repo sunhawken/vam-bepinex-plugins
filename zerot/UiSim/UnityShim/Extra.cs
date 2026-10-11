@@ -36,13 +36,7 @@ namespace UnityEngine
 	}
 	public partial class Transform
 	{
-		public Vector3 forward => Vector3.forward;
 		public Transform root { get { var t = this; while (t.parent != null) t = t.parent; return t; } }
-		public Vector3 lossyScale => Vector3.one;
-		public Vector3 InverseTransformPoint(Vector3 v) => v;
-		public Vector3 InverseTransformDirection(Vector3 v) => v;
-		public Vector3 TransformPoint(Vector3 v) => v;
-		public Vector3 TransformDirection(Vector3 v) => v;
 	}
 	public partial class Camera
 	{
@@ -51,10 +45,8 @@ namespace UnityEngine
 		public void CopyFrom(Camera c) { }
 	}
 	public partial class AudioClip { public static AudioClip Create(string n, int len, int ch, int freq, bool stream) => new AudioClip(); public bool SetData(float[] d, int off) => true; }
-	public partial class GameObject { public int layer { get; set; } public static GameObject Find(string name) => null; }
-	public partial class Transform { public Vector3 eulerAngles { get; set; } public Vector3 up => Vector3.up; public Quaternion rotation { get; set; } = Quaternion.identity; }
+	public partial class GameObject { public int layer { get; set; } }
 	public partial struct Vector3 { public static float Distance(Vector3 a, Vector3 b) => (a - b).magnitude; }
-	public partial class Object { public static T[] FindObjectsOfType<T>() where T : Object => new T[0]; }
 	public static partial class Mathf
 	{
 		public static float Sign(float f) => f >= 0 ? 1f : -1f;

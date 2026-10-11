@@ -254,6 +254,9 @@ namespace UnityEngine
 								using (var p = new Pen(edge)) g.DrawRectangle(p, c.r.X, c.r.Y, c.r.Width - 1, c.r.Height - 1);
 								break;
 							}
+						case "fill":
+							using (var b = new SolidBrush(SDColor.FromArgb((int)(c.color.a * 255), (int)(c.color.r * 255), (int)(c.color.g * 255), (int)(c.color.b * 255)))) g.FillRectangle(b, c.r);
+							break;
 						case "scrollbar":
 							using (var b = new SolidBrush(SDColor.FromArgb(255, 70, 70, 70))) g.FillRectangle(b, c.r);
 							break;
@@ -354,7 +357,14 @@ namespace UnityEngine
 		public static string TextField(Rect r, string t, GUIStyle s) { Gui.DrawStyled(r, t, s, false, false, false); return t; }
 		public static string TextArea(Rect r, string t) => TextField(r, t, skin.textArea);
 		public static float HorizontalSlider(Rect r, float v, float min, float max) { Gui.DrawStyled(r, "", skin.horizontalSlider, false, false, false); return v; }
-		public static void DrawTexture(Rect r, Texture t) { }
+		public static void DrawTexture(Rect r, Texture t)
+		{
+			if (!Gui.Repaint) return;
+			var a = Gui.Abs(r);
+			if (a.Width <= 0 || a.Height <= 0) return;
+			var col = (t as Texture2D)?.Pixel0 ?? Color.white;
+			Gui.Cmds.Add(new DrawCmd { kind = "fill", r = Gui.Screen_(a), clip = Gui.Screen_(Gui.Clip), color = col });
+		}
 		public static void SetNextControlName(string n) { }
 		public static string GetNameOfFocusedControl() => "";
 		public static void FocusControl(string n) { }

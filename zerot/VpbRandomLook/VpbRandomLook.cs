@@ -316,7 +316,7 @@ namespace ZeroT.VpbRandomLook
         private void DrawExternal(float w, float h)
         {
             Rect panel = new Rect(0f, 0f, w, h);
-            GUI.Box(panel, "");
+            ZeroT.UiKit.RlChrome.Panel(panel);
             DrawWindow(panel, Mathf.Clamp(_scale.Value, 0.3f, 2.5f), false);
         }
 
@@ -335,7 +335,7 @@ namespace ZeroT.VpbRandomLook
             ClampToDisplay(w, h);
 
             Rect panel = new Rect(_win.x, _win.y, w, h);
-            GUI.Box(panel, "");
+            ZeroT.UiKit.RlChrome.Panel(panel);
             DrawWindow(panel, scale, collapsed);
         }
 

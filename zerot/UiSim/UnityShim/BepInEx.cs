@@ -59,7 +59,7 @@ namespace BepInEx.Logging
 
 namespace BepInEx.Configuration
 {
-	public abstract class ConfigEntryBase { public ConfigFile ConfigFile; public string Section, Key; public abstract void SetFromString(string s); public abstract object BoxedValue { get; } }
+	public abstract class ConfigEntryBase { public ConfigFile ConfigFile { get; set; } public string Section, Key; public abstract void SetFromString(string s); public abstract object BoxedValue { get; } }
 
 	public class ConfigEntry<T> : ConfigEntryBase
 	{
@@ -86,7 +86,9 @@ namespace BepInEx.Configuration
 		public bool IsUp() { return false; }
 	}
 	public class SettingChangedEventArgs : EventArgs { public ConfigEntryBase ChangedSetting { get; set; } public SettingChangedEventArgs(ConfigEntryBase s) { ChangedSetting = s; } }
-	public class ConfigDescription { public ConfigDescription(string d) { } }
+	public class ConfigDescription { public ConfigDescription(string d) { } public ConfigDescription(string d, object acceptable) { } public ConfigDescription(string d, object acceptable, params object[] tags) { } }
+	public class AcceptableValueRange<T> { public AcceptableValueRange(T min, T max) { } }
+	public class AcceptableValueList<T> { public AcceptableValueList(params T[] values) { } }
 
 	public class ConfigFile
 	{
@@ -115,4 +117,13 @@ namespace BepInEx.Configuration
 		public void Save() { }
 		public bool SaveOnConfigSet { get; set; }
 	}
+}
+
+namespace BepInEx
+{
+	public class PluginInfo { public BaseUnityPlugin Instance { get; set; } public BepInPlugin Metadata { get; set; } }
+}
+namespace BepInEx.Bootstrap
+{
+	public static class Chainloader { static readonly Dictionary<string, BepInEx.PluginInfo> infos = new Dictionary<string, BepInEx.PluginInfo>(); public static Dictionary<string, BepInEx.PluginInfo> PluginInfos { get { return infos; } } }
 }

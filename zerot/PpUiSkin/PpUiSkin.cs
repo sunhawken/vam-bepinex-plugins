@@ -152,7 +152,7 @@ namespace ZeroT.PpUiSkin
 			float w = collapsed ? 340f : win.width;
 			float h = collapsed ? ZeroT.UiKit.RlChrome.CollapsedH : win.height;
 			Rect panel = new Rect(win.x, win.y, w * s, h * s);
-			GUI.Box(panel, "");
+			ZeroT.UiKit.RlChrome.Panel(panel);
 
 			GUI.BeginGroup(panel);
 			int b = ZeroT.UiKit.RlChrome.TitleRow(panel.width, collapsed ? "ParticlePinnacle  52.0.1" : "ParticlePinnacle Filters", collapsed, s, GUI.skin.label, GUI.skin.button, ActiveCfg.Value);

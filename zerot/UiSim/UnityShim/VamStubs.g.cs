@@ -1141,10 +1141,6 @@ public enum TextAlignment : int {
   Center = 1,
   Right = 2,
 }
-public enum Space : int {
-  World = 0,
-  Self = 1,
-}
 public sealed partial class LineRenderer : global::UnityEngine.Renderer {
   public LineRenderer() {}
 }
@@ -1471,9 +1467,6 @@ public partial interface IMeshProvider {
 }
 }
 namespace UnityEngine {
-public partial class Object {
-  public static T FindObjectOfType<T>() { return default; }
-}
 public partial class Component {
   public void BroadcastMessage(string methodName, object parameter, global::UnityEngine.SendMessageOptions options) { }
   public void SendMessage(string methodName, object value) { }
@@ -1505,18 +1498,6 @@ public enum Axis : int {
   Horizontal = 0,
   Vertical = 1,
 }
-}
-public partial class Transform {
-  public global::UnityEngine.Vector3 right { get; set; }
-  public bool IsChildOf(global::UnityEngine.Transform parent) { return default; }
-  public void LookAt(global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector3 worldUp) { }
-  public void Rotate(float xAngle, float yAngle, float zAngle) { }
-  public void RotateAround(global::UnityEngine.Vector3 point, global::UnityEngine.Vector3 axis, float angle) { }
-  public global::UnityEngine.Vector3 localEulerAngles { get; set; }
-  public void SetAsFirstSibling() { }
-  public void Translate(global::UnityEngine.Vector3 translation) { }
-  public void Translate(float x, float y, float z) { }
-  public void Translate(float x, float y, float z, global::UnityEngine.Space relativeTo) { }
 }
 public static partial class Resources {
   public static T[] FindObjectsOfTypeAll<T>() { return new T[0]; }

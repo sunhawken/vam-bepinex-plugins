@@ -299,6 +299,50 @@ def cmd_simtargets():
     return ok
 
 
+def cmd_sheet(out=None):
+    """Render every plugin window collapsed (uisim) from the BUILT dlls and montage them into one PNG."""
+    from PIL import Image, ImageDraw
+    out = out or os.path.join(SIM, 'out', 'collapsed_huds.png')
+    ckeys = ['Window.Collapsed', 'GUI.Collapsed', 'Desktop GUI.Collapsed', 'Touch Filters.ControlWindowCollapsed']
+    tiles = []
+    wd = os.path.join(SIM, 'out', 'sheet')
+    os.makedirs(wd, exist_ok=True)
+    host = os.path.join(SIM, 'hosts', 'ParticlePinnacleThighCompressor.52.0.1.dll') + '::com.particlepinnacle.thighcompressorandvibrations'
+    for n in sorted(UI_PLUGINS | {'ppuiskin'}):
+        dll = os.path.join(ART, P[n][1])
+        if not os.path.exists(dll):
+            continue
+        cmd = [UISIM, dll, '--out', wd, '--tag', 'sheet', '--w', '700', '--h', '420']
+        for k in ckeys:
+            cmd += ['--set', k + '=true']
+        if n == 'ppuiskin':
+            cmd += ['--host', host]
+        run(cmd, quiet=True)
+        png = os.path.join(wd, os.path.splitext(P[n][1])[0] + '_sheet.png')
+        if os.path.exists(png):
+            tiles.append((n, Image.open(png).convert('RGB')))
+    tiles.append(('personguard', None))   # headless: no window
+    cw, ch, cols = 360, 190, 4
+    rows = (len(tiles) + cols - 1) // cols
+    sheet = Image.new('RGB', (cols * cw, rows * ch), (24, 24, 28))
+    d = ImageDraw.Draw(sheet)
+    for i, (n, im) in enumerate(tiles):
+        x, y = (i % cols) * cw, (i // cols) * ch
+        d.text((x + 8, y + 4), n, fill=(200, 200, 200))
+        if im is None:
+            d.rectangle([x + 8, y + 24, x + cw - 8, y + 90], outline=(90, 90, 100))
+            d.text((x + 20, y + 50), 'no window - headless (logs only)', fill=(140, 140, 150))
+            continue
+        bbox = im.point(lambda v: 255 if v > 14 else 0).convert('L').getbbox()
+        if bbox:
+            im = im.crop((max(0, bbox[0] - 4), max(0, bbox[1] - 4), min(im.width, bbox[2] + 4), min(im.height, bbox[3] + 4)))
+        im.thumbnail((cw - 16, ch - 30))
+        sheet.paste(im, (x + 8, y + 24))
+    sheet.save(out)
+    print('sheet', out, len(tiles), 'tiles')
+    return out
+
+
 def main(argv):
     if len(argv) < 2 or argv[1] in ('-h', '--help', 'help'):
         print(__doc__)
@@ -327,6 +371,8 @@ def main(argv):
         return 0 if cmd_cslcheck(a[0]) else 1
     elif c == 'cslbuild':
         return 0 if cmd_cslcheck(a[0], a[1]) else 1
+    elif c == 'sheet':
+        cmd_sheet(a[0] if a else None)
     elif c == 'simtargets':
         return 0 if cmd_simtargets() else 1
     else:

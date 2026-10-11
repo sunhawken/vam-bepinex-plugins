@@ -18,7 +18,8 @@ $variants = [ordered]@{
 $total = 0
 Get-ChildItem in -Filter *.dll | Where-Object { $_.Name -match $Only } | ForEach-Object {
     foreach ($v in $variants.Keys) {
-        $out = & .\bin\uisim.exe $_.FullName --out out --tag $v @($variants[$v]) 2>&1
+        $hostArgs = @(); if ($_.BaseName -like '*ParticlePinnacleUiSkin*') { $hostArgs = @('--host', ((Join-Path $PSScriptRoot 'hosts\ParticlePinnacleThighCompressor.52.0.1.dll') + '::com.particlepinnacle.thighcompressorandvibrations')) }
+        $out = & .\bin\uisim.exe $_.FullName --out out --tag $v @($hostArgs) @($variants[$v]) 2>&1
         $clips = @($out | Where-Object { $_ -like 'CLIP*' })
         $errs = @($out | Where-Object { $_ -like 'ERR*' } | Where-Object { $_ -notmatch 'Update:|coroutine:' })
         $status = if ($clips.Count -eq 0) { 'ok' } else { "$($clips.Count) CLIPPED" }
