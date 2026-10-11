@@ -261,6 +261,9 @@ internal static class Program
 		{ "DAZCharacterSelector", new HashSet<string> { "GetClothingItem" } },
 		{ "UnityEngine.Mesh", new HashSet<string> { ".ctor", "get_vertices", "set_vertices", "SetIndices", "Clear", "RecalculateBounds" } },
 		{ "UnityEngine.Material", new HashSet<string> { ".ctor", "get_color", "set_color", "SetFloat", "GetFloat", "get_shader", "set_shader", "get_renderQueue", "set_renderQueue", "HasProperty", "SetTexture", "GetTexture" } },
+		{ "Trigger", new HashSet<string> { "handler", "discreteActionsStart", "discreteActionsEnd", "transitionActions", "_transitionInterpValue", "active", "get_active", "set_active", "HasActions", "RestoreFromJSON", "GetJSON", "Update", "Remove" } },
+		{ "TriggerActionDiscrete", new HashSet<string> { "Trigger" } },
+		{ "TriggerActionTransition", new HashSet<string> { "TriggerInterp" } },
 		{ "UnityEngine.Random", new HashSet<string> { "get_insideUnitSphere" } },
 		{ "UnityEngine.LineRenderer", new HashSet<string> { "SetVertexCount", "SetWidth", "SetPosition" } },
 		{ "UnityEngine.GameObject", new HashSet<string> { "CreatePrimitive" } },
@@ -268,7 +271,7 @@ internal static class Program
 		{ "UnityEngine.Shader", new HashSet<string> { ".ctor", "get_isSupported", "set_isSupported" } },
 		{ "UnityEngine.AssetBundle", new HashSet<string> { "LoadFromMemory", "LoadAsset", "LoadAllAssets", "Unload" } },
 		{ "UnityEngine.JsonUtility", new HashSet<string> { "FromJson", "ToJson" } },
-		{ "MVR.FileManagementSecure.FileManagerSecure", new HashSet<string> { "FileExists", "DirectoryExists", "GetFiles", "GetDirectories", "ReadAllText", "CreateDirectory" } },
+		{ "MVR.FileManagementSecure.FileManagerSecure", new HashSet<string> { "FileExists", "DirectoryExists", "GetFiles", "GetDirectories", "ReadAllText", "CreateDirectory", "NormalizePath" } },
 		{ "MVR.FileManagement.FileManager", new HashSet<string> { "GetPackageUids", "get_lastPackageRefreshTime" } },
 	};
 

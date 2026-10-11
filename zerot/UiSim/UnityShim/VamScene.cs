@@ -55,6 +55,7 @@ namespace UnityEngine
 		public CollisionDetectionMode collisionDetectionMode { get; set; }
 		public float maxDepenetrationVelocity { get; set; } = 10f;
 		public Vector3 worldCenterOfMass => transform.position;
+		public Vector3 inertiaTensor { get; set; } = new Vector3(0.02f, 0.02f, 0.02f);
 		public Vector3 SimForceSum, SimTorqueSum; public int SimForceCalls, SimTorqueCalls;
 		public void AddForce(Vector3 force, ForceMode mode) { SimForceSum = SimForceSum + force; SimForceCalls++; velocity = velocity + force * (1f / Mathf.Max(0.0001f, mass)); }
 		public void AddTorque(Vector3 torque, ForceMode mode) { SimTorqueSum = SimTorqueSum + torque; SimTorqueCalls++; angularVelocity = angularVelocity + torque; }
@@ -267,8 +268,11 @@ public partial class FreeControllerV3 : JSONStorable
 	public void SelectLinkToRigidbody(Rigidbody rb) { }
 }
 
+public partial class ForceReceiver : MonoBehaviour { }
+
 public partial class Atom : JSONStorable
 {
+	public ForceReceiver[] forceReceivers { get; set; } = new ForceReceiver[0];
 	public string type;
 	public string category;
 	public void Remove() { SuperController.singleton.RemoveAtom(this); }
@@ -366,13 +370,14 @@ public partial class DAZMorphBank : MonoBehaviour
 public partial class DAZMorph
 {
 	public string displayName, morphName;
+	public string uid { get; set; }
 	public float min = 0f, max = 1f, startValue;
 	public JSONStorableFloat jsonFloat;
 	public bool wasTouched;
 	public DAZMorph() { }
 	public DAZMorph(string name, float min, float max, float def = 0f)
 	{
-		displayName = morphName = name; this.min = min; this.max = max; startValue = def;
+		displayName = morphName = uid = name; this.min = min; this.max = max; startValue = def;
 		jsonFloat = new JSONStorableFloat(name, def, min, max, false);
 	}
 	public float morphValue { get => jsonFloat.val; set { wasTouched = true; jsonFloat.val = value; } }
@@ -388,6 +393,7 @@ public partial class GenerateDAZMorphsControlUI : MonoBehaviour
 {
 	public List<DAZMorph> all = new List<DAZMorph>();
 	public DAZMorph GetMorphByDisplayName(string name) => all.Find(m => m.displayName == name);
+	public DAZMorph GetMorphByUid(string uid) => all.Find(m => m.uid == uid);
 	public List<string> GetMorphDisplayNames() => all.ConvertAll(m => m.displayName);
 }
 
@@ -416,7 +422,8 @@ public static class SimWorld
 {
 	public static readonly string[] Bodies =
 	{
-		"hip", "pelvis", "abdomen", "abdomen2", "chest", "neck", "head", "lKneeLink", "rKneeLink",
+		"hip", "pelvis", "abdomen", "abdomen2", "chest", "neck", "head", "lKneeLink", "rKneeLink", "lForeArm", "rForeArm",
+		"lIndex1", "rIndex1", "lMid1", "rMid1", "lRing1", "rRing1", "lPinky1", "rPinky1", "lBigToe", "rBigToe", "lSmallToe1", "rSmallToe1",
 		"lShldr", "rShldr", "lArm", "rArm", "lHand", "rHand", "lThigh", "rThigh", "lShin", "rShin", "lFoot", "rFoot", "lToe", "rToe",
 		"LGlute", "RGlute", "lPectoral", "rPectoral", "Gen1", "Gen2", "Gen3", "labia", "Testes"
 	};
@@ -489,6 +496,14 @@ public static class SimWorld
 		atom.freeControllers = controllers.ToArray();
 		atom.mainController = main;
 		atom.rigidbodies = bodies.ToArray();
+		var frs = new List<ForceReceiver>();
+		foreach (var rbx in bodies) frs.Add(rbx.gameObject.AddComponent<ForceReceiver>());
+		atom.forceReceivers = frs.ToArray();
+		var skin = Child(go, "skin").AddComponent<JSONStorable>();
+		skin.storeId = "skin"; skin.containingAtom = atom;
+		skin.RegisterFloat(new JSONStorableFloat("Gloss", 5f, 0f, 8f, true));
+		skin.RegisterFloat(new JSONStorableFloat("Gloss Texture Offset", 0.6f, -1f, 1f, true));
+		atom.storables["skin"] = skin;
 		// geometry: gender + morphs
 		var geo = Child(go, "geometry").AddComponent<DAZCharacterSelector>();
 		geo.storeId = "geometry"; geo.containingAtom = atom;
@@ -508,6 +523,14 @@ public static class SimWorld
 		Child(trig, "handler").AddComponent<CollisionTriggerEventHandler>();
 		sc.AddAtom(atom);
 		return atom;
+	}
+
+	public static DAZMorph AddMorphUid(DAZCharacterSelector geo, string uid, float min, float max)
+	{
+		var m = new DAZMorph(uid, min, max, 0f);
+		geo.morphsControlUI.all.Add(m);
+		geo.morphBank1.morphs.Add(m);
+		return m;
 	}
 
 	public static DAZMorph AddMorph(DAZCharacterSelector geo, string name, float min, float max, float def = 0f)

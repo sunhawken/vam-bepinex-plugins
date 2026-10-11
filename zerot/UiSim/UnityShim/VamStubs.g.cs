@@ -531,6 +531,7 @@ public partial class DAZMesh : global::MVR.ObjectAllocator {
   public global::UnityEngine.Material[] materials;
   public bool[] materialsEnabled;
   public bool[] materialsShadowCastEnabled;
+  public global::DAZMorphBank morphBank;
   public bool receiveShadows;
   public DAZMesh() {}
 }
@@ -803,21 +804,11 @@ public partial class AudioClipManager : global::JSONStorable {
 }
 public partial class Trigger {
   public Trigger() {}
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::SimpleJSON.JSONClass GetJSON() { return default; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::SimpleJSON.JSONClass GetJSON(string subScenePrefix) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void InitTriggerUI() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void OpenTriggerActionsPanel() { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc) { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void RestoreFromJSON(global::SimpleJSON.JSONClass jc, string subScenePrefix, bool isMerge) { }
-  public bool active { get; set; }
   public string displayName { get; set; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void SyncAtomNames() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void Validate() { }
-  public float _transitionInterpValue;
-  public global::System.Collections.Generic.List<global::TriggerActionDiscrete> discreteActionsEnd;
-  public global::System.Collections.Generic.List<global::TriggerActionDiscrete> discreteActionsStart;
-  public global::TriggerHandler handler;
-  public global::System.Collections.Generic.List<global::TriggerActionTransition> transitionActions;
   public global::UnityEngine.UI.Slider transitionInterpValueSlider;
   public global::UnityEngine.Transform triggerActionsPanel;
   public global::UnityEngine.Transform triggerActionsParent;
@@ -834,11 +825,9 @@ public partial interface TriggerHandler {
 }
 public partial class TriggerActionDiscrete : global::TriggerAction {
   public bool timerActive { get; set; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Trigger(bool reverse = default, bool force = default) { }
   public TriggerActionDiscrete() {}
 }
 public partial class TriggerActionTransition : global::TriggerAction {
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void TriggerInterp(float interp, bool force = default) { }
   public TriggerActionTransition() {}
 }
 public partial class TriggerActionTransitionUI : global::TriggerActionUI {
@@ -1369,6 +1358,7 @@ public partial class Collision {
   public global::UnityEngine.Vector3 impulse { get; set; }
   public global::UnityEngine.Vector3 relativeVelocity { get; set; }
   public global::UnityEngine.Rigidbody rigidbody { get; set; }
+  public global::UnityEngine.Transform transform { get; set; }
   public Collision() {}
 }
 public partial struct ContactPoint {
@@ -1768,7 +1758,6 @@ public partial class FileManagerSecure {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool IsDirectoryInPackage(string path) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool IsFileInPackage(string path) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string NormalizeLoadPath(string path) { return ""; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static string NormalizePath(string path) { return ""; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool PackageExists(string packageUid) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static byte[] ReadAllBytes(string path) { return new byte[0]; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static void WriteAllBytes(string path, byte[] bytes) { }
@@ -2393,7 +2382,6 @@ public delegate void EndBrowseWithObjectCallback(global::JSONStorableUrl jsurl);
 }
 public partial class GenerateDAZMorphsControlUI {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DefaultMorph() { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::DAZMorph GetMorphByUid(string morphUid) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroAll() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroMorph() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroNearZero() { }
@@ -2403,7 +2391,6 @@ public partial class GenerateDAZMorphsControlUI {
 public partial class DAZMorph {
   public string formulasString { get; set; }
   public bool hasBoneModificationFormulas { get; set; }
-  public string uid { get; set; }
   public global::DAZMorphFormula[] formulas;
   public bool isInPackage;
   public bool isPoseControl;

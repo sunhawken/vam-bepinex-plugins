@@ -187,7 +187,9 @@ namespace MVR.FileManagementSecure
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 		public static void CreateDirectory(string path) { SimDirs.Add(Norm(path)); }
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-		public static bool FileExists(string path, bool onlySystemFiles) { FileExistsCalls++; return SimFiles.Contains(Norm(path)); }
+		public static string NormalizePath(string path) { return (path ?? "").Replace((char)92, '/'); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static bool FileExists(string path, bool onlySystemFiles) { FileExistsCalls++; return SimFiles.Contains(Norm(path)) || SuperController.SimSaved.ContainsKey(Norm(path)); }
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 		public static bool DirectoryExists(string path, bool onlySystemDirectories) { DirExistsCalls++; return SimDirs.Contains(Norm(path)); }
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
@@ -195,7 +197,9 @@ namespace MVR.FileManagementSecure
 		{
 			GetFilesCalls++;
 			var r = new System.Collections.Generic.List<string>(); string d = Norm(dir);
-			foreach (var f in SimFiles)
+			var all = new System.Collections.Generic.HashSet<string>(SimFiles, System.StringComparer.OrdinalIgnoreCase);
+			foreach (var k in SuperController.SimSaved.Keys) all.Add(Norm(k));   // files a scenario saved through SuperController.SaveJSON
+			foreach (var f in all)
 			{
 				int i = f.LastIndexOf('/');
 				if (i < 0 || !string.Equals(f.Substring(0, i), d, System.StringComparison.OrdinalIgnoreCase)) continue;
@@ -281,4 +285,67 @@ namespace UnityEngine
 		public static T FromJson<T>(string json) { return System.Text.Json.JsonSerializer.Deserialize<T>(json, opts); }
 		public static string ToJson(object obj) { return System.Text.Json.JsonSerializer.Serialize(obj, obj.GetType(), opts); }
 	}
+}
+
+
+// ---- VaM's trigger system, without any UI: actions are only counted so a scenario can see what fired
+public partial class TriggerActionDiscrete
+{
+	public static int SimTriggered;
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public void Trigger(bool reverse = false, bool force = false) { SimTriggered++; }
+}
+
+public partial class TriggerActionTransition
+{
+	public static int SimCalls;
+	public static float SimLast;
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public void TriggerInterp(float interp, bool force = false) { SimCalls++; SimLast = interp; }
+}
+
+public partial class Trigger
+{
+	public TriggerHandler handler;
+	public System.Collections.Generic.List<TriggerActionDiscrete> discreteActionsStart = new System.Collections.Generic.List<TriggerActionDiscrete>();
+	public System.Collections.Generic.List<TriggerActionDiscrete> discreteActionsEnd = new System.Collections.Generic.List<TriggerActionDiscrete>();
+	public System.Collections.Generic.List<TriggerActionTransition> transitionActions = new System.Collections.Generic.List<TriggerActionTransition>();
+	protected float _transitionInterpValue;
+	private bool _activeFlag;
+	public bool active
+	{
+		get { return _activeFlag; }
+		set
+		{
+			if (value == _activeFlag) return;
+			_activeFlag = value;
+			var l = value ? discreteActionsStart : discreteActionsEnd;
+			for (int i = 0; i < l.Count; i++) l[i].Trigger();
+		}
+	}
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public bool HasActions() { return discreteActionsStart.Count > 0 || discreteActionsEnd.Count > 0 || transitionActions.Count > 0; }
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public virtual void RestoreFromJSON(SimpleJSON.JSONClass jc) { RestoreFromJSON(jc, "", false); }
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public virtual void RestoreFromJSON(SimpleJSON.JSONClass jc, string subScenePrefix, bool isMerge)
+	{
+		if (!isMerge) { discreteActionsStart.Clear(); discreteActionsEnd.Clear(); transitionActions.Clear(); }
+		var a = jc == null ? null : jc["startActions"] as SimpleJSON.JSONArray; for (int i = 0; a != null && i < a.Count; i++) discreteActionsStart.Add(new TriggerActionDiscrete());
+		a = jc == null ? null : jc["endActions"] as SimpleJSON.JSONArray; for (int i = 0; a != null && i < a.Count; i++) discreteActionsEnd.Add(new TriggerActionDiscrete());
+		a = jc == null ? null : jc["transitionActions"] as SimpleJSON.JSONArray; for (int i = 0; a != null && i < a.Count; i++) transitionActions.Add(new TriggerActionTransition());
+	}
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public virtual SimpleJSON.JSONClass GetJSON(string subScenePrefix)
+	{
+		var jc = new SimpleJSON.JSONClass();
+		var s = new SimpleJSON.JSONArray(); for (int i = 0; i < discreteActionsStart.Count; i++) s.Add(new SimpleJSON.JSONClass()); jc["startActions"] = s;
+		var t = new SimpleJSON.JSONArray(); for (int i = 0; i < transitionActions.Count; i++) t.Add(new SimpleJSON.JSONClass()); jc["transitionActions"] = t;
+		var e = new SimpleJSON.JSONArray(); for (int i = 0; i < discreteActionsEnd.Count; i++) e.Add(new SimpleJSON.JSONClass()); jc["endActions"] = e;
+		return jc;
+	}
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public virtual void Update() { }
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public virtual void Remove() { }
 }

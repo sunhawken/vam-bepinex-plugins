@@ -88,8 +88,26 @@ namespace UnityEngine
 		}
 	}
 
+	public partial struct Vector3
+	{
+		public float this[int i]
+		{
+			get { switch (i) { case 0: return x; case 1: return y; case 2: return z; default: throw new System.IndexOutOfRangeException(); } }
+			set { switch (i) { case 0: x = value; break; case 1: y = value; break; case 2: z = value; break; default: throw new System.IndexOutOfRangeException(); } }
+		}
+	}
+
 	public partial struct Vector4
 	{
+		public float this[int i]
+		{
+			get { switch (i) { case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: throw new System.IndexOutOfRangeException(); } }
+			set { switch (i) { case 0: x = value; break; case 1: y = value; break; case 2: z = value; break; case 3: w = value; break; default: throw new System.IndexOutOfRangeException(); } }
+		}
+		public static Vector4 operator +(Vector4 a, Vector4 b) => new Vector4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+		public static Vector4 operator -(Vector4 a, Vector4 b) => new Vector4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
+		public static Vector4 operator *(Vector4 a, float d) => new Vector4(a.x * d, a.y * d, a.z * d, a.w * d);
+		public static Vector4 operator *(float d, Vector4 a) => new Vector4(a.x * d, a.y * d, a.z * d, a.w * d);
 		public static implicit operator Vector4(Vector3 v) => new Vector4(v.x, v.y, v.z, 0f);
 		public static bool operator ==(Vector4 a, Vector4 b) => a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 		public static bool operator !=(Vector4 a, Vector4 b) => !(a == b);

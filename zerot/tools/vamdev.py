@@ -48,6 +48,7 @@ P = {
     'controllersappearance': ('ControllersAppearanceStandalone/ZeroT.ControllersAppearanceStandalone.csproj', 'ZeroT.ControllersAppearanceStandalone.dll', None),
     'appearanceloaderhelper': ('AppearanceLoaderHelper/ZeroT.AppearanceLoaderHelper.csproj', 'ZeroT.AppearanceLoaderHelper.dll', None),
     'zajeshufflehelper': ('ZajeShuffleHelper/ZeroT.ZajeShuffleHelper.csproj', 'ZeroT.ZajeShuffleHelper.dll', None),
+    'shakeit': ('ShakeItStandalone/ZeroT.ShakeItStandalone.csproj', 'ZeroT.ShakeItStandalone.dll', None),
     'autoflutterhip': ('AutoFlutterHipStandalone/ZeroT.AutoFlutterHipStandalone.csproj', 'ZeroT.AutoFlutterHipStandalone.dll', None),
     'clothingbackface': ('ClothingBackfaceStandalone/ZeroT.ClothingBackfaceStandalone.csproj', 'ZeroT.ClothingBackfaceStandalone.dll', None),
     'forcepersoncache': ('ForcePersonCacheStandalone/ZeroT.ForcePersonCacheStandalone.csproj', 'ZeroT.ForcePersonCacheStandalone.dll', None),
@@ -58,7 +59,7 @@ P = {
     'extraautogenitals': ('ExtraAutoGenitalsStandalone/ZeroT.ExtraAutoGenitalsStandalone.csproj', 'ZeroT.ExtraAutoGenitalsStandalone.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HEADLESS = {'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
 HELPERS = {'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper', 'appearanceloaderhelper', 'zajeshufflehelper'}   # Harmony helpers: need the script assemblies from `simtargets`
 UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook'}
