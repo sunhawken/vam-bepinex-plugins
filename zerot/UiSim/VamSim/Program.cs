@@ -90,6 +90,7 @@ public sealed class Harness
 
 internal static class Program
 {
+	private static int runCounter;
 	private static int Main(string[] args)
 	{
 		var scenarios = typeof(Program).Assembly.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
@@ -149,7 +150,7 @@ internal static class Program
 		BepInEx.Logging.ManualLogSource.Lines.Clear();
 		BepInEx.Configuration.ConfigFile.Overrides.Clear();
 		foreach (var kv in overrides) BepInEx.Configuration.ConfigFile.Overrides[kv.Key] = kv.Value;
-		string work = Path.Combine(Path.GetTempPath(), "vamsim_work_" + Path.GetFileNameWithoutExtension(dll));
+		string work = Path.Combine(Path.GetTempPath(), "vamsim_work_" + Path.GetFileNameWithoutExtension(dll) + "_" + Environment.ProcessId + "_" + (++runCounter));   // earlier scenarios keep their DLLs loaded (and locked)
 		if (Directory.Exists(work)) Directory.Delete(work, true);
 		Directory.CreateDirectory(work);
 		File.Copy(typeof(GameObject).Assembly.Location, Path.Combine(work, "UnityShim.dll"), true);
