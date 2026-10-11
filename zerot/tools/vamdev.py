@@ -421,6 +421,13 @@ def scene_lint(path):
                 walk(v, trail)
     pairs = []
     walk(d, [])
+    # CUAClothing atoms are positioned by the plugin (it re-parents them to a bone every LateUpdate and writes any controller drift back into the offsets).
+    # A VaM link (linkTo / Hold) on top fights it: the offsets run away on load (e.g. zOffset -5000) and the piece ends up far from the body.
+    for at in d.get('atoms', []) if isinstance(d, dict) else []:
+        if '.CUAClothing' in str(at.get('id', '')):
+            for st in at.get('storables', []):
+                if st.get('id') == 'control' and (st.get('linkTo') or st.get('positionState') == 'Hold'):
+                    issues.append(([at['id']], 'plugin-driven CUA atom also has a VaM link (%s, %s) - double-driven, offsets drift on load' % (st.get('linkTo'), st.get('positionState'))))
     # L/R mirror check: same plugin group, bones lX / rX, local offset should be (-x, y, z) of the other
     by = {}
     for trail, o in pairs:
