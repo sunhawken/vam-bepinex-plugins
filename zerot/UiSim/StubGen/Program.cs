@@ -34,7 +34,7 @@ internal static class Program
 	{
 		string outFile = args[0]; string shimPath = args[1]; string managed = args[2];
 		shim = ModuleDefinition.ReadModule(shimPath);
-		foreach (var t in AllTypes(shim.Types)) { shimTypes.Add(t.FullName); var set = new HashSet<string>(); foreach (var m in t.Methods) set.Add(m.Name); foreach (var f in t.Fields) set.Add(f.Name); shimMembers[t.FullName] = set; }
+		foreach (var t in AllTypes(shim.Types)) { shimTypes.Add(t.FullName); var set = new HashSet<string>(); foreach (var m in t.Methods) { set.Add(m.Name); set.Add(m.Name + "/" + m.Parameters.Count); } foreach (var f in t.Fields) set.Add(f.Name); shimMembers[t.FullName] = set; }
 		var resolver = new DefaultAssemblyResolver();
 		resolver.AddSearchDirectory(managed);
 		resolver.AddSearchDirectory(Path.Combine(Path.GetDirectoryName(managed), "..", "BepInEx", "core"));
@@ -99,7 +99,7 @@ internal static class Program
 		}
 		// members a plugin needs that a hand-written (partial) shim type lacks: add them as default-bodied partial members
 		var aug = needs.Values.Where(n => n.existsInShim && n.def.DeclaringType == null && !n.def.IsValueType && !n.def.IsEnum && !n.def.IsInterface && !IsDelegate(n.def) && !n.def.HasGenericParameters
-			&& (n.methods.Any(m => !shimMembers[n.def.FullName].Contains(m.Name)) || n.fields.Any(f => !shimMembers[n.def.FullName].Contains(f.Name)) || needs.Values.Any(x => x.def.DeclaringType != null && x.def.DeclaringType.FullName == n.def.FullName && !x.existsInShim))).ToList();
+			&& (n.methods.Any(m => !Has(shimMembers[n.def.FullName], m)) || n.fields.Any(f => !shimMembers[n.def.FullName].Contains(f.Name)) || needs.Values.Any(x => x.def.DeclaringType != null && x.def.DeclaringType.FullName == n.def.FullName && !x.existsInShim))).ToList();
 		foreach (var g in aug.GroupBy(n => n.def.Namespace))
 		{
 			if (g.Key != "") sb.AppendLine("namespace " + g.Key + " {");
@@ -112,7 +112,7 @@ internal static class Program
 		foreach (var n in needs.Values.Where(n => n.existsInShim))
 		{
 			var have = shimMembers[n.def.FullName];
-			foreach (var m in n.methods) if (!have.Contains(m.Name)) Console.WriteLine("MISSING MEMBER on existing shim type: " + n.def.FullName + "::" + m.Name);
+			foreach (var m in n.methods) if (!Has(have, m)) Console.WriteLine("MISSING MEMBER on existing shim type: " + n.def.FullName + "::" + m.Name);
 			foreach (var f in n.fields) if (!have.Contains(f.Name)) Console.WriteLine("MISSING FIELD on existing shim type: " + n.def.FullName + "::" + f.Name);
 		}
 		foreach (var r in report.Distinct().Take(30)) Console.WriteLine("note: " + r);
@@ -212,9 +212,12 @@ internal static class Program
 		var props = new Dictionary<string, PropertyDefinition>();
 		var emittedProps = new HashSet<string>();
 		bool hasCtor = false;
+		HashSet<string> hand;
+		HandWritten.TryGetValue(d.FullName, out hand);
 		foreach (var m in n.methods.OrderBy(x => x.Name))
 		{
-			if (have != null && (m.IsConstructor || have.Contains(m.Name))) continue;
+			if (hand != null && hand.Contains(m.Name)) continue;   // implemented for real in UnityShim/ScriptHost.cs
+			if (have != null && (m.IsConstructor || Has(have, m))) continue;
 			if (m.IsConstructor && !m.IsStatic) { hasCtor = true; sb.AppendLine("  public " + SimpleName(d) + "(" + Params(m) + ") " + (d.BaseType != null && !d.IsValueType && NeedsBase(d) ? ": base(" + BaseArgs(d) + ") " : "") + "{}"); continue; }
 			if (m.IsStatic && m.IsConstructor) continue;
 			var prop = d.Properties.FirstOrDefault(p => (p.GetMethod != null && p.GetMethod.FullName == m.FullName) || (p.SetMethod != null && p.SetMethod.FullName == m.FullName));
@@ -224,7 +227,7 @@ internal static class Program
 				if (have != null && (have.Contains(prop.Name) || (prop.GetMethod != null && have.Contains(prop.GetMethod.Name)) || (prop.SetMethod != null && have.Contains(prop.SetMethod.Name)))) continue;
 				var acc = (n.methods.Any(x => prop.GetMethod != null && x.FullName == prop.GetMethod.FullName) ? "get; " : "") + (n.methods.Any(x => prop.SetMethod != null && x.FullName == prop.SetMethod.FullName) ? "set; " : "");
 				acc = "get; set; ";
-				string pinit = (!prop.PropertyType.IsValueType && prop.PropertyType.Name.Contains("Event") && !prop.PropertyType.Name.StartsWith("EventFunction") && !(prop.PropertyType is GenericParameter)) ? " = new " + Name(prop.PropertyType) + "();" : "";
+				string pinit = ((!prop.PropertyType.IsValueType && prop.PropertyType.Name.Contains("Event") && !prop.PropertyType.Name.StartsWith("EventFunction") && !(prop.PropertyType is GenericParameter)) || (!m.IsStatic && IsPlainUnityClass(prop.PropertyType))) ? " = new " + Name(prop.PropertyType) + "();" : "";
 				sb.AppendLine("  public " + (m.IsStatic ? "static " : "") + Name(prop.PropertyType) + " " + prop.Name + " { " + acc + "}" + pinit);
 				continue;
 			}
@@ -239,7 +242,8 @@ internal static class Program
 		{
 			if (d.IsEnum) continue;
 			if (have != null && have.Contains(f.Name)) continue;
-			sb.AppendLine("  public " + (f.IsStatic ? "static " : "") + (f.IsLiteral ? "" : "") + Name(f.FieldType) + " " + f.Name + ";");
+			if (hand != null && hand.Contains(f.Name)) continue;
+			sb.AppendLine("  public " + (f.IsStatic ? "static " : "") + (f.IsLiteral ? "" : "") + Name(f.FieldType) + " " + f.Name + (!f.IsStatic && IsPlainUnityClass(f.FieldType) ? " = new " + Name(f.FieldType) + "();" : ";"));
 		}
 		if (have == null && kind == "class" && !(d.IsAbstract && d.IsSealed) && !n.methods.Any(x => x.IsConstructor && !x.IsStatic && x.Parameters.Count == 0)) sb.AppendLine("  public " + SimpleName(d) + "() {}");
 		foreach (var nt in d.NestedTypes)
@@ -249,6 +253,33 @@ internal static class Program
 
 	// an override is only valid when a base type that exists in the output (hand-written shim type or stub) really declares that method;
 	// stubs are generated lazily, so otherwise declare it virtual on this type instead of overriding something that is not there
+	// members of these types that UnityShim/ScriptHost.cs implements for real (the rest of the type is still generated)
+	private static readonly Dictionary<string, HashSet<string>> HandWritten = new Dictionary<string, HashSet<string>>
+	{
+		{ "MVRScript", new HashSet<string> { "Init", "InitUI", "ForceAwake", "CreateSlider", "CreateToggle", "CreateButton", "CreateTextField", "CreatePopup", "CreateScrollablePopup", "CreateFilterablePopup", "CreateSpacer",
+			"GetContainingAtom", "RemoveSlider", "RemoveToggle", "RemoveButton", "RemoveTextField", "RemovePopup", "RemoveColorPicker", "RemoveSpacer", "enabledJSON", "pluginLabelJSON", "manager" } },
+		{ "DAZCharacterSelector", new HashSet<string> { "GetClothingItem" } },
+	};
+
+	// reference-typed members the real engine always fills (RectOffset padding, UnityEvents...) start as live objects, not null
+	private static bool IsPlainUnityClass(TypeReference t)
+	{
+		if (t == null || t is GenericParameter || t is ArrayType || t is GenericInstanceType || t.IsValueType) return false;
+		TypeDefinition d; try { d = t.Resolve(); } catch { return false; }
+		if (d == null || !d.IsClass || d.IsAbstract || d.IsInterface || d.IsValueType || d.IsEnum) return false;
+		if (d.Namespace == null || !d.Namespace.StartsWith("UnityEngine")) return false;
+		if (d.BaseType != null && d.BaseType.FullName == "System.MulticastDelegate") return false;
+		for (var b = d; b != null; b = b.BaseType == null ? null : b.BaseType.Resolve()) if (b.FullName == "UnityEngine.Object" || b.FullName == "System.MulticastDelegate") return false;
+		return d.Methods.Any(m => m.IsConstructor && !m.IsStatic && m.IsPublic && m.Parameters.Count == 0);
+	}
+
+	// a method is already hand-written when the shim has the same name AND parameter count (accessors: by name)
+	private static bool Has(HashSet<string> have, MethodDefinition m)
+	{
+		if (m.Name.StartsWith("get_") || m.Name.StartsWith("set_") || m.IsConstructor) return have.Contains(m.Name);
+		return have.Contains(m.Name + "/" + m.Parameters.Count);
+	}
+
 	private static bool StubBaseDeclares(TypeDefinition d, MethodDefinition m)
 	{
 		var b = d.BaseType == null ? null : d.BaseType.Resolve();

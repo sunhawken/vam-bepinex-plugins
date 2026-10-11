@@ -68,6 +68,9 @@ namespace UnityEngine
 	public partial struct Vector3
 	{
 		public static Vector3 right => new Vector3(1, 0, 0);
+		public static Vector3 left => new Vector3(-1, 0, 0);
+		public static Vector3 down => new Vector3(0, -1, 0);
+		public static Vector3 back => new Vector3(0, 0, -1);
 		public static Vector3 operator -(Vector3 v) => new Vector3(-v.x, -v.y, -v.z);
 		public static bool operator ==(Vector3 a, Vector3 b) => (a - b).sqrMagnitude < 9.99999944E-11f;
 		public static bool operator !=(Vector3 a, Vector3 b) => !(a == b);

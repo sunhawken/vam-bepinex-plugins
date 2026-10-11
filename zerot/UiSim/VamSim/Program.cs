@@ -184,13 +184,13 @@ internal static class Program
 		foreach (var r in mod.AssemblyReferences)
 		{
 			if (r.Name == "0Harmony" || r.Name == "0Harmony20") { r.Name = "0Harmony"; r.Version = new Version(2, 3, 3, 0); r.PublicKeyToken = null; r.PublicKey = null; continue; }   // real Harmony (Lib.Harmony)
-			bool unity = r.Name.StartsWith("UnityEngine") || r.Name == "BepInEx" || r.Name == "Assembly-CSharp";
+			bool unity = r.Name.StartsWith("UnityEngine") || r.Name == "BepInEx" || r.Name.StartsWith("Assembly-CSharp") || r.Name == "SimpleJSON";
 			if (!unity) continue;
 			if (shim == null) { r.Name = "UnityShim"; r.Version = new Version(1, 0, 0, 0); r.PublicKeyToken = null; r.PublicKey = null; shim = r; }
 			else toRemove.Add(r);
 		}
 		foreach (var tr in mod.GetTypeReferences())
-			if (tr.Scope is AssemblyNameReference an && an != shim && (an.Name.StartsWith("UnityEngine") || an.Name == "BepInEx" || an.Name == "Assembly-CSharp") && shim != null)
+			if (tr.Scope is AssemblyNameReference an && an != shim && (an.Name.StartsWith("UnityEngine") || an.Name == "BepInEx" || an.Name.StartsWith("Assembly-CSharp") || an.Name == "SimpleJSON") && shim != null)
 				tr.Scope = shim;
 		foreach (var r in toRemove) mod.AssemblyReferences.Remove(r);
 		// the helpers were built against Harmony 2.0 (0Harmony20), whose Patch() returns DynamicMethod; Lib.Harmony returns MethodInfo

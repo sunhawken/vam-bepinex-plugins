@@ -50,6 +50,9 @@ namespace UnityEngine
 	public static partial class Mathf
 	{
 		public static float Sign(float f) => f >= 0 ? 1f : -1f;
+		public static float Repeat(float t, float length) { return Clamp(t - Floor(t / length) * length, 0f, length); }
+		public static float DeltaAngle(float current, float target) { float d = Repeat(target - current, 360f); if (d > 180f) d -= 360f; return d; }
+		public static float LerpAngle(float a, float b, float t) { float d = Repeat(b - a, 360f); if (d > 180f) d -= 360f; return a + d * Clamp01(t); }
 		public static float InverseLerp(float a, float b, float v) => a == b ? 0f : Clamp01((v - a) / (b - a));
 		// Unity's SmoothDamp (critically damped spring), same formula
 		public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime) { return SmoothDamp(current, target, ref currentVelocity, smoothTime, float.PositiveInfinity, Time.deltaTime); }

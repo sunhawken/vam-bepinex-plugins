@@ -299,6 +299,84 @@ def cmd_simtargets():
     return ok
 
 
+def scene_plugins(scene):
+    """{(package, path)} of every script a scene loads (PluginManager / clothing 'plugins' dictionaries)."""
+    t = open(scene, encoding='utf-8').read()
+    return sorted(set(re.findall(r'"plugin#\d+"\s*:\s*"([^":]+):/([^"]+\.(?:cs|cslist))"', t)))
+
+
+def resolve_var(pkg):
+    stem, ver = pkg.rsplit('.', 1)
+    idx = {}
+    for sub in ('AddonPackages', 'AllPackages'):
+        for root, _, files in os.walk(os.path.join(VAM, sub)):
+            for f in files:
+                if f.lower().endswith('.var'):
+                    idx.setdefault(f[:-4].lower(), os.path.join(root, f))
+    if ver == 'latest' or ver.startswith('min'):
+        best = sorted([(int(k.rsplit('.', 1)[1]), v) for k, v in idx.items() if k.startswith(stem.lower() + '.') and k.rsplit('.', 1)[1].isdigit()])
+        return best[-1][1] if best else None
+    return idx.get(pkg.lower())
+
+
+def cmd_scenescripts(scene):
+    """Compile every script the scene loads (from its package, against VaM's real Managed DLLs) into UiSim/in/scene/ so vamsim --scene can run them."""
+    out = os.path.join(SIM, 'in', 'scene')
+    os.makedirs(out, exist_ok=True)
+    ok = True
+    for pkg, path in scene_plugins(scene):
+        var = resolve_var(pkg)
+        name = re.sub(r'[^A-Za-z0-9_.]', '_', pkg + '__' + path) + '.dll'
+        if not var:
+            print('MISSING PACKAGE %s' % pkg); ok = False; continue
+        print('== %s :/%s' % (pkg, path))
+        ok = compile_one(var, path, os.path.join(out, name)) and ok
+    return ok
+
+
+def compile_one(var, entry, out):
+    work = tempfile.mkdtemp(prefix='cslone_')
+    src = os.path.join(work, 'var')
+    cmd_unpack(var, src)
+    full = os.path.normpath(os.path.join(src, entry.replace(chr(92), '/')))
+    cs = []
+    if entry.lower().endswith('.cslist'):
+        for line in open(full, encoding='utf-8-sig').read().splitlines():
+            line = line.strip()
+            if line and not line.startswith('//'):
+                q = os.path.normpath(os.path.join(os.path.dirname(full), line.replace(chr(92), '/')))
+                if os.path.exists(q):
+                    cs.append(q)
+    else:
+        cs = [full]
+    managed = os.path.join(VAM, 'VaM_Data', 'Managed')
+    refs = []
+    for f in sorted(os.listdir(managed)):
+        if f.endswith('.dll') and (f.startswith('UnityEngine') or f in ('Assembly-CSharp.dll', 'Assembly-CSharp-firstpass.dll', 'SimpleJSON.dll', 'Leap.dll', 'LeapCSharp.NET3.5.dll', 'LeapCSharp.dll')):
+            refs.append('<Reference Include="%s"><HintPath>%s</HintPath></Reference>' % (f[:-4], os.path.join(managed, f)))
+    asm = os.path.splitext(os.path.basename(out))[0]
+    open(os.path.join(work, 'chk.csproj'), 'w').write(
+        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Library</OutputType><AssemblyName>' + asm + '</AssemblyName><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion>'
+        '<EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0108;CS0114;CS0168;CS0219;CS0649;CS0169;CS0414;CS0618;CS1998;CS0659;CS0661;CS0162;CS0105;CS1591</NoWarn></PropertyGroup>'
+        '<ItemGroup>%s%s<Reference Include="System.Core" /></ItemGroup></Project>' % (chr(10).join('<Compile Include="%s" />' % c for c in cs), chr(10).join(refs)))
+    r = run(['dotnet', 'build', os.path.join(work, 'chk.csproj'), '--nologo', '-v', 'q'], quiet=True)
+    text = (r.stdout or '') + (r.stderr or '')
+    errs = sorted(set(l.strip() for l in text.splitlines() if ' error ' in l))
+    good = False
+    if errs:
+        print('  COMPILE ERRORS (%d)' % len(errs))
+        for e in errs[:10]:
+            print('   ' + e.replace(src, '')[:200])
+    else:
+        for root, _, files in os.walk(os.path.join(work, 'bin')):
+            for f in files:
+                if f == asm + '.dll':
+                    shutil.copy(os.path.join(root, f), out); good = True
+        print('  ok -> ' + os.path.basename(out) if good else '  no output')
+    shutil.rmtree(work, ignore_errors=True)
+    return good
+
+
 def cmd_sheet(out=None):
     """Render every plugin window collapsed (uisim) from the BUILT dlls and montage them into one PNG."""
     from PIL import Image, ImageDraw
@@ -494,6 +572,8 @@ def main(argv):
         return 0 if cmd_cslcheck(a[0], a[1]) else 1
     elif c == 'simall':
         return 0 if cmd_simall() else 1
+    elif c == 'scenescripts':
+        return 0 if cmd_scenescripts(a[0]) else 1
     elif c == 'scene':
         return run([VAMSIM, '--scene', a[0]] + a[1:], None, False).returncode
     elif c == 'scenelint':

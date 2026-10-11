@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using UnityEngine;
@@ -192,6 +193,7 @@ public static class SceneSim
 			Console.WriteLine("  -- run: VaM links " + (useLinks ? "as stored in the scene" : "ignored (plugin only)"));
 			Simulate(studs, useLinks);
 		}
+		RealRun(atoms, people, sc, studs);
 	}
 
 	static float Mag(Vector3 v) => (float)Math.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -199,49 +201,7 @@ public static class SceneSim
 
 	static void Simulate(List<Stud> studs, bool useLinks)
 	{
-		// ---- bones: calibrate each (person, bone) pose from a stud whose offsets are sane (|offset| within 5x the slider range); the mirror side is derived
-		var bones = new Dictionary<string, Bone>();
-		foreach (var s in studs) { s.Xo = s.Xo0; s.Yo = s.Yo0; s.Zo = s.Zo0; s.HasPrevPose = false; s.HasPrevC = false; s.Calibrated = false; }
-		Func<Stud, bool> sane = s => Math.Abs(s.Xo0) <= 0.5f && Math.Abs(s.Yo0) <= 0.5f && Math.Abs(s.Zo0) <= 0.5f;
-		foreach (var s in studs.Where(sane))
-		{
-			string key = s.Person + "/" + s.Bone;
-			if (bones.ContainsKey(key)) continue;
-			var rot = Quaternion.Euler(s.SavedRot.x, s.SavedRot.y, s.SavedRot.z);
-			var pos = s.SavedPos - rot * new Vector3(s.Xo0, s.Yo0, s.Zo0);
-			bones[key] = MakeBone(key, pos, rot);
-			s.Calibrated = true;
-		}
-		// L/R pairs: the bones are mirror images, so the left (reference) bone defines the right one. If the right stud was calibrated on its own, say how far off the mirror it was.
-		foreach (var s in studs.Where(x => x.Bone != null && x.Bone.Length > 1 && x.Bone[0] == 'r'))
-		{
-			string lk = s.Person + "/l" + s.Bone.Substring(1), rk = s.Person + "/" + s.Bone;
-			if (bones.ContainsKey(lk) && bones.ContainsKey(rk))
-			{
-				var lb = bones[lk]; var rb = bones[rk];
-				var want = new Vector3(-lb.Base.x, lb.Base.y, lb.Base.z);
-				Info(s.Bone + " saved pose vs mirrored " + lb.Go.name.Substring(5).Split('/')[1] + ": " + (Mag(rb.Base - want) * 1000f).ToString("0.0", Inv) + " mm apart (the stored right stud was not where a mirrored left would be)");
-				bones[rk] = MakeBone(rk, want, Mirror(lb.Rot));
-			}
-		}
-		foreach (var s in studs)
-		{
-			string key = s.Person + "/" + s.Bone;
-			if (bones.ContainsKey(key)) continue;
-			string other = s.Bone != null && s.Bone.Length > 1 ? (s.Bone[0] == 'l' ? "r" + s.Bone.Substring(1) : s.Bone[0] == 'r' ? "l" + s.Bone.Substring(1) : null) : null;
-			Bone ob;
-			if (other != null && bones.TryGetValue(s.Person + "/" + other, out ob))
-			{
-				bones[key] = MakeBone(key, new Vector3(-ob.Base.x, ob.Base.y, ob.Base.z), Mirror(ob.Rot));   // the L/R bones of a person are mirror images (saved yaw/roll mirror each other)
-				Info("bone " + s.Bone + " derived by mirroring " + other + " (its own saved offsets are not usable)");
-			}
-			else
-			{
-				var rot = Quaternion.Euler(s.SavedRot.x, s.SavedRot.y, s.SavedRot.z);
-				bones[key] = MakeBone(key, s.SavedPos, rot);
-				Info("bone " + s.Bone + " has no calibration source: placed at the stud's saved pose");
-			}
-		}
+		var bones = CalibrateBones(studs, true);
 
 		// ---- create the CUA objects the way CUAClothingAlt.CreateCUA does for an atom that already exists (scene load)
 		foreach (var s in studs)
@@ -303,6 +263,201 @@ public static class SceneSim
 			else Ok(grp.Key.Substring(grp.Key.IndexOf('/') + 1) + " L/R studs symmetric to " + (Mag(d) * 1000f).ToString("0.00", Inv) + " mm");
 		}
 		foreach (var s in studs) { UnityEngine.Object.Destroy(s.Reparent); UnityEngine.Object.Destroy(s.Controller); }
+	}
+
+	static Dictionary<string, Bone> CalibrateBones(List<Stud> studs, bool verbose)
+	{
+		// ---- bones: calibrate each (person, bone) pose from a stud whose offsets are sane (|offset| within 5x the slider range); the mirror side is derived
+		var bones = new Dictionary<string, Bone>();
+		foreach (var s in studs) { s.Xo = s.Xo0; s.Yo = s.Yo0; s.Zo = s.Zo0; s.HasPrevPose = false; s.HasPrevC = false; s.Calibrated = false; }
+		Func<Stud, bool> sane = s => Math.Abs(s.Xo0) <= 0.5f && Math.Abs(s.Yo0) <= 0.5f && Math.Abs(s.Zo0) <= 0.5f;
+		foreach (var s in studs.Where(sane))
+		{
+			string key = s.Person + "/" + s.Bone;
+			if (bones.ContainsKey(key)) continue;
+			var rot = Quaternion.Euler(s.SavedRot.x, s.SavedRot.y, s.SavedRot.z);
+			var pos = s.SavedPos - rot * new Vector3(s.Xo0, s.Yo0, s.Zo0);
+			bones[key] = MakeBone(key, pos, rot);
+			s.Calibrated = true;
+		}
+		// L/R pairs: the bones are mirror images, so the left (reference) bone defines the right one. If the right stud was calibrated on its own, say how far off the mirror it was.
+		foreach (var s in studs.Where(x => x.Bone != null && x.Bone.Length > 1 && x.Bone[0] == 'r'))
+		{
+			string lk = s.Person + "/l" + s.Bone.Substring(1), rk = s.Person + "/" + s.Bone;
+			if (bones.ContainsKey(lk) && bones.ContainsKey(rk))
+			{
+				var lb = bones[lk]; var rb = bones[rk];
+				var want = new Vector3(-lb.Base.x, lb.Base.y, lb.Base.z);
+				if (verbose) Info(s.Bone + " saved pose vs mirrored " + lb.Go.name.Substring(5).Split('/')[1] + ": " + (Mag(rb.Base - want) * 1000f).ToString("0.0", Inv) + " mm apart (the stored right stud was not where a mirrored left would be)");
+				bones[rk] = MakeBone(rk, want, Mirror(lb.Rot));
+			}
+		}
+		foreach (var s in studs)
+		{
+			string key = s.Person + "/" + s.Bone;
+			if (bones.ContainsKey(key)) continue;
+			string other = s.Bone != null && s.Bone.Length > 1 ? (s.Bone[0] == 'l' ? "r" + s.Bone.Substring(1) : s.Bone[0] == 'r' ? "l" + s.Bone.Substring(1) : null) : null;
+			Bone ob;
+			if (other != null && bones.TryGetValue(s.Person + "/" + other, out ob))
+			{
+				bones[key] = MakeBone(key, new Vector3(-ob.Base.x, ob.Base.y, ob.Base.z), Mirror(ob.Rot));   // the L/R bones of a person are mirror images (saved yaw/roll mirror each other)
+				if (verbose) Info("bone " + s.Bone + " derived by mirroring " + other + " (its own saved offsets are not usable)");
+			}
+			else
+			{
+				var rot = Quaternion.Euler(s.SavedRot.x, s.SavedRot.y, s.SavedRot.z);
+				bones[key] = MakeBone(key, s.SavedPos, rot);
+				if (verbose) Info("bone " + s.Bone + " has no calibration source: placed at the stud's saved pose");
+			}
+		}
+
+		return bones;
+	}
+
+	// ------------------------------------------------------------------ the real scripts
+
+	static void RealRun(List<JsonObject> atoms, Dictionary<string, Atom> people, SuperController sc, List<Stud> studs)
+	{
+		Console.WriteLine("  -- real scripts (compiled from the scene's packages, run on the shim)");
+		SceneHost.ScriptDir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(SceneSim).Assembly.Location), "..", "..", "..", "..", "in", "scene"));
+		SceneHost.Prepare();
+		var entries = SceneHost.Collect(atoms);
+		Info(entries.Count + " plugin instance(s): " + string.Join(", ", entries.Select(e => e.Key + "=" + e.Package.Split('.').Last() + "/" + System.IO.Path.GetFileNameWithoutExtension(e.Path))));
+		var bones = CalibrateBones(studs, false);
+		foreach (var s in studs) { s.Xo = s.Xo0; s.Yo = s.Yo0; s.Zo = s.Zo0; }
+
+		var root = new GameObject("SceneAtoms");   // VaM keeps every atom under SceneAtoms; scripts walk up to it
+		var byUid = new Dictionary<string, Atom>(people);
+		foreach (var pa in people.Values) pa.transform.SetParent(root.transform, false);
+		// person extras the scripts look up
+		foreach (var kv in people)
+		{
+			var person = kv.Value;
+			var pm = new GameObject("PhysicsModel"); pm.transform.SetParent(person.transform, false);
+			var pmc = pm.AddComponent<PhysicsMaterialControl>(); pmc.storeId = "PhysicsModel"; pmc.containingAtom = person; person.storables["PhysicsModel"] = pmc;
+			foreach (var b in bones.Where(x => x.Key.StartsWith(kv.Key + "/")))
+			{
+				b.Value.Go.name = b.Key.Substring(kv.Key.Length + 1);
+				b.Value.Go.transform.SetParent(pm.transform, true);
+			}
+			var rs = new GameObject("rescaleObject"); rs.transform.SetParent(person.transform, false);
+			var rsj = rs.AddComponent<JSONStorable>(); rsj.storeId = "rescaleObject"; rsj.containingAtom = person; rsj.RegisterFloat(new JSONStorableFloat("scale", 1f, 0.01f, 10f)); person.storables["rescaleObject"] = rsj;
+		}
+		// every other atom; plugin-driven CUA atoms get the structure CUAClothingAlt expects (reParentObject > control, an asset loader, AtomControl)
+		foreach (var a in atoms)
+		{
+			string id = S(a["id"]), type = S(a["type"]);
+			if (byUid.ContainsKey(id)) continue;
+			var go = new GameObject(id); go.transform.SetParent(root.transform, false);
+			var atom = go.AddComponent<Atom>(); atom.type = type; atom.uid = id; atom.name = id; atom.containingAtom = atom;
+			var ctl = (a["storables"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault(x => S(x["id"]) == "control");
+			var rp = new GameObject("reParent"); rp.transform.SetParent(go.transform, false);
+			atom.reParentObject = rp.transform;
+			var mc = new GameObject("control"); mc.transform.SetParent(rp.transform, false);
+			var fc = mc.AddComponent<FreeControllerV3>(); fc.name = "control"; fc.control = mc.transform; fc.containingAtom = atom;
+			atom.mainController = fc; atom.freeControllers = new[] { fc };
+			if (ctl != null) { mc.transform.position = V(ctl["position"]); mc.transform.rotation = Quaternion.Euler(V(ctl["rotation"]).x, V(ctl["rotation"]).y, V(ctl["rotation"]).z); }
+			var ac = new GameObject("AtomControl"); ac.transform.SetParent(go.transform, false);
+			var acj = ac.AddComponent<JSONStorable>(); acj.storeId = "AtomControl"; acj.containingAtom = atom; acj.RegisterBool(new JSONStorableBool("collisionEnabled", S(a["collisionEnabled"]) != "false")); atom.storables["AtomControl"] = acj;
+			if (id.Contains(".CUAClothing"))
+			{
+				var loader = rp.AddComponent<CustomUnityAssetLoader>(); loader.storeId = "CUALoader"; loader.containingAtom = atom;
+				var assetName = new JSONStorableStringChooser("assetName", new List<string> { "None" }, "None", "Asset");
+				var url = new JSONStorableUrl("assetUrl", "");
+				url.setCallbackFunction = v => { assetName.choices = new List<string> { "None", "asset" }; };   // a real loader lists the bundle's prefabs; the bundle is not opened here
+				loader.RegisterUrl(url); loader.RegisterStringChooser(assetName);
+			}
+			sc.AddAtom(atom);
+			byUid[id] = atom;
+		}
+		sc.loadingIcon = new GameObject("loadingIcon").transform; sc.loadingIcon.gameObject.SetActive(false);
+		sc.loadingUI = new GameObject("loadingUI").transform; sc.loadingUI.gameObject.SetActive(false);
+		var holders = new Dictionary<string, GameObject>();
+		Func<GameObject, MVRPluginManager> addManager = parentGo =>
+		{
+			var mg = new GameObject("PluginManager"); mg.transform.SetParent(parentGo.transform, false);
+			var m = mg.AddComponent<MVRPluginManager>(); m.storeId = "PluginManager";
+			foreach (var f in typeof(MVRPluginManager).GetFields().Where(x => x.FieldType == typeof(Transform) || x.FieldType == typeof(RectTransform)))
+				f.SetValue(m, f.FieldType == typeof(RectTransform) ? new GameObject("prefab " + f.Name).AddComponent<RectTransform>() : new GameObject("prefab " + f.Name).transform);
+			return m;
+		};
+		foreach (var kv in byUid.Where(x => x.Value.type == "Person" || x.Value.type == "CoreControl" || x.Value.type == "WindowCamera" || x.Value.type == "CustomUnityAsset" || true).ToList())
+		{
+			var m = addManager(kv.Value.gameObject); m.containingAtom = kv.Value; kv.Value.storables["PluginManager"] = m;
+			holders[kv.Key + "|"] = m.gameObject;
+		}
+		var clothingGo = new Dictionary<string, GameObject>();
+		Func<string, string, int, GameObject> makeClothing = (atomId, id, nMat) =>
+		{
+			string key = atomId + "|" + id;
+			GameObject item;
+			if (clothingGo.TryGetValue(key, out item)) return item;
+			item = new GameObject(id); item.transform.SetParent(byUid[atomId].gameObject.transform, false);
+			var dit = item.AddComponent<DAZClothingItem>(); dit.uid = id; dit.internalUid = id; dit.displayName = id; dit.packageUid = "";
+			var dyn = item.AddComponent<MeshVR.DAZDynamic>(); dyn.uid = id;
+			var bin = new GameObject("binaryStorableBucket"); bin.transform.SetParent(item.transform, false); dyn.binaryStorableBucket = bin.transform;
+			dyn.specificStorables = new MeshVR.PresetManager.SpecificStorable[0];
+			var mesh = item.AddComponent<DAZMesh>(); mesh.materials = Enumerable.Range(0, Math.Max(1, nMat)).Select(k => new Material((Shader)null)).ToArray();
+			item.AddComponent<DAZSkinWrap>(); item.AddComponent<DAZSkinWrapMaterialOptions>();
+			return clothingGo[key] = item;
+		};
+		foreach (var kv in people)
+		{
+			var pj = atoms.First(a => S(a["id"]) == kv.Key);
+			var stor = (pj["storables"] as JsonArray).OfType<JsonObject>().ToList();
+			var geo = stor.FirstOrDefault(x => S(x["id"]) == "geometry");
+			var items = new List<DAZClothingItem>();
+			foreach (var c in (geo?["clothing"] as JsonArray)?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+			{
+				string iid = S(c["internalId"]); if (iid == null) continue;
+				int nm = stor.Count(x => (S(x["id"]) ?? "").StartsWith(iid + "Material"));
+				items.Add(makeClothing(kv.Key, iid, nm).GetComponent<DAZClothingItem>());
+			}
+			var sel = kv.Value.GetStorableByID("geometry") as DAZCharacterSelector;
+			if (sel != null) sel.clothingItems = items.ToArray();
+		}
+		Func<string, string, GameObject> holderOf = (atomId, clothing) =>
+		{
+			string key = atomId + "|" + clothing;
+			GameObject h;
+			if (holders.TryGetValue(key, out h)) return h;
+			var item = makeClothing(atomId, clothing, 1);
+			var mgr = addManager(item); mgr.containingAtom = byUid[atomId];
+			return holders[key] = mgr.gameObject;
+		};
+
+		float t0 = 0f;
+		Sim.BeforeFrame = () => { t0 += 0.02f; foreach (var b in bones.Values) MoveBone(b, t0); };
+		var results = SceneHost.Start(sc, entries, id => byUid[id], holderOf);
+		foreach (var g in results.Where(x => x.Error != null).GroupBy(x => x.E.Package.Split((char)46)[1] + ": " + x.Error)) Bad((g.Count() > 1 ? g.Count() + "x " : "") + g.Key);
+		Info(results.Count(r => r.Script != null && r.Error == null) + " of " + results.Count + " plugin instances initialised cleanly");
+		for (int f = 0; f < 500; f++) Sim.Step(0.02f);
+		var errs = Sim.Errors.Distinct().ToList();
+		foreach (var g in errs.GroupBy(e => e.ToString().Split((char)10)[0]).Take(25)) Bad("runtime: " + (g.Count() > 1 ? g.Count() + "x " : "") + g.Key);
+		if (errs.Count > 25) Info((errs.Count - 25) + " more runtime errors");
+		if (errs.Count == 0) Ok("no exception in 10 simulated seconds");
+		foreach (var r in results.Where(x => x.Script != null && x.Script.GetType().Name.StartsWith("CUAClothing")))
+		{
+			var t = r.Script.GetType();
+			Func<string, object> g = n => { var fi = t.GetField(n, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public); return fi == null ? "?" : fi.GetValue(r.Script) ?? "null"; };
+			var bc = g("parentBoneChooser") as JSONStorableStringChooser;
+			Info("debug " + r.E.Key + " " + t.FullName + ": connected=" + g("connected") + " parentTransform=" + (g("parentTransform") is Transform ? "set" : g("parentTransform").ToString()) + " creating=" + g("_isCreatingCUA") + " cuaAtom=" + (g("cuaAtom") is Atom ? "set" : g("cuaAtom").ToString()) + " bone='" + (bc == null ? "?" : bc.val) + "' choices=" + (bc == null || bc.choices == null ? "?" : bc.choices.Count.ToString()) + " cuaManager=" + (g("cuaManager") is Component ? "set" : g("cuaManager")) + " atomScale=" + (g("atomScale") is JSONStorableFloat ? "set" : g("atomScale")) + " prevPose=" + g("prevParentPose") + " main=" + ((g("cuaAtom") as Atom) != null && ((Atom)g("cuaAtom")).mainController != null ? "ok" : "null"));
+		}
+		Sim.BeforeFrame = null;
+		// the actual CUA atoms: where did the plugin put them?
+		foreach (var st in studs)
+		{
+			Atom cua;
+			if (!byUid.TryGetValue(st.Id, out cua) || cua.mainController == null) continue;
+			var boneT = bones.ContainsKey(st.Person + "/" + st.Bone) ? bones[st.Person + "/" + st.Bone].Go.transform : null;
+			if (boneT == null) continue;
+			var rpT = cua.reParentObject;
+			Func<Vector3, string> f3 = v => "(" + v.x.ToString("0.000", Inv) + "," + v.y.ToString("0.000", Inv) + "," + v.z.ToString("0.000", Inv) + ")";
+			Console.WriteLine("      debug " + st.Bone + ": bone " + f3(boneT.position) + " reParent " + (rpT == null ? "-" : f3(rpT.position)) + " controller " + f3(cua.mainController.transform.position) + " local " + f3(cua.mainController.transform.localPosition));
+			float d = Mag(cua.mainController.transform.position - boneT.position);
+			Console.WriteLine("      " + st.Bone + " CUA atom: " + (d * 100f).ToString("0.0", Inv) + " cm from its bone after the real plugin ran");
+			if (d > 0.15f) Bad(st.Bone + " piercing is " + (d * 100f).ToString("0", Inv) + " cm from its bone");
+		}
 	}
 
 	static string ShortId(string id) { int i = id.LastIndexOf('#'); return i >= 0 ? id.Substring(i + 1) : id; }

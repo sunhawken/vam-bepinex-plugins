@@ -166,7 +166,8 @@ namespace UnityEngine
 
 	public partial class Object
 	{
-		public string name { get; set; } = "";
+		private string _name = "";
+		public virtual string name { get { return _name; } set { _name = value; } }
 		public HideFlags hideFlags { get; set; }
 		internal bool destroyed;
 		public static bool operator ==(Object a, Object b)
@@ -185,7 +186,11 @@ namespace UnityEngine
 		public static void DestroyImmediate(Object o) { Destroy(o); }
 		public static void DontDestroyOnLoad(Object o) { }
 		internal virtual void DestroyInternal() { destroyed = true; }
-		public static T Instantiate<T>(T o) where T : Object => o;
+		public static T Instantiate<T>(T o) where T : Object { return Cloner.Clone(o, null); }
+		public static T Instantiate<T>(T o, Transform parent) where T : Object { return Cloner.Clone(o, parent); }
+		public static T Instantiate<T>(T o, Transform parent, bool worldPositionStays) where T : Object { return Cloner.Clone(o, parent); }
+		public static T Instantiate<T>(T o, Vector3 position, Quaternion rotation) where T : Object { var c = Cloner.Clone(o, null); var tr = c is GameObject g ? g.transform : (c as Component)?.transform; if (tr != null) { tr.position = position; tr.rotation = rotation; } return c; }
+		public static Object Instantiate(Object o) { return Cloner.Clone(o, null); }
 		public T GetInstanceIDHolder<T>() => default;
 		public int GetInstanceID() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
 		public override string ToString() => name;
@@ -193,7 +198,9 @@ namespace UnityEngine
 
 	public partial class Component : Object
 	{
-		public GameObject gameObject { get; set; }
+		public override string name { get { return _go != null ? _go.name : base.name; } set { if (_go != null) _go.name = value; else base.name = value; } }
+		private GameObject _go;
+		public GameObject gameObject { get { return _go ?? GameObject.constructing; } set { _go = value; } }   // like Unity, a script constructor already sees its game object
 		public Transform transform => gameObject.transform;
 		public T GetComponent<T>() where T : class => gameObject.GetComponent<T>();
 		public T GetComponentInChildren<T>() where T : class => gameObject.GetComponentInChildren<T>(true);
@@ -215,7 +222,22 @@ namespace UnityEngine
 	public partial class MonoBehaviour : Behaviour
 	{
 		internal List<IEnumerator> routines = new List<IEnumerator>();
-		public Coroutine StartCoroutine(IEnumerator e) { var c = new Coroutine(); c.it = e; routines.Add(e); Sim.Routines.Add(new Sim.Routine { owner = this, it = e }); return c; }
+		public Coroutine StartCoroutine(string methodName) { return StartCoroutine(methodName, null); }
+		public Coroutine StartCoroutine(string methodName, object value)
+		{
+			var mi = GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			if (mi == null) return null;
+			var r = mi.Invoke(this, mi.GetParameters().Length == 0 ? null : new object[] { value });
+			return r is IEnumerator it ? StartCoroutine(it) : null;
+		}
+		public Coroutine StartCoroutine(IEnumerator e)
+		{
+			if (e == null) return null;
+			var c = new Coroutine(); c.it = e;
+			try { routines.Add(e); Sim.Routines.Add(new Sim.Routine { owner = this, it = e }); }
+			catch (ArrayTypeMismatchException ex) { throw new InvalidOperationException("StartCoroutine(" + e.GetType().FullName + ") from " + GetType().Name + ": " + ex.StackTrace, ex); }
+			return c;
+		}
 		public void StopAllCoroutines() { Sim.Routines.RemoveAll(r => r.owner == this); }
 		public void StopCoroutine(Coroutine c) { }
 		public void Invoke(string m, float t) { }
@@ -247,13 +269,30 @@ namespace UnityEngine
 			active = v;
 			if (!was && activeInHierarchy) foreach (var c in comps.ToArray()) if (c is MonoBehaviour m) Sim.Lifecycle.OnEnable(m);
 		}
+		[ThreadStatic] internal static GameObject constructing;
 		public Component AddComponent(Type t)
 		{
-			var c = (Component)Activator.CreateInstance(t, true);
+			Component c;
+			var prev = constructing; constructing = this;
+			try { c = (Component)Activator.CreateInstance(t, true); }
+			catch (TargetInvocationException tie) when (tie.InnerException != null) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(tie.InnerException).Throw(); throw; }
+			finally { constructing = prev; }
 			c.gameObject = this;
 			c.name = name;
 			comps.Add(c);
-			if (c is Transform tr) transform = tr;
+			if (c is Transform tr)
+			{
+				var old = transform;
+				if (old != null && old != tr)
+				{   // Unity swaps Transform for RectTransform in place: parent, children and local pose carry over
+					tr.parent = old.parent;
+					if (old.parent != null) { int idx = old.parent.children.IndexOf(old); if (idx >= 0) old.parent.children[idx] = tr; }
+					tr.children = old.children; foreach (var ch in tr.children) ch.parent = tr;
+					tr.localPosition = old.localPosition; tr.localRotation = old.localRotation; tr.localScale = old.localScale;
+					comps.Remove(old); old.destroyed = true;
+				}
+				transform = tr;
+			}
 			c.OnAttached();
 			if (c is MonoBehaviour mb) Sim.Lifecycle.Created(mb);
 			return c;
@@ -300,9 +339,12 @@ namespace UnityEngine
 		public void SetParent(Transform p) { SetParent(p, true); }
 		public void SetParent(Transform p, bool worldPositionStays)
 		{
+			Vector3 wp = default(Vector3); Quaternion wr = default(Quaternion);
+			if (worldPositionStays) { wp = position; wr = rotation; }
 			if (parent != null) parent.children.Remove(this);
 			parent = p;
 			if (p != null) p.children.Add(this);
+			if (worldPositionStays) { position = wp; rotation = wr; }
 		}
 		public Transform Find(string path)
 		{
@@ -397,6 +439,7 @@ namespace UnityEngine
 			Now += dt;
 			Time.realtimeSinceStartup = Time.unscaledTime = Time.time = Now;
 			Time.deltaTime = Time.unscaledDeltaTime = dt;
+			BeforeFrame?.Invoke();   // the scene host moves bones / physics here
 			Lifecycle.Flush();
 			foreach (var r in Routines.ToArray())
 			{
@@ -425,7 +468,12 @@ namespace UnityEngine
 						if (c is MonoBehaviour m && m.isActiveAndEnabled && !m.destroyed && Lifecycle.Started.Contains(m))
 							Lifecycle.Call(m, "FixedUpdate");
 			}
+			foreach (var go in AllObjects.ToArray())
+				foreach (var c in go.comps.ToArray())
+					if (c is MonoBehaviour m && m.isActiveAndEnabled && !m.destroyed && Lifecycle.Started.Contains(m))
+						Lifecycle.Call(m, "LateUpdate");
 		}
+		public static Action BeforeFrame;
 		public static float FixedAccum;
 
 		private static IEnumerator Chain(IEnumerator inner, IEnumerator outer)
@@ -441,5 +489,59 @@ namespace UnityEngine
 		public static int GetControlID(int hint, FocusType t) => hint;
 		public static int GetControlID(FocusType t) => 0;
 		public static Vector2 GUIToScreenPoint(Vector2 p) => p;
+	}
+
+	// Object.Instantiate: a deep copy of the game object (children, components with their field values)
+	internal static class Cloner
+	{
+		public static T Clone<T>(T src, Transform parent) where T : Object
+		{
+			if (src == null) return null;
+			var go = src as GameObject ?? (src as Component)?.gameObject;
+			if (go == null) return src;
+			var map = new Dictionary<Object, Object>();
+			var copy = CloneGo(go, parent, map);
+			if (src is GameObject) return (T)(Object)copy;
+			var comp = (Component)map[src];
+			return (T)(Object)comp;
+		}
+
+		static GameObject CloneGo(GameObject go, Transform parent, Dictionary<Object, Object> map)
+		{
+			var c = new GameObject(go.name + "(Clone)");
+			map[go] = c;
+			c.SetActive(go.activeSelf);
+			if (parent != null) c.transform.SetParent(parent, false);
+			var st = go.transform; var dt = c.transform;
+			foreach (var comp in go.comps.ToArray())
+			{
+				Component n;
+				if (comp is Transform) { n = c.transform; }
+				else
+				{
+					if (comp.GetType().IsSubclassOf(typeof(Transform))) { n = c.AddComponent(comp.GetType()); }
+					else n = c.AddComponent(comp.GetType());
+				}
+				map[comp] = n;
+			}
+			dt.localPosition = st.localPosition; dt.localRotation = st.localRotation; dt.localScale = st.localScale;
+			foreach (var ch in st.children.ToArray()) CloneGo(ch.gameObject, dt, map);
+			// copy field values; references into the copied hierarchy are remapped
+			foreach (var kv in new List<KeyValuePair<Object, Object>>(map))
+			{
+				if (!(kv.Key is Component sc) || sc is Transform) continue;
+				var dc = (Component)kv.Value;
+				for (var t = sc.GetType(); t != null && t != typeof(Component) && t != typeof(MonoBehaviour) && t != typeof(object); t = t.BaseType)
+					foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+					{
+						if (f.IsInitOnly || f.Name == "_go") continue;
+						object v; try { v = f.GetValue(sc); } catch { continue; }
+						Object ov = v as Object;
+						if (ov != null && map.ContainsKey(ov)) v = map[ov];
+						try { f.SetValue(dc, v); } catch { }
+					}
+			}
+			return c;
+		}
 	}
 }

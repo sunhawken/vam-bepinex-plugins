@@ -80,8 +80,9 @@ public partial class JSONStorableFloat : JSONStorableParam
 	public SetFloatCallback setCallbackFunction;
 	public SetJSONFloatCallback setJSONCallbackFunction;
 	public float defaultVal { get; set; }
-	public float min, max;
-	public bool constrained;
+	public float min { get; set; }
+	public float max { get; set; }
+	public bool constrained { get; set; }
 	private float _val;
 	public JSONStorableFloat() { }
 	public JSONStorableFloat(string paramName, float startingValue, SetFloatCallback callback, float minValue, float maxValue, bool constrain = true, bool interactable = true)
@@ -147,6 +148,16 @@ public partial class JSONStorableString : JSONStorableParam
 	public void SetValToDefault() { val = defaultVal; }
 }
 
+public partial class JSONStorableUrl : JSONStorableString
+{
+	public JSONStorableUrl() { }
+	public JSONStorableUrl(string paramName, string startingValue) : base(paramName, startingValue) { }
+	public JSONStorableUrl(string paramName, string startingValue, SetStringCallback callback) : base(paramName, startingValue, callback) { }
+	public JSONStorableUrl(string paramName, string startingValue, SetStringCallback callback, string filter, bool forceCallbackOnSet = false) : base(paramName, startingValue, callback) { }
+	public JSONStorableUrl(string paramName, string startingValue, string filter) : base(paramName, startingValue) { }
+	public JSONStorableUrl(string paramName, string startingValue, SetStringCallback callback, string filter, string path) : base(paramName, startingValue, callback) { }
+}
+
 public partial class JSONStorableStringChooser : JSONStorableParam
 {
 	public delegate void SetStringCallback(string val);
@@ -158,7 +169,8 @@ public partial class JSONStorableStringChooser : JSONStorableParam
 	public string label { get; set; }
 	private string _val;
 	public JSONStorableStringChooser() { }
-	public JSONStorableStringChooser(string paramName, List<string> options, string startingValue, string label, SetStringCallback callback = null)
+	public JSONStorableStringChooser(string paramName, List<string> options, string startingValue, string label) : this(paramName, options, startingValue, label, (SetStringCallback)null) { }
+	public JSONStorableStringChooser(string paramName, List<string> options, string startingValue, string label, SetStringCallback callback)
 	{ name = paramName; choices = options ?? new List<string>(); _val = startingValue; defaultVal = startingValue; this.label = label; setCallbackFunction = callback; }
 	public JSONStorableStringChooser(string paramName, List<string> options, string startingValue, string label, SetJSONStringCallback callback)
 	{ name = paramName; choices = options ?? new List<string>(); _val = startingValue; defaultVal = startingValue; this.label = label; setJSONCallbackFunction = callback; }
@@ -198,6 +210,16 @@ public partial class JSONStorable : MonoBehaviour
 	public void RegisterString(JSONStorableString p) { strings[p.name] = p; p.storable = this; }
 	public void RegisterStringChooser(JSONStorableStringChooser p) { choosers[p.name] = p; p.storable = this; }
 	public void RegisterAction(JSONStorableAction p) { actions[p.name] = p; p.storable = this; }
+	private readonly Dictionary<string, JSONStorableUrl> urls = new Dictionary<string, JSONStorableUrl>();
+	public void RegisterUrl(JSONStorableUrl p) { urls[p.name] = p; strings[p.name] = p; p.storable = this; }
+	public JSONStorableUrl GetUrlJSONParam(string n) { JSONStorableUrl p; return urls.TryGetValue(n, out p) ? p : null; }
+	public void DeregisterFloat(JSONStorableFloat p) { floats.Remove(p.name); }
+	public void DeregisterBool(JSONStorableBool p) { bools.Remove(p.name); }
+	public void DeregisterString(JSONStorableString p) { strings.Remove(p.name); }
+	public void DeregisterStringChooser(JSONStorableStringChooser p) { choosers.Remove(p.name); }
+	public void DeregisterUrl(JSONStorableUrl p) { urls.Remove(p.name); strings.Remove(p.name); }
+	public void DeregisterAction(JSONStorableAction p) { actions.Remove(p.name); }
+	public List<string> GetUrlParamNames() => new List<string>(urls.Keys);
 	public JSONStorableFloat GetFloatJSONParam(string n) { JSONStorableFloat p; return floats.TryGetValue(n, out p) ? p : null; }
 	public JSONStorableBool GetBoolJSONParam(string n) { JSONStorableBool p; return bools.TryGetValue(n, out p) ? p : null; }
 	public JSONStorableString GetStringJSONParam(string n) { JSONStorableString p; return strings.TryGetValue(n, out p) ? p : null; }
@@ -213,7 +235,15 @@ public partial class JSONStorable : MonoBehaviour
 	public virtual void CallAction(string n) { var a = GetAction(n); a?.actionCallback?.Invoke(); }
 	public virtual void InitUI() { }
 	public virtual SimpleJSON.JSONClass GetJSON(bool includePhysical = true, bool includeAppearance = true, bool forceStore = false) => new SimpleJSON.JSONClass();
-	public virtual void RestoreFromJSON(SimpleJSON.JSONClass jc, bool restorePhysical = true, bool restoreAppearance = true, SimpleJSON.JSONArray presetAtoms = null, bool setMissingToDefault = true) { }
+	// like VaM: every registered param present in the JSON is set (callbacks fire); missing ones go back to their default when asked
+	public virtual void RestoreFromJSON(SimpleJSON.JSONClass jc, bool restorePhysical = true, bool restoreAppearance = true, SimpleJSON.JSONArray presetAtoms = null, bool setMissingToDefault = true)
+	{
+		if (jc == null) return;
+		foreach (var kv in new List<KeyValuePair<string, JSONStorableFloat>>(floats)) { float v; if (jc[kv.Key] != null && jc[kv.Key].ToString().Trim('"') != "" && float.TryParse(jc[kv.Key].ToString().Trim('"'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out v)) kv.Value.val = v; else if (setMissingToDefault) kv.Value.val = kv.Value.defaultVal; }
+		foreach (var kv in new List<KeyValuePair<string, JSONStorableBool>>(bools)) { if (jc[kv.Key] != null) { bool b; if (bool.TryParse(jc[kv.Key].ToString().Trim('"'), out b)) kv.Value.val = b; } else if (setMissingToDefault) kv.Value.val = kv.Value.defaultVal; }
+		foreach (var kv in new List<KeyValuePair<string, JSONStorableString>>(strings)) { if (jc[kv.Key] != null) kv.Value.val = jc[kv.Key].ToString().Trim('"'); else if (setMissingToDefault) kv.Value.val = kv.Value.defaultVal; }
+		foreach (var kv in new List<KeyValuePair<string, JSONStorableStringChooser>>(choosers)) { if (jc[kv.Key] != null) kv.Value.val = jc[kv.Key].ToString().Trim('"'); else if (setMissingToDefault) kv.Value.val = kv.Value.defaultVal; }
+	}
 	public virtual void LateRestoreFromJSON(SimpleJSON.JSONClass jc, bool restorePhysical = true, bool restoreAppearance = true, bool setMissingToDefault = true) { }
 }
 
