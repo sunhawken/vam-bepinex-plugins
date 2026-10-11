@@ -527,4 +527,251 @@ public static class HelperScenarios
 		while (g.MoveNext()) { }
 		h.Check(chooser.val == "10", "...and also restored when the load fails");
 	}
+	public static readonly System.Collections.Generic.List<string> SaveNotes = new System.Collections.Generic.List<string>();
+	public static void NoteSave(SimpleJSON.JSONClass jc) { SaveNotes.Add(jc.ToString()); }
+
+	// stand-ins with the exact member shapes of UIAssist's grid classes (shapes are checked against the real UIAssist at the end)
+	public sealed class FakeUiaButton
+	{
+		public int Index; public int Invoked; public bool Busy;
+		public string buttonRef { get { return "R" + (Index + 1); } }
+		public bool actionInProgress { get { return Busy; } set { Busy = value; } }
+		public void ActionInit(int hand, bool leap) { Invoked++; }
+	}
+	public sealed class FakeUiaGrid
+	{
+		public JSONStorableString gridLabelJSS;
+		public System.Collections.Generic.List<FakeUiaButton> buttonList = new System.Collections.Generic.List<FakeUiaButton>();
+		public FakeUiaGrid(string label, int n) { gridLabelJSS = new JSONStorableString("gridLabel", label); for (int i = 0; i < n; i++) buttonList.Add(new FakeUiaButton { Index = i }); }
+	}
+
+	[Scenario("zajeshufflehelper", "ZeroT.ZajeShuffleHelper")]
+	public static void ZajeShuffleHelper(Harness h)
+	{
+		h.Unpatch("none");
+		// ---- UIAssist (fake grids) and the CoreControl atom
+		var other = new FakeUiaGrid("Other", 3); var zaje = new FakeUiaGrid("Zaje", 30);
+		UIAStorables.buttonGridsList = new System.Collections.Generic.List<FakeUiaGrid> { other, zaje };
+		Func<Atom> makeCore = () => { var a = new GameObject("CoreControl").AddComponent<Atom>(); a.type = "CoreControl"; a.uid = a.name = "CoreControl"; a.containingAtom = a; h.Sc.AddAtom(a); return a; };
+		var core = makeCore();
+		Func<int> invokedAll = () => zaje.buttonList.Sum(b => b.Invoked);
+		var settingsFile = "Saves/PluginData/ZeroT/ZajeShuffle/settings.json";
+		// the .var's own saved settings, to be imported on first run
+		MVR.FileManagementSecure.FileManagerSecure.SimReset();
+		MVR.FileManagementSecure.FileManagerSecure.SimAddFile(settingsFile);
+		SuperController.SimSaved[settingsFile] = "{\"gridLabel\":\"Zaje\",\"skipButtons\":\"24,25\",\"hotkey\":\"F6\",\"cooldown\":\"0.2\",\"autoShuffle\":\"False\",\"autoInterval\":\"45\"}";
+		var harm = new HarmonyLib.Harmony("test.zaje");
+
+		h.Start();
+		h.Step(2.5f);
+		Func<string, string, string> cfg = (sec, key) => h.Plugin.Config.Find(sec, key).BoxedValue.ToString();
+		h.Check(cfg("Hotkey", "Key") == "F6" && cfg("Shuffle", "CooldownSeconds") == "0.2" && cfg("Auto", "AutoIntervalSeconds") == "45", "first run imports the .var's settings.json (hotkey F6, cooldown 0.2, interval 45)");
+		h.Check(cfg("Import", "ImportedPluginSettings") == "True", "...and remembers it did");
+		var host = core.GetStorableByID("ZeroT.ZajeShuffle");
+		h.Check(host != null, "storable 'ZeroT.ZajeShuffle' is on CoreControl");
+		h.Check(host.GetAction("Shuffle") != null && host.GetAction("SetHotkey") != null && host.GetAction("ClearHotkey") != null && host.GetAction("SaveSettings") != null, "actions Shuffle, SetHotkey, ClearHotkey, SaveSettings exist");
+		h.Check(host.GetStringJSONParam("Grid Label") != null && host.GetStringJSONParam("Skip Buttons") != null && host.GetStringJSONParam("Hotkey") != null && host.GetFloatJSONParam("Cooldown (sec)") != null && host.GetBoolJSONParam("Auto Shuffle") != null && host.GetFloatJSONParam("Auto Interval (sec)") != null && host.GetStringJSONParam("Status") != null && host.GetStringJSONParam("History") != null, "the .var's eight parameters are there under the same names");
+		h.Check(host.GetStringJSONParam("Hotkey").val == "F6" && Math.Abs(host.GetFloatJSONParam("Cooldown (sec)").val - 0.2f) < 1e-4f, "storables show the imported values");
+
+		// ---- Shuffle action
+		h.Set("Shuffle", "CooldownSeconds", "0.1");
+		int before = invokedAll();
+		host.CallAction("Shuffle");
+		h.Check(invokedAll() == before + 1 && other.buttonList.Sum(b => b.Invoked) == 0, "Shuffle action activates exactly one button of the grid named Zaje (not of Other)");
+		var status = host.GetStringJSONParam("Status").val; var hist = host.GetStringJSONParam("History").val;
+		int lastIdx = zaje.buttonList.FindIndex(b => b.Invoked > 0);
+		h.Check(status == "Now: R" + (lastIdx + 1), "status shows the button's real reference (" + status + "), not '#n'");
+		h.Check(hist.EndsWith("- R" + (lastIdx + 1)) && hist.Split((char)10).Length == 1, "history has the entry (" + hist + ")");
+
+		// ---- cooldown
+		h.Set("Shuffle", "CooldownSeconds", "3"); h.Step(0.05f);
+		before = invokedAll();
+		h.Step(3.2f); host.CallAction("Shuffle"); int afterFirst = invokedAll();
+		host.CallAction("Shuffle");
+		h.Check(afterFirst == before + 1 && invokedAll() == afterFirst, "cooldown 3 s: the second shuffle inside it is ignored");
+		h.Step(3.1f); host.CallAction("Shuffle");
+		h.Check(invokedAll() == afterFirst + 1, "...and works after the cooldown");
+
+		// ---- skip list, no repeat, coverage
+		h.Set("Shuffle", "CooldownSeconds", "0.1");
+		foreach (var b in zaje.buttonList) b.Invoked = 0;
+		int prev = -1; bool repeated = false; var picks = new System.Collections.Generic.List<int>();
+		for (int i = 0; i < 400; i++)
+		{
+			h.Step(0.12f);
+			var snap = zaje.buttonList.Select(b => b.Invoked).ToArray();
+			host.CallAction("Shuffle");
+			int idx = -1; for (int k = 0; k < snap.Length; k++) if (zaje.buttonList[k].Invoked != snap[k]) idx = k;
+			if (idx == prev) repeated = true;
+			prev = idx; picks.Add(idx);
+		}
+		h.Check(picks.All(p => p >= 0), "400 shuffles: every one activated a button");
+		h.Check(!picks.Contains(23) && !picks.Contains(24), "skip list '24,25' (1-based): buttons 24 and 25 never picked");
+		h.Check(picks.Distinct().Count() == 28, "all 28 eligible buttons get picked (" + picks.Distinct().Count() + ")");
+		h.Check(!repeated, "never the same button twice in a row");
+		h.Set("Shuffle", "SkipButtons", "1, 2 ,x,3");
+		foreach (var b in zaje.buttonList) b.Invoked = 0;
+		for (int i = 0; i < 120; i++) { h.Step(0.12f); host.CallAction("Shuffle"); }
+		h.Check(zaje.buttonList.Take(3).All(b => b.Invoked == 0) && zaje.buttonList.Skip(3).Count(b => b.Invoked > 0) > 20, "skip list with spaces and junk ('1, 2 ,x,3') skips 1-3 and ignores the junk");
+		h.Set("Shuffle", "SkipButtons", "24,25");
+
+		// ---- history keeps 20, newest first
+		string h20 = host.GetStringJSONParam("History").val;
+		h.Check(h20.Split((char)10).Length == 20, "history keeps the last 20 entries");
+		h.Set("History", "Entries", "5"); h.Step(0.2f); host.CallAction("Shuffle");
+		h.Check(host.GetStringJSONParam("History").val.Split((char)10).Length == 5, "History.Entries can shorten it");
+		h.Set("History", "Entries", "20");
+
+		// ---- busy buttons are not picked
+		foreach (var b in zaje.buttonList) b.Busy = true;
+		zaje.buttonList[7].Busy = false;
+		foreach (var b in zaje.buttonList) b.Invoked = 0;
+		for (int i = 0; i < 6; i++) { h.Step(0.12f); host.CallAction("Shuffle"); }
+		h.Check(zaje.buttonList[7].Invoked >= 1 && zaje.buttonList.Where((b, i) => i != 7).All(b => b.Invoked == 0), "a button whose action is still running is never picked");
+		zaje.buttonList[7].Busy = true; h.Step(0.2f); host.CallAction("Shuffle");
+		h.Check(host.GetStringJSONParam("Status").val == "No eligible buttons", "every button busy -> 'No eligible buttons'");
+		foreach (var b in zaje.buttonList) b.Busy = false;
+
+		// ---- messages for a missing grid / UIAssist
+		h.Set("Shuffle", "GridLabel", "Nope"); h.Step(0.2f); host.CallAction("Shuffle");
+		h.Check(host.GetStringJSONParam("Status").val == "Grid 'Nope' not found", "unknown grid label -> status says so");
+		h.Set("Shuffle", "GridLabel", "Zaje");
+		UIAStorables.buttonGridsList = null; h.Step(0.2f); host.CallAction("Shuffle");
+		h.Check(host.GetStringJSONParam("Status").val == "UIAssist not loaded yet", "UIAssist not loaded -> 'UIAssist not loaded yet'");
+		UIAStorables.buttonGridsList = new System.Collections.Generic.List<FakeUiaGrid> { other, zaje };
+		var swapped = new FakeUiaGrid("Zaje", 5); UIAStorables.buttonGridsList = new System.Collections.Generic.List<FakeUiaGrid> { swapped };
+		h.Step(0.2f); host.CallAction("Shuffle");
+		h.Check(swapped.buttonList.Sum(b => b.Invoked) == 1, "UIAssist rebuilding its grid list is followed (the new list is used)");
+		UIAStorables.buttonGridsList = new System.Collections.Generic.List<FakeUiaGrid> { other, zaje };
+
+		// ---- hotkey
+		h.Set("Hotkey", "Key", "F5"); foreach (var b in zaje.buttonList) b.Invoked = 0; h.Step(0.2f);
+		Input.SimDown.Add(KeyCode.F5); h.Step(0.02f); Input.SimDown.Clear();
+		h.Check(invokedAll() == 1, "hotkey F5 shuffles");
+		Input.SimDown.Add(KeyCode.F6); h.Step(0.2f); Input.SimDown.Clear();
+		h.Check(invokedAll() == 1, "other keys do nothing");
+		h.Set("Hotkey", "Key", "f5"); h.Step(0.2f); Input.SimDown.Add(KeyCode.F5); h.Step(0.02f); Input.SimDown.Clear();
+		h.Check(invokedAll() == 2, "key names are accepted in any case ('f5')");
+		var es = new UnityEngine.EventSystems.EventSystem(); var field = new GameObject("Field"); var inp = field.AddComponent<UnityEngine.UI.InputField>(); inp.isFocused = true;
+		UnityEngine.EventSystems.EventSystem.current = es; es.currentSelectedGameObject = field;
+		h.Step(0.2f); Input.SimDown.Add(KeyCode.F5); h.Step(0.02f); Input.SimDown.Clear();
+		h.Check(invokedAll() == 2, "typing in a text field: the hotkey is ignored");
+		inp.isFocused = false; h.Step(0.2f); Input.SimDown.Add(KeyCode.F5); h.Step(0.02f); Input.SimDown.Clear();
+		h.Check(invokedAll() == 3, "...and works again when the field lets go");
+		UnityEngine.EventSystems.EventSystem.current = null;
+
+		// ---- set / clear hotkey like the buttons
+		harm.Patch(typeof(SuperController).GetMethod("SaveJSON"), new HarmonyLib.HarmonyMethod(typeof(HelperScenarios).GetMethod("NoteSave", BindingFlags.Public | BindingFlags.Static)));
+		SaveNotes.Clear();
+		host.CallAction("SetHotkey"); h.Step(0.05f);
+		h.Check(host.GetStringJSONParam("Status").val == "Press any key to set hotkey...", "SetHotkey: status asks for a key");
+		Input.SimDown.Add(KeyCode.Mouse0); h.Step(0.02f); Input.SimDown.Clear();
+		h.Check(cfg("Hotkey", "Key").ToLower() == "f5", "SetHotkey: the left mouse button is not taken as a key (" + cfg("Hotkey", "Key") + ")");
+		Input.SimDown.Add(KeyCode.G); h.Step(0.02f); Input.SimDown.Clear(); h.Step(0.04f);
+		h.Check(cfg("Hotkey", "Key") == "G" && host.GetStringJSONParam("Status").val == "Hotkey set to: G" && host.GetStringJSONParam("Hotkey").val == "G", "SetHotkey: the next key becomes the hotkey (G) and is shown (" + cfg("Hotkey", "Key") + " / " + host.GetStringJSONParam("Status").val + " / " + host.GetStringJSONParam("Hotkey").val + ")");
+		h.Check(SaveNotes.Count >= 1 && SaveNotes[SaveNotes.Count - 1].Contains("\"hotkey\":\"G\""), "...and is saved to the .var's settings.json too");
+		int c0 = invokedAll(); h.Step(0.2f); Input.SimDown.Add(KeyCode.G); h.Step(0.02f); Input.SimDown.Clear();
+		h.Check(invokedAll() == c0 + 1, "the newly set hotkey works at once");
+		host.CallAction("ClearHotkey"); h.Step(0.05f);
+		h.Check(cfg("Hotkey", "Key") == "None" && host.GetStringJSONParam("Status").val == "Hotkey cleared", "ClearHotkey: hotkey cleared and status says so");
+		c0 = invokedAll(); h.Step(0.2f); Input.SimDown.Add(KeyCode.G); h.Step(0.02f); Input.SimDown.Clear();
+		h.Check(invokedAll() == c0, "...and the old key no longer shuffles");
+
+		// ---- auto shuffle
+		h.Set("Auto", "AutoIntervalSeconds", "5"); h.Step(0.2f);
+		c0 = invokedAll();
+		h.Set("Auto", "AutoShuffle", "true"); h.Step(0.3f);
+		h.Check(invokedAll() == c0 + 1, "Auto Shuffle switched on: shuffles at once (like the .var)");
+		h.Step(4.5f); h.Check(invokedAll() == c0 + 1, "...nothing before the interval is up");
+		h.Step(1.0f); h.Check(invokedAll() == c0 + 2, "...one more after 5 s");
+		h.Step(5.3f); h.Check(invokedAll() == c0 + 3, "...and so on every interval");
+		h.Set("Auto", "AutoShuffle", "false"); h.Step(6f); h.Check(invokedAll() == c0 + 3, "Auto Shuffle off: stops");
+		h.Set("Auto", "ShuffleWhenSwitchedOn", "false"); h.Set("Auto", "AutoShuffle", "true"); h.Step(0.3f);
+		h.Check(invokedAll() == c0 + 3, "ShuffleWhenSwitchedOn=false: waits a full interval first");
+		h.Step(5.3f); h.Check(invokedAll() == c0 + 4, "...then shuffles");
+		h.Set("Auto", "AutoShuffle", "false"); h.Set("Auto", "ShuffleWhenSwitchedOn", "true"); h.Step(0.3f);
+		host.GetBoolJSONParam("Auto Shuffle").val = true; h.Step(0.3f);
+		h.Check(cfg("Auto", "AutoShuffle") == "True" && invokedAll() == c0 + 5, "switching Auto Shuffle on from the storable (a trigger) works the same");
+		host.GetBoolJSONParam("Auto Shuffle").val = false;
+
+		// ---- storables <-> settings
+		host.GetFloatJSONParam("Cooldown (sec)").val = 2.5f; host.GetFloatJSONParam("Auto Interval (sec)").val = 60f;
+		host.GetStringJSONParam("Grid Label").val = "Other"; host.GetStringJSONParam("Skip Buttons").val = "2";
+		h.Check(cfg("Shuffle", "CooldownSeconds") == "2.5" && cfg("Auto", "AutoIntervalSeconds") == "60" && cfg("Shuffle", "GridLabel") == "Other" && cfg("Shuffle", "SkipButtons") == "2", "changing a storable (UI, trigger, other plugin) changes the setting");
+		h.Set("Shuffle", "GridLabel", "Zaje"); h.Set("Shuffle", "SkipButtons", "24,25"); h.Set("Shuffle", "CooldownSeconds", "0.1"); h.Set("Auto", "AutoIntervalSeconds", "30");
+		h.Check(host.GetStringJSONParam("Grid Label").val == "Zaje" && Math.Abs(host.GetFloatJSONParam("Cooldown (sec)").val - 0.1f) < 1e-4f && host.GetStringJSONParam("Skip Buttons").val == "24,25", "changing a setting (config file, ConfigurationManager) updates the storables");
+		host.GetFloatJSONParam("Cooldown (sec)").val = 99f;
+		h.Check(cfg("Shuffle", "CooldownSeconds") == "10", "cooldown is limited to 0.1 - 10 (99 -> 10)");
+		h.Set("Shuffle", "CooldownSeconds", "0.1");
+
+		// ---- Save Settings action
+		SaveNotes.Clear();
+		h.Set("Shuffle", "SkipButtons", "3,4"); h.Set("Hotkey", "Key", "F7");
+		host.CallAction("SaveSettings");
+		h.Check(host.GetStringJSONParam("Status").val == "Settings saved" && SaveNotes.Count == 1 && SaveNotes[0].Contains("\"skipButtons\":\"3,4\"") && SaveNotes[0].Contains("\"hotkey\":\"F7\"") && SaveNotes[0].Contains("\"cooldown\":\"0.1\"") && SaveNotes[0].Contains("\"autoInterval\":\"30\""), "SaveSettings writes every setting to settings.json in the .var's format");
+		h.Set("Shuffle", "SkipButtons", "24,25"); h.Set("Hotkey", "Key", "None");
+
+		// ---- scene load: CoreControl is replaced, the actions come back
+		h.Load(() => { core = makeCore(); });
+		h.Step(2.5f);
+		var host2 = core.GetStorableByID("ZeroT.ZajeShuffle");
+		h.Check(host2 != null && host2.GetAction("Shuffle") != null, "after a scene load the actions are back on the new CoreControl");
+		int c1 = invokedAll(); host2.CallAction("Shuffle"); h.Check(invokedAll() == c1 + 1, "...and work");
+
+		// ---- master switch
+		h.Set("General", "Enabled", "false"); h.Step(1.5f);
+		h.Check(core.GetStorableByID("ZeroT.ZajeShuffle") == null, "Enabled=false removes the actions");
+		h.Set("General", "Enabled", "true"); h.Step(1.5f);
+		h.Check(core.GetStorableByID("ZeroT.ZajeShuffle") != null, "...and Enabled=true brings them back");
+
+		// ---- the real UIAssist: do the members this helper reflects on exist with these shapes?
+		var ua = h.LoadTarget("UIAssistScripts");
+		var st = ua.GetType("JayJayWon.UIAStorables", true);
+		var gf = st.GetField("buttonGridsList", BindingFlags.Public | BindingFlags.Static);
+		h.Check(gf != null && gf.FieldType.IsGenericType, "real UIAssist: UIAStorables.buttonGridsList is a public static List field");
+		var gridT = gf.FieldType.GetGenericArguments()[0];
+		var lf = gridT.GetField("gridLabelJSS", BindingFlags.Public | BindingFlags.Instance);
+		h.Check(lf != null && lf.FieldType.GetProperty("val") != null, "real UIAssist: grid.gridLabelJSS is a field with a 'val'");
+		var blf = gridT.GetField("buttonList", BindingFlags.Public | BindingFlags.Instance);
+		var btnT = blf.FieldType.GetGenericArguments()[0];
+		h.Check(blf != null && btnT.GetMethod("ActionInit", new[] { typeof(int), typeof(bool) }) != null, "real UIAssist: grid.buttonList (field) of buttons with ActionInit(int, bool)");
+		h.Check(btnT.GetProperty("buttonRef") != null && btnT.GetField("buttonRef") == null, "real UIAssist: buttonRef is a PROPERTY (the .var looked for a field, so it always showed '#n')");
+		h.Check(btnT.GetProperty("actionInProgress") != null, "real UIAssist: button.actionInProgress exists");
+	}
+
+
+	[Scenario("zajeshufflehelper_original", "ZeroT.ZajeShuffleHelper")]
+	public static void ZajeShuffleHelperOriginal(Harness h)
+	{
+		var zaje = new FakeUiaGrid("Zaje", 30);
+		UIAStorables.buttonGridsList = new System.Collections.Generic.List<FakeUiaGrid> { zaje };
+		var core = new GameObject("CoreControl").AddComponent<Atom>(); core.type = "CoreControl"; core.uid = core.name = "CoreControl"; core.containingAtom = core; h.Sc.AddAtom(core);
+		// the .var itself, running as a session plugin
+		var asm = h.LoadTarget("ZajeShuffleScripts");
+		var ot = asm.GetType("ZajeShuffle", true);
+		var go = new GameObject("plugin#0_ZajeShuffle"); go.transform.SetParent(core.transform, false);
+		var orig = (MVRScript)go.AddComponent(ot);
+		orig.containingAtom = core;
+		orig.Init();
+		h.Step(1.5f);
+		ot.GetMethod("DoShuffle", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(orig, null);
+		var status = ((JSONStorableString)ot.GetField("statusJSON", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(orig)).val;
+		h.Check(zaje.buttonList.Sum(b => b.Invoked) == 1, "the .var shuffles: one button activated");
+		h.Check(status.StartsWith("Now: #"), "the .var's own status says '" + status + "' - it never shows UIAssist's button reference (it looks for a field, UIAssist has a property)");
+
+		h.Start();
+		h.Step(2.5f);
+		h.Check(core.GetStorableByID("ZeroT.ZajeShuffle") == null, "with the .var loaded the helper puts nothing on CoreControl");
+		h.Check(h.LogHas("steps aside"), "...and says why in the log");
+		h.Set("Hotkey", "Key", "F5"); h.Step(0.2f);
+		int c0 = zaje.buttonList.Sum(b => b.Invoked);
+		Input.SimDown.Add(KeyCode.F5); h.Step(0.02f); Input.SimDown.Clear();
+		h.Check(zaje.buttonList.Sum(b => b.Invoked) == c0, "...and its hotkey does nothing, so there is only one shuffle");
+	}
+}
+
+// UIAssist's static entry point, same name and shape: the helper finds it by name
+public static class UIAStorables
+{
+	public static System.Collections.IList buttonGridsList;
 }

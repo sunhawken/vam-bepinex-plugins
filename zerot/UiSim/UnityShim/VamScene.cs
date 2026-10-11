@@ -308,6 +308,11 @@ public partial class SuperController : MonoBehaviour
 	public static List<string> Messages = new List<string>();
 	public static List<string> Errors = new List<string>();
 	public Atom selectedAtom;
+	public static readonly Dictionary<string, string> SimSaved = new Dictionary<string, string>();   // what SaveJSON wrote / what LoadJSON reads
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public void SaveJSON(SimpleJSON.JSONClass jc, string saveName) { SimSaved[saveName] = jc == null ? "" : jc.ToString(); }
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public SimpleJSON.JSONNode LoadJSON(string saveName) { string t; return SimSaved.TryGetValue(saveName, out t) ? SimpleJSON.JSON.Parse(t) : null; }
 	public bool targetShow;
 	public int allControllersCalls;   // how often something asked for the full list (it is rebuilt on every call in VaM)
 	public bool GetTargetShow() { return targetShow; }

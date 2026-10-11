@@ -146,6 +146,7 @@ public partial class HorizontalLayoutGroup : global::UnityEngine.UI.HorizontalOr
 public partial class InputField : global::UnityEngine.UI.Selectable {
   public void ActivateInputField() { }
   public int caretPosition { get; set; }
+  public bool isFocused { get; set; }
   public global::UnityEngine.UI.InputField.SubmitEvent onEndEdit { get; set; } = new global::UnityEngine.UI.InputField.SubmitEvent();
   public global::UnityEngine.UI.InputField.OnChangeEvent onValueChanged { get; set; } = new global::UnityEngine.UI.InputField.OnChangeEvent();
   public global::UnityEngine.UI.Graphic placeholder { get; set; }
@@ -325,6 +326,7 @@ public enum InputButton : int {
 }
 public partial class EventSystem : global::UnityEngine.EventSystems.UIBehaviour {
   public static global::UnityEngine.EventSystems.EventSystem current { get; set; } = new global::UnityEngine.EventSystems.EventSystem();
+  public global::UnityEngine.GameObject currentSelectedGameObject { get; set; }
   public void RaycastAll(global::UnityEngine.EventSystems.PointerEventData eventData, global::System.Collections.Generic.List<global::UnityEngine.EventSystems.RaycastResult> raycastResults) { }
   public EventSystem() {}
 }
@@ -2158,7 +2160,6 @@ public partial class SuperController {
   public void HideMainHUD() { }
   public void Load(string saveName = default) { }
   public void LoadFromJSONEmbed(global::JSONEmbed je, bool loadMerge = default, bool editMode = default) { }
-  public global::SimpleJSON.JSONNode LoadJSON(string saveName) { return default; }
   public void LoadMerge(string saveName = default) { }
   public string NormalizeDirectoryPath(string path) { return ""; }
   public string NormalizeLoadPath(string path) { return ""; }
@@ -2172,7 +2173,6 @@ public partial class SuperController {
   public void RegisterPrefab(string assetBundleName, string assetName, global::UnityEngine.GameObject prefab) { }
   public global::UnityEngine.Rigidbody RigidbodyNameToRigidbody(string rigidbodyName) { return default; }
   public void Save(string saveName = default, global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default, global::SuperController.ScreenShotCallback callback = default, bool isOverwrite = default) { }
-  public void SaveJSON(global::SimpleJSON.JSONClass jc, string saveName) { }
   public void SaveStringIntoFile(string path, string contents) { }
   public void SelectController(global::FreeControllerV3 controller, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
   public void SelectController(string atomName, string controllerName, bool alignView = default, bool alignRotationOnly = default, bool alignUpDown = default, bool openUI = default) { }
