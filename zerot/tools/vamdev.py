@@ -396,6 +396,67 @@ def cmd_simall():
     return ok
 
 
+def scene_lint(path):
+    """Static scene check (what the sim can't load): CUA/plugin offsets out of their slider range, absurd values, L/R bone pairs that are not mirrored."""
+    import json, re
+    d = json.load(open(path, encoding='utf-8'))
+    issues = []
+    LIMITS = {'xOffset': 0.1, 'yOffset': 0.1, 'zOffset': 0.1}
+    def walk(o, trail):
+        if isinstance(o, dict):
+            if 'Parent Bone' in o and any(k in o for k in LIMITS):
+                for k, lim in LIMITS.items():
+                    try:
+                        v = float(o.get(k, 0))
+                    except ValueError:
+                        continue
+                    if abs(v) > lim * 5:
+                        issues.append((trail + [o.get('id', '?')], '%s=%s beyond 5x the +-%s slider range (plugin accepts it on load -> object ends up far away)' % (k, o.get(k), lim)))
+                pairs.append((trail, o))
+            for k, v in o.items():
+                if isinstance(v, (dict, list)):
+                    walk(v, trail + [k if not isinstance(o.get('id'), str) else o['id']])
+        elif isinstance(o, list):
+            for v in o:
+                walk(v, trail)
+    pairs = []
+    walk(d, [])
+    # L/R mirror check: same plugin group, bones lX / rX, local offset should be (-x, y, z) of the other
+    by = {}
+    for trail, o in pairs:
+        b = o.get('Parent Bone', '')
+        m = re.match(r'^([lr])([A-Z]\w*)$', b)
+        if m:
+            by.setdefault((tuple(trail[:-1]) if trail else (), m.group(2)), {})[m.group(1)] = o
+    for key, lr in by.items():
+        if 'l' in lr and 'r' in lr:
+            l, r = lr['l'], lr['r']
+            try:
+                lx, ly, lz = (float(l.get(k, 0)) for k in ('xOffset', 'yOffset', 'zOffset'))
+                rx, ry, rz = (float(r.get(k, 0)) for k in ('xOffset', 'yOffset', 'zOffset'))
+            except ValueError:
+                continue
+            if abs(abs(lx) - abs(rx)) > 0.003 or abs(ly - ry) > 0.003 or abs(lz - rz) > 0.003:
+                issues.append((['%s/%s' % (l.get('id'), r.get('id'))], 'L/R %s offsets not mirrored: L(%.4f,%.4f,%.4f) R(%.4f,%.4f,%.4f)' % (key[1], lx, ly, lz, rx, ry, rz)))
+    return issues
+
+
+def cmd_scenelint(target):
+    import glob
+    files = [target] if target.lower().endswith('.json') else glob.glob(os.path.join(target, '**', '*.json'), recursive=True)
+    bad = 0
+    for f in files:
+        try:
+            iss = scene_lint(f)
+        except Exception:
+            continue
+        for trail, msg in iss:
+            bad += 1
+            print('%s :: %s :: %s' % (os.path.basename(f), trail[-1] if trail else '', msg))
+    print('scenelint: %d file(s), %d issue(s)' % (len(files), bad))
+    return bad == 0
+
+
 def main(argv):
     if len(argv) < 2 or argv[1] in ('-h', '--help', 'help'):
         print(__doc__)
@@ -426,6 +487,8 @@ def main(argv):
         return 0 if cmd_cslcheck(a[0], a[1]) else 1
     elif c == 'simall':
         return 0 if cmd_simall() else 1
+    elif c == 'scenelint':
+        return 0 if cmd_scenelint(a[0]) else 1
     elif c == 'sheet':
         cmd_sheet(a[0] if a else None)
     elif c == 'simtargets':
