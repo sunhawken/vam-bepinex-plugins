@@ -132,7 +132,7 @@ namespace ZeroT.UiKit
 		{
 			if (panelTex == null)
 			{
-				panelTex = MakeTex(new Color(0.04f, 0.04f, 0.04f, 0.72f));
+				panelTex = MakeTex(new Color(0.04f, 0.04f, 0.04f, 0.97f));
 				edgeTex = MakeTex(new Color(0.40f, 0.40f, 0.40f, 1f));
 			}
 			GUI.DrawTexture(r, panelTex);
