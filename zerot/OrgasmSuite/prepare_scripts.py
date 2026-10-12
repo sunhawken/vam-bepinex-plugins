@@ -123,6 +123,19 @@ def patch_sexyfluids_bundle(t):
                  'bundleFileName = $"{metaData.pluginPath}/data/Foost.SexyFluids.fluid_shaders.assetbundle";', what='bundle name')
 
 
+def patch_bl_fillmeup(t):
+    t = t.replace('\r\n', '\n')
+    t = patch(t, """				orificeForceGroup.Update();
+				handForceGroup.Update();
+				UpdateBulge();
+""", """				// [OrgasmSuite] before everything is built (or when the person it was built for is gone) these are still null: that threw here every frame
+				if (orificeForceGroup != null) orificeForceGroup.Update();
+				if (handForceGroup != null) handForceGroup.Update();
+				if (anus != null && vagina != null && throat != null && bellyBulgeMorphs != null && throatBulgeMorphs != null) UpdateBulge();
+""", what='fillmeup update')
+    return t
+
+
 def patch_bl_orifice(t):
     t = t.replace('\r\n', '\n')
     t = patch(t, """		public void GetDepthAndSpeed()
@@ -150,6 +163,73 @@ def patch_bl_orifice(t):
 			if (penetrator == null) return;   // [OrgasmSuite] nothing in the orifice: the depth / stretch / stimulation below all need the penetrator
 			GetDepthAndSpeed();
 """, what='orifice fixedupdate')
+    return t
+
+
+def patch_lite_collision(t):
+    """BodyLanguage Lite: it can already switch self stimulation; add the other half (other Persons / CUA atoms) so the suite can offer None / Self / Person+CUA / Both"""
+    t = t.replace('\r\n', '\n')
+    t = patch(t, "        JSONStorableBool selfStimulationJ;\n", "        JSONStorableBool selfStimulationJ;\n        JSONStorableBool otherStimulationJ;   // [OrgasmSuite]\n", what='lite field')
+    t = patch(t, """            selfStimulationJ.setCallbackFunction += delegate(bool value) { ForceRebuildPairs(); };
+""", """            selfStimulationJ.setCallbackFunction += delegate(bool value) { ForceRebuildPairs(); };
+            otherStimulationJ = NewBool("Allow Other Stimulation", true);   // [OrgasmSuite] other Persons and CUA atoms
+            otherStimulationJ.setCallbackFunction += delegate(bool value) { ForceRebuildPairs(); };
+""", what='lite create')
+    t = patch(t, """            TT(CreateToggle(selfStimulationJ, false), "Allows the character's own hands, feet, and genitals to stimulate themselves.");
+""", """            TT(CreateToggle(selfStimulationJ, false), "Allows the character's own hands, feet, and genitals to stimulate themselves.");
+            TT(CreateToggle(otherStimulationJ, false), "Allows other Persons and CUA atoms (toys, props) to stimulate this character. Off = only self stimulation (if allowed) counts.");
+""", what='lite ui')
+    t = patch(t, """            if (atom == containingAtom) return AllowSelfStimulation();
+""", """            if (atom == containingAtom) return AllowSelfStimulation();
+            if (!AllowOtherStimulation()) return false;   // [OrgasmSuite]
+""", what='lite atoms')
+    t = patch(t, """                    if (!AllowSelfStimulation() && isSelfHit) continue;
+""", """                    if (!AllowSelfStimulation() && isSelfHit) continue;
+                    if (!isSelfHit && !AllowOtherStimulation()) continue;   // [OrgasmSuite]
+""", what='lite overlap')
+    t = patch(t, """        bool AllowSelfStimulation()
+        {""", """        bool AllowOtherStimulation()
+        {
+            return otherStimulationJ == null || otherStimulationJ.val;
+        }
+
+        bool AllowSelfStimulation()
+        {""", what='lite helper')
+    return t
+
+
+FILTER_CS = '''using UnityEngine;
+
+// [OrgasmSuite] one switch for where touch-based arousal may come from; the suite sets Mode through reflection
+// 0 = nothing, 1 = other Persons / CUA atoms, 2 = the Person itself, 3 = both
+public static class OrgasmSuiteFilter
+{
+    public static int Mode = 1;
+
+    public static bool Allows(Atom self, Atom other)
+    {
+        if (other == null) return Mode != 0;
+        bool isSelf = other == self;
+        switch (Mode)
+        {
+            case 0: return false;
+            case 1: return !isSelf;
+            case 2: return isSelf;
+            default: return true;
+        }
+    }
+}
+'''
+
+
+def patch_bl_listener(t):
+    t = t.replace('\r\n', '\n')
+    t = patch(t, """		public void RegisterCollision(TouchCollisionTrigger collisionTrigger){
+			if(touchEnabled.val){""", """		public void RegisterCollision(TouchCollisionTrigger collisionTrigger){
+			// [OrgasmSuite] touch arousal only from the sources the window allows (none / self / other Person+CUA / both)
+			Atom suiteOther = null;
+			try { if (collisionTrigger.lastCollision != null && collisionTrigger.lastCollision.collider != null) suiteOther = collisionTrigger.lastCollision.collider.GetAtom(); } catch { }
+			if(touchEnabled.val && OrgasmSuiteFilter.Allows(FillMeUp.atom, suiteOther)){""", what='bl listener')
     return t
 
 
@@ -425,10 +505,12 @@ def build():
         if n.startswith('Saves/PluginData/Foost/SexyFluids/') and not n.endswith('/'):
             put(n, z.read(n), soft=True)
     # BodyLanguage Lite and ArousalHUD: two scripts, two assemblies (VaM runs every MVRScript class it finds in one)
-    add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.BodyLanguageLite', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'BodyLanguage_Lite.cslist'))
+    add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.BodyLanguageLite', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'BodyLanguage_Lite.cslist', {'BodyLanguage_Lite.cs': patch_lite_collision}))
     add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.ArousalHUD', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'ArousalHUD.cslist'))
     # BodyLanguage (full)
-    add_dll('BodyLanguage', 'ZeroT.OrgasmSuite.BodyLanguage', collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist', {'src/FillMeUp/Orifice.cs': patch_bl_orifice}))
+    bl_sources = collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist', {'src/FillMeUp/Orifice.cs': patch_bl_orifice, 'src/shared/TouchCollisionListener.cs': patch_bl_listener, 'src/FillMeUp/FillMeUp.cs': patch_bl_fillmeup})
+    bl_sources['OrgasmSuiteFilter.cs'] = FILTER_CS
+    add_dll('BodyLanguage', 'ZeroT.OrgasmSuite.BodyLanguage', bl_sources)
     # FluidBridge (patched)
     add_dll('FluidBridge', 'ZeroT.OrgasmSuite.FluidBridge', collect_sources('fluidbridge', 'Custom/Scripts/ZeroT/FluidBridge/', 'FluidBridge.cslist', {'FluidBridge.cs': patch_fluidbridge}))
     # AutoTremble (patched), plus the user's default preset when it is missing

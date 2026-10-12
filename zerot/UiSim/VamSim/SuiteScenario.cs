@@ -296,6 +296,29 @@ public static class SuiteScenario
 		var arP = liteW.GetFloatJSONParam("Arousal");
 		h.Check(Math.Abs(lvNow - Math.Max(0f, Math.Min(1f, (arP.val - arP.min) / (arP.max - arP.min)))) < 0.001f && lvNow > 0.3f, "the liquid level is the Lite arousal (" + lvNow.ToString("0.00") + ")");
 		h.Check((float)lvT.Invoke(h.Plugin, new object[] { "NoSuchPerson" }) < 0f, "...and shows nothing for a Person without the engine");
+
+		// ---- collision arousal: None / Person+CUA / Self / Both
+		SetCfg(h, "Man", "Collision", 0);   // keep Man from drifting into an orgasm of his own while the long waits below run
+		var selfSw = liteW.GetBoolJSONParam("Allow Self Stimulation");
+		var otherSw = liteW.GetBoolJSONParam("Allow Other Stimulation");
+		h.Check(selfSw != null && otherSw != null, "BodyLanguage Lite carries both collision switches (the suite added the 'other' one)");
+		SetCfg(h, "Woman", "Collision", 0);
+		St(h, 2.5f);
+		h.Check(!selfSw.val && !otherSw.val, "None: self and other collisions are both off");
+		arP.val = 0.10f;
+		St(h, 6f);
+		h.Check(arP.val < 0.13f, "None: arousal does not climb from collisions (0.10 -> " + arP.val.ToString("0.000") + ")");
+		SetCfg(h, "Woman", "Collision", 1);
+		St(h, 2.5f);
+		h.Check(!selfSw.val && otherSw.val, "Person/CUA: only other atoms count");
+		arP.val = 0.10f;
+		St(h, 6f);
+		h.Check(arP.val > 0.17f, "Person/CUA: the other Person's contact does raise it (0.10 -> " + arP.val.ToString("0.000") + ")");
+		SetCfg(h, "Woman", "Collision", 2); St(h, 2.5f);
+		h.Check(selfSw.val && !otherSw.val, "Self: only the Person's own parts count");
+		SetCfg(h, "Woman", "Collision", 3); St(h, 2.5f);
+		h.Check(selfSw.val && otherSw.val, "Both: self and other");
+		SetCfg(h, "Woman", "Collision", 1); St(h, 2.5f);
 		h.Check(Orgasm(h, woman), "FluidBridge saw Woman's orgasm exactly once (BodyLanguage Lite)");
 		bool trembling = trW.GetBoolJSONParam("Active").val;
 		h.Check(trembling, "AutoTremble on Woman started with the orgasm");
@@ -323,6 +346,8 @@ public static class SuiteScenario
 		// ---- 6. the same on the man: his AutoTremble moves HIS controllers
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 6 errors=" + Sim.Errors.Count);
 		var liteM = Script(man, "BodyLanguage_Lite");
+		SetCfg(h, "Man", "Collision", 1);   // his contact with Woman is what lifts him over the threshold in this simulation
+		St(h, 2.5f);
 		h.Check(Orgasm(h, man), "FluidBridge saw Man's orgasm exactly once");
 		h.Check(trM.GetBoolJSONParam("Active").val, "AutoTremble on Man started with his orgasm");
 		float wigM = Wiggle(man, "hipControl", h, 1.5f);
@@ -356,6 +381,15 @@ public static class SuiteScenario
 		h.Check(Has(woman, "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll"), "the Stimulation HUD was attached");
 		h.Check(Has(man, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll") && !Has(man, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll"), "Man stays on Lite (own setting)");
 		h.Check(Script(woman, "BodyLanguage_Lite") == null && Script(woman, "ArousalHUD") == null, "the old scripts are really gone from Woman");
+		// the same switch for BodyLanguage: a static filter in its touch code
+		var blAsm = Script(woman, "ReadMyLips").GetType().Assembly;
+		var filterT = blAsm.GetType("OrgasmSuiteFilter");
+		var modeF = filterT == null ? null : filterT.GetField("Mode");
+		SetCfg(h, "Woman", "Collision", 2); St(h, 3f);
+		h.Check(modeF != null && (int)modeF.GetValue(null) == 2, "BodyLanguage: Self reaches the touch filter (Mode " + (modeF == null ? "?" : modeF.GetValue(null).ToString()) + ")");
+		SetCfg(h, "Woman", "Collision", 0); St(h, 3f);
+		h.Check(modeF != null && (int)modeF.GetValue(null) == 0, "BodyLanguage: None reaches the touch filter");
+		SetCfg(h, "Woman", "Collision", 1); St(h, 3f);
 		foreach (var e in loadErrors) Console.WriteLine("  load error: " + e);
 
 		// BodyLanguage is a singleton: a second Person asking for it is held back

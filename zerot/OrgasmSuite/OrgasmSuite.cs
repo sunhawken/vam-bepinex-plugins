@@ -53,6 +53,7 @@ namespace ZeroT.OrgasmSuite
 			public string Engine = "Lite";   // Lite | BodyLanguage
 			// what happens during an orgasm on this Person (each one is a part of the suite that can be switched off) + the HUD
 			public bool Fluids = true, Tremble = true, Shuffle = true, Wet = true, Wardrobe = true, Hud = true;
+			public int Collision = 1;   // where touch arousal may come from: 0 none, 1 other Persons / CUA, 2 self, 3 both
 			public float ShuffleDelay = 0f;   // seconds after the orgasm before ZajeShuffle runs
 		}
 
@@ -66,7 +67,7 @@ namespace ZeroT.OrgasmSuite
 		private ConfigEntry<float> _scale, _winX, _winY, _winW, _winH;
 		private ConfigEntry<string> _lastUid;
 
-		private Rect _win = new Rect(60f, 140f, 380f, 545f);
+		private Rect _win = new Rect(60f, 140f, 380f, 595f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
 		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f, CollapsedH = 34f;
@@ -105,7 +106,7 @@ namespace ZeroT.OrgasmSuite
 			_winX = Config.Bind("Window", "X", 60f, "Saved horizontal position.");
 			_winY = Config.Bind("Window", "Y", 140f, "Saved vertical position.");
 			_winW = Config.Bind("Window", "Width", 380f, "Saved width.");
-			_winH = Config.Bind("Window", "Height", 545f, "Saved height.");
+			_winH = Config.Bind("Window", "Height", 595f, "Saved height.");
 			_dpiAware = Config.Bind("Window", "DpiAware", true, "Scale with the monitor's DPI.");
 			_previewFill = Config.Bind("Window", "PreviewFill", -1f, "Show this level (0..1) in the liquid bar instead of the live value (for screenshots). -1 = live.");
 			_lastUid = Config.Bind("State", "LastPerson", "", "Person remembered across sessions.");
@@ -220,7 +221,9 @@ namespace ZeroT.OrgasmSuite
 					c.Hud = f[5] == "1";
 					if (f.Length >= 9) { c.Shuffle = f[6] == "1"; c.Wet = f[7] == "1"; c.Wardrobe = f[8] == "1"; }
 					float sd;
-					if (f.Length >= 10 && float.TryParse(f[9], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sd)) c.ShuffleDelay = Mathf.Clamp(sd, 0f, 60f);   // older files stop at the HUD column
+					if (f.Length >= 10 && float.TryParse(f[9], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sd)) c.ShuffleDelay = Mathf.Clamp(sd, 0f, 60f);
+					int cm;
+					if (f.Length >= 11 && int.TryParse(f[10], out cm)) c.Collision = Mathf.Clamp(cm, 0, 3);   // older files stop at the HUD column
 					_cfg[f[0]] = c;
 				}
 			}
@@ -244,7 +247,8 @@ namespace ZeroT.OrgasmSuite
 					sb.Append(kv.Key).Append('\t').Append(c.On ? "1" : "0").Append('\t').Append(c.Engine).Append('\t')
 						.Append(c.Fluids ? "1" : "0").Append('\t').Append(c.Tremble ? "1" : "0").Append('\t').Append(c.Hud ? "1" : "0")
 							.Append('\t').Append(c.Shuffle ? "1" : "0").Append('\t').Append(c.Wet ? "1" : "0").Append('\t').Append(c.Wardrobe ? "1" : "0")
-							.Append('\t').Append(c.ShuffleDelay.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
+							.Append('\t').Append(c.ShuffleDelay.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))
+						.Append('\t').Append(c.Collision).Append('\n');
 				}
 				File.WriteAllText(p, sb.ToString());
 			}
@@ -480,9 +484,43 @@ namespace ZeroT.OrgasmSuite
 				attachedOne = Apply(a, mgr, lite ? FullHud : LiteHud, false, ref attachedOne, out s);
 				_status[a.uid] = st.ToString();
 				_liquid[a.uid] = FindLiquid(a, lite);
+				PushCollisionMode(a, cfg, lite);
 				PushBridgeSettings(a, cfg);
 			}
 			if (attachedOne) _nextScan = Time.realtimeSinceStartup + 0.8f;
+		}
+
+		// where touch arousal may come from: Lite gets its two switches, BodyLanguage a filter in its touch code
+		private readonly Dictionary<string, string> _collisionPushed = new Dictionary<string, string>();
+
+		private void PushCollisionMode(Atom a, PersonCfg cfg, bool lite)
+		{
+			try
+			{
+				if (!cfg.On) return;
+				MVRScript m = Instance(a, lite ? Lite : Full);
+				if (m == null) return;
+				string sig = cfg.Collision + "|" + m.GetInstanceID();
+				string old;
+				if (_collisionPushed.TryGetValue(a.uid, out old) && old == sig) return;
+				if (lite)
+				{
+					JSONStorableBool self = m.GetBoolJSONParam("Allow Self Stimulation");
+					JSONStorableBool other = m.GetBoolJSONParam("Allow Other Stimulation");
+					if (self == null || other == null) return;
+					self.val = cfg.Collision == 2 || cfg.Collision == 3;
+					other.val = cfg.Collision == 1 || cfg.Collision == 3;
+				}
+				else
+				{
+					Type t = m.GetType().Assembly.GetType("OrgasmSuiteFilter");
+					FieldInfo f = t == null ? null : t.GetField("Mode", BindingFlags.Public | BindingFlags.Static);
+					if (f == null) return;
+					f.SetValue(null, cfg.Collision);
+				}
+				_collisionPushed[a.uid] = sig;
+			}
+			catch { }
 		}
 
 		// what the arousal / stimulation HUD shows: BodyLanguage Lite's "Arousal", BodyLanguage's "Stimulation"
@@ -786,6 +824,16 @@ namespace ZeroT.OrgasmSuite
 			Fx.Text(new Rect(x + w - pw, y, pw, 26f * s), lv < 0f ? "-- %" : Mathf.RoundToInt(lv * 100f) + " %", small, TextAnchor.MiddleRight, Fx.Ink, false);
 			y += 26f * s + 10f * s;
 
+			// ---- where touch arousal may come from
+			Fx.Section(new Rect(x, y, w, 16f * s), "Collision arousal", s);
+			y += 20f * s;
+			float cw = (w - 3f * gap) / 4f;
+			string[] cnames = { "None", "Self", "Person/CUA", "Both" };
+			int[] cvals = { 0, 2, 1, 3 };
+			for (int ci = 0; ci < 4; ci++)
+				if (Fx.Button(new Rect(x + ci * (cw + gap), y, cw, lh), cnames[ci], side, cfg != null && cfg.Collision == cvals[ci], s, false) && cfg != null && cfg.Collision != cvals[ci]) { cfg.Collision = cvals[ci]; changed = true; }
+			y += lh + 10f * s;
+
 			// ---- what happens during an orgasm: one switch per module, in the colour of the side
 			float hw = (w - gap) / 2f;
 			Fx.Section(new Rect(x, y, w, 16f * s), "During orgasm", s);
@@ -827,7 +875,7 @@ namespace ZeroT.OrgasmSuite
 			GUI.enabled = enabled;
 			y += 24f * s + 10f * s;
 
-			if (changed) { SavePeople(); _nextScan = 0f; _pushed.Clear(); }
+			if (changed) { SavePeople(); _nextScan = 0f; _pushed.Clear(); _collisionPushed.Clear(); }
 
 			// ---- status
 			float footer = 34f * s;
