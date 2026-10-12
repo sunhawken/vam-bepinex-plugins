@@ -90,6 +90,15 @@ public static class HudDockScenario
 		h.Check(!visible("Detached UI Panel"), "Detached UI Panel can be hidden");
 		setVis("Detached UI Panel", true);
 
+		// XRay + Slap and Deeper Plugin (the shared in-game window: Window.Show / Window.Collapsed)
+		Fake("zerot.xrayslapstandalone", "Window", "Show", "Window", "Collapsed", true, true);
+		Fake("com.zerot.deeperplugin.standalone", "Window", "Show", "Window", "Collapsed", true, false);
+		resolve();
+		h.Check(found("XRay + Slap") && found("Deeper Plugin") && collapsed("XRay + Slap") && !collapsed("Deeper Plugin"), "XRay + Slap and Deeper Plugin are listed and read");
+		setVis("XRay + Slap", false); setVis("Deeper Plugin", false);
+		h.Check(!visible("XRay + Slap") && !visible("Deeper Plugin"), "both can be hidden");
+		setVis("XRay + Slap", true); setVis("Deeper Plugin", true);
+
 		// a plugin that loads later is picked up
 		var late = Fake("zerot.fluidbridge.helper", "Window", "Show", "Window", "Collapsed", true, false);
 		resolve();

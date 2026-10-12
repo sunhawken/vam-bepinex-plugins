@@ -8,6 +8,6 @@ One vertical window (`ZeroT.HudDock.dll`) with a switch for every other plugin's
 
 It does not patch anything: every plugin already reads a bool from its own BepInEx config each frame (`Window.Show`, `Window.Visible`, `GUI.Visible`, `GUI.VisibleLowImpact`, `Touch Filters.ShowControlWindow` ...), the dock flips that entry (Penetration Counter keeps its window in a private flag, which the dock sets, plus `ShowOnStart` so the next start matches).
 
-Listed: Scene Performance, SmartWardrobe, Anus Physics, CounterThrust, Penis Path Alignment, Move Controls, Thigh Compressor, Penetration Counter, Procedural Slaps, Orifice Dynamics, FastMode, FluidBridge Helper, GiveMeFPS, iamjoi Garments, Detached UI Panel, Orgasm Suite, VPB Random Look. More with `Window.ExtraHuds` (`Label|plugin guid|show section|show key|collapsed section|collapsed key;...`).
+Listed: Scene Performance, SmartWardrobe, Anus Physics, CounterThrust, Penis Path Alignment, Move Controls, Thigh Compressor, Penetration Counter, Procedural Slaps, Orifice Dynamics, FastMode, FluidBridge Helper, GiveMeFPS, iamjoi Garments, XRay + Slap, Deeper Plugin, Detached UI Panel, Orgasm Suite, VPB Random Look. More with `Window.ExtraHuds` (`Label|plugin guid|show section|show key|collapsed section|collapsed key;...`).
 
-Build / test: `python zerot/tools/vamdev.py test huddock` (20 logic checks against stand-in plugins registered like BepInEx registers them + the UI check). Not run in VaM.
+Build / test: `python zerot/tools/vamdev.py test huddock` (22 logic checks against stand-in plugins registered like BepInEx registers them + the UI check). Not run in VaM.

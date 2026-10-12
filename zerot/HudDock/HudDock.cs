@@ -71,6 +71,8 @@ namespace ZeroT.HudDock
 			_targets.Add(T("FluidBridge Helper", "zerot.fluidbridge.helper", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("GiveMeFPS", "com.zerot.givemefps.standalone", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("iamjoi Garments", "zerot.iamjoi.garments.standalone", "Window", "Show", "Window", "Collapsed"));
+			_targets.Add(T("XRay + Slap", "zerot.xrayslapstandalone", "Window", "Show", "Window", "Collapsed"));
+			_targets.Add(T("Deeper Plugin", "com.zerot.deeperplugin.standalone", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("Detached UI Panel", "zero.vam.detached-ui-panel", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("Orgasm Suite", "com.zerot.orgasmsuite", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("VPB Random Look", "com.zerot.vpbrandomlook", "Window", "Show", "Window", "Collapsed"));
@@ -187,7 +189,7 @@ namespace ZeroT.HudDock
 		private ConfigEntry<string> _extra, _previewRows, _state;
 		private ConfigEntry<KeyCode> _hotkey;
 
-		private Rect _win = new Rect(20f, 60f, 290f, 590f);
+		private Rect _win = new Rect(20f, 60f, 290f, 660f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
 		private const float MinW = 260f, MaxW = 480f, MinH = 180f, MaxH = 900f;
@@ -202,7 +204,7 @@ namespace ZeroT.HudDock
 			_winX = Config.Bind("Window", "X", 20f, "Saved horizontal position.");
 			_winY = Config.Bind("Window", "Y", 60f, "Saved vertical position.");
 			_winW = Config.Bind("Window", "Width", 290f, "Saved width.");
-			_winH = Config.Bind("Window", "Height", 590f, "Saved height.");
+			_winH = Config.Bind("Window", "Height", 660f, "Saved height.");
 			_dpiAware = Config.Bind("Window", "DpiAware", true, "Scale with the monitor's DPI.");
 			_hotkey = Config.Bind("Window", "Hotkey", KeyCode.F7, "Shows / hides this window (it has no other way back once closed).");
 			_extra = Config.Bind("Window", "ExtraHuds", "", "More HUDs to list, ';' separated: 'Label|plugin guid|show section|show key|collapsed section|collapsed key' (the last two optional).");
