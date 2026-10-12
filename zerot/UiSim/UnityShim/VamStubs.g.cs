@@ -428,11 +428,20 @@ public partial interface ISubmitHandler {
 public abstract partial class AbstractEventData {
   public AbstractEventData() {}
 }
+public partial class StandaloneInputModule : global::UnityEngine.EventSystems.PointerInputModule {
+  public StandaloneInputModule() {}
+}
 public partial interface IUpdateSelectedHandler {
 }
 public partial interface IDropHandler {
 }
 public partial interface ICancelHandler {
+}
+public abstract partial class PointerInputModule : global::UnityEngine.EventSystems.BaseInputModule {
+  public PointerInputModule() {}
+}
+public abstract partial class BaseInputModule : global::UnityEngine.EventSystems.UIBehaviour {
+  public BaseInputModule() {}
 }
 }
 public partial class MVRPluginManager : global::JSONStorable {
@@ -696,6 +705,9 @@ public partial class UIDynamicTextField : global::UIDynamic {
   public global::UnityEngine.UI.Image backgroundImage;
   public global::UnityEngine.UI.Text UItext;
   public UIDynamicTextField() {}
+}
+public partial class LookInputModule : global::UnityEngine.EventSystems.StandaloneInputModule {
+  public LookInputModule() {}
 }
 public partial class DAZDynamicItem : global::JSONStorableDynamic {
   public bool active { get; set; }

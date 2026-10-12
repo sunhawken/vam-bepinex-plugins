@@ -155,8 +155,10 @@ namespace UnityEngine
 		public static readonly System.Collections.Generic.HashSet<KeyCode> SimDown = new System.Collections.Generic.HashSet<KeyCode>();   // keys "pressed this frame" for the simulator
 		public static bool GetKeyDown(KeyCode k) => SimDown.Contains(k);
 		public static bool GetKey(KeyCode k) => false;
-		public static bool GetMouseButton(int b) => false;
-		public static bool GetMouseButtonDown(int b) => false;
+		public static readonly System.Collections.Generic.HashSet<int> SimMouseHeld = new System.Collections.Generic.HashSet<int>();   // mouse buttons held / pressed this frame, for the simulator
+		public static readonly System.Collections.Generic.HashSet<int> SimMouseDown = new System.Collections.Generic.HashSet<int>();
+		public static bool GetMouseButton(int b) => SimMouseHeld.Contains(b);
+		public static bool GetMouseButtonDown(int b) => SimMouseDown.Contains(b);
 	}
 
 	public static partial class Debug

@@ -38,6 +38,7 @@ namespace ZeroT.HudClickShield
 		private static int overFrame = -1;
 		private static bool overResult;
 		private static Vector3 lastMouse;
+		private static bool pressStartedOnHud;
 
 		public static int RectCount { get { return prev.Count; } }
 
@@ -151,6 +152,11 @@ namespace ZeroT.HudClickShield
 				if (_imgui.Value && ImguiCovers(m)) over = true;
 				else if (_overlay.Value && OverlayCovers(m)) over = true;
 			}
+			// a press belongs to wherever it started: begun on a HUD it stays the HUD's even when dragged off; begun elsewhere (a VaM slider) it is not stolen on the way over a HUD
+			bool down = Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2);
+			bool held = Input.GetMouseButton(0) || Input.GetMouseButton(1) || Input.GetMouseButton(2);
+			if (down) pressStartedOnHud = over;
+			if (held) over = pressStartedOnHud; else pressStartedOnHud = false;
 			if (over != overResult && _debug.Value) log.Info("mouse " + (over ? "over a HUD" : "left the HUD") + " at " + m.x + "," + m.y + " (" + RectCount + " IMGUI rects)");
 			lastMouse = m;
 			overResult = over;
@@ -162,6 +168,9 @@ namespace ZeroT.HudClickShield
 
 		// GUIStyle / GUI draw hooks: the rectangle parameter is always called "position"
 		public static void DrawPrefix(Rect position) { Record(position); }
+
+		// VaM's own uGUI (the menus, sliders, buttons) takes the click through LookInputModule: while the mouse is on a HUD it is simply not asked
+		public static bool UiInputPrefix() { return !MouseOverHud(); }
 
 		public static void ProcessUIPostfix(object __instance)
 		{
@@ -221,10 +230,15 @@ namespace ZeroT.HudClickShield
 			if (guiHitMouse == null) log.Warn("SuperController.GUIhitMouse not found: this VaM version cannot be shielded.");
 			else ok += TryPatch(h, typeof(SuperController), "ProcessUI", null, new HarmonyMethod(typeof(HudClickShieldPlugin).GetMethod("ProcessUIPostfix", BindingFlags.Public | BindingFlags.Static)));
 
+			// the click on the VaM menu behind a HUD: LookInputModule.ProcessMouseAlt is what hands the mouse to VaM's uGUI (and the standalone Process path in case it is on)
+			HarmonyMethod skip = new HarmonyMethod(typeof(HudClickShieldPlugin).GetMethod("UiInputPrefix", BindingFlags.Public | BindingFlags.Static));
+			total++; ok += TryPatch(h, typeof(LookInputModule), "ProcessMouseAlt", skip, null, -1, false);
+			total++; ok += TryPatch(h, typeof(LookInputModule), "Process", skip, null, -1, false);
+
 			log.Info("HUD Click Shield ready: " + ok + " of " + total + " hooks in place.");
 		}
 
-		private static int TryPatch(Harmony h, Type type, string name, HarmonyMethod pre, HarmonyMethod post, int paramCount = -1)
+		private static int TryPatch(Harmony h, Type type, string name, HarmonyMethod pre, HarmonyMethod post, int paramCount = -1, bool needRect = true)
 		{
 			try
 			{
@@ -235,7 +249,7 @@ namespace ZeroT.HudClickShield
 					if (ms[i].Name != name) continue;
 					ParameterInfo[] ps = ms[i].GetParameters();
 					if (paramCount >= 0 && ps.Length != paramCount) continue;
-					if (pre != null)
+					if (pre != null && needRect)
 					{
 						// needs a Rect parameter called "position"
 						bool has = false;

@@ -71,6 +71,36 @@ public static class HudShieldScenario
 		h.Step(3.5f);
 		h.Check(!overlay(250, 320), "a graphic that is not a raycast target does not count");
 
+		// ---- VaM's own menus: the click must not reach them through LookInputModule
+		Func<bool> vamGetsInput = () => (bool)call("UiInputPrefix", new object[0]);
+		Action<float, float> frame = (x, yTop) =>
+		{
+			Time.frameCount++;
+			Input.mousePosition = new Vector3(x, Screen.height - yTop, 0);
+			Event.current.type = EventType.Repaint;
+			call("Record", new object[] { new Rect(100, 100, 200, 150) });   // the HUD window is drawn every frame
+		};
+		Input.SimMouseHeld.Clear(); Input.SimMouseDown.Clear();
+		frame(150, 150);
+		h.Check(!vamGetsInput(), "mouse over the HUD (Random Look's Close All, say): VaM's menu behind it is not given the mouse");
+		frame(500, 500);
+		h.Check(vamGetsInput(), "mouse elsewhere: VaM gets it as usual");
+		frame(150, 150); Input.SimMouseDown.Add(0); Input.SimMouseHeld.Add(0);
+		h.Check(!vamGetsInput(), "the click lands on the HUD: still not VaM's");
+		Input.SimMouseDown.Clear();
+		frame(500, 500);
+		h.Check(!vamGetsInput(), "dragged off the HUD with the button down: the press is still the HUD's");
+		Input.SimMouseHeld.Clear();
+		frame(500, 500);
+		h.Check(vamGetsInput(), "released: VaM gets the mouse again");
+		frame(500, 500); Input.SimMouseDown.Add(0); Input.SimMouseHeld.Add(0);
+		h.Check(vamGetsInput(), "a press that starts on a VaM slider...");
+		Input.SimMouseDown.Clear();
+		frame(150, 150);
+		h.Check(vamGetsInput(), "...is not stolen when the pointer slides over a HUD");
+		Input.SimMouseHeld.Clear();
+		frame(500, 500);
+
 		// ---- the flag VaM reads
 		images["ArousalHUD_Canvas"].raycastTarget = true;
 		h.Step(3.5f);
