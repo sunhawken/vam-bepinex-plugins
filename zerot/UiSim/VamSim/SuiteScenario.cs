@@ -21,7 +21,7 @@ public static class SuiteScenario
 
 	// SexyFluids (screen-space fluid rendering, compute/shader bundle) and BodyLanguage (1.6 MB: PoseMe, FillMeUp, voices...) need far more of Unity than the
 	// simulator has: their attach / detach is tested, their own Init is attempted, and what the simulator cannot do is listed, not hidden
-	private static bool SimLimited(string set) { return set == "SexyFluids" || set == "BodyLanguage"; }
+	private static bool SimLimited(string set) { return set == "ZeroT.OrgasmSuite.SexyFluids" || set == "ZeroT.OrgasmSuite.BodyLanguage"; }
 
 	private static string SuiteDir { get { return Path.GetFullPath(Path.Combine(Harness.CoresDir, "..", "suite")); } }
 
@@ -42,16 +42,20 @@ public static class SuiteScenario
 		int i = rest.IndexOf("OrgasmSuite/");
 		rest = i >= 0 ? rest.Substring(i + "OrgasmSuite/".Length) : rest;
 		set = null; type = null;
-		switch (rest)
+		string file = rest.Substring(rest.LastIndexOf('/') + 1);
+		if (!file.EndsWith(".dll")) return;
+		set = file.Substring(0, file.Length - 4);
+		switch (set)
 		{
-			case "BodyLanguage_Lite/BodyLanguage_Lite.cslist": set = "BodyLanguage_Lite"; type = "BodyLanguage_Lite"; break;
-			case "BodyLanguage_Lite/ArousalHUD.cslist": set = "BodyLanguage_Lite"; type = "ArousalHUD"; break;
-			case "BodyLanguage/BodyLanguage.cslist": set = "BodyLanguage"; type = "ReadMyLips"; break;
-			case "StimulationHUD/StimulationHUD.cslist": set = "StimulationHUD"; type = "StimulationHUD"; break;
-			case "SexyFluids/SexyFluids.cslist": set = "SexyFluids"; type = "SexyFluids"; break;
-			case "FluidBridge/FluidBridge.cslist": set = "FluidBridge"; type = "FluidBridge"; break;
-			case "AutoTremble/AutoTremble.cs": set = "AutoTremble"; type = "AutoTremble"; break;
-			case "ZajeShuffle/ZajeShuffle.cslist": set = "ZajeShuffle"; type = "ZajeShuffle"; break;
+			case "ZeroT.OrgasmSuite.BodyLanguageLite": type = "BodyLanguage_Lite"; break;
+			case "ZeroT.OrgasmSuite.ArousalHUD": type = "ArousalHUD"; break;
+			case "ZeroT.OrgasmSuite.BodyLanguage": type = "ReadMyLips"; break;
+			case "ZeroT.OrgasmSuite.StimulationHUD": type = "StimulationHUD"; break;
+			case "ZeroT.OrgasmSuite.SexyFluids": type = "SexyFluids"; break;
+			case "ZeroT.OrgasmSuite.FluidBridge": type = "FluidBridge"; break;
+			case "ZeroT.OrgasmSuite.AutoTremble": type = "AutoTremble"; break;
+			case "ZeroT.OrgasmSuite.ZajeShuffle": type = "ZajeShuffle"; break;
+			default: set = null; break;
 		}
 	}
 
@@ -196,6 +200,9 @@ public static class SuiteScenario
 		if (Directory.Exists(game)) Directory.Delete(game, true);
 		Directory.CreateDirectory(Path.Combine(game, "Saves", "PluginPresets", "AutoTremble"));
 		BepInEx.Paths.GameRootPath = game;
+		// a leftover from the earlier source-based build must disappear
+		Directory.CreateDirectory(Path.Combine(game, "Custom", "Scripts", "ZeroT", "OrgasmSuite", "old"));
+		File.WriteAllText(Path.Combine(game, "Custom", "Scripts", "ZeroT", "OrgasmSuite", "old", "Leftover.cs"), "// old");
 		// the user's own preset must survive: it is only written when missing
 		File.WriteAllText(Path.Combine(game, "Saves", "PluginPresets", "AutoTremble", "AutoTremblePreset.json"), TremblePreset);
 
@@ -210,40 +217,44 @@ public static class SuiteScenario
 		var core = Core(h);
 		var woman = Person(h, "Woman", false);
 		var man = Person(h, "Man", true);
+		// the real defaults (15 s settle, 6 s quiet) would only slow the test down; the gating itself is exercised below
+		BepInEx.Configuration.ConfigFile.Overrides["Suite.SettleSeconds"] = "1";
+		BepInEx.Configuration.ConfigFile.Overrides["Suite.QuietSeconds"] = "1";
 		h.Start();
 		h.Check(h.Plugin != null, "the plugin starts");
 
 		// ---- 1. the embedded script pack lands on disk
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 1 errors=" + Sim.Errors.Count);
 		string sd = Path.Combine(game, "Custom", "Scripts", "ZeroT", "OrgasmSuite");
-		foreach (var f in new[] { "FluidBridge/FluidBridge.cslist", "FluidBridge/FluidBridge.cs", "AutoTremble/AutoTremble.cs", "BodyLanguage_Lite/BodyLanguage_Lite.cslist", "BodyLanguage_Lite/ArousalHUD.cslist",
-			"BodyLanguage/BodyLanguage.cslist", "StimulationHUD/StimulationHUD.cslist", "ZajeShuffle/ZajeShuffle.cslist", "SexyFluids/SexyFluids.cslist", "SexyFluids/data/Foost.SexyFluids.fluid_shaders.assetbundle" })
+		foreach (var f in new[] { "FluidBridge/ZeroT.OrgasmSuite.FluidBridge.dll", "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll", "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll", "BodyLanguage_Lite/ZeroT.OrgasmSuite.ArousalHUD.dll",
+			"BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll", "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll", "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll", "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll", "SexyFluids/data/Foost.SexyFluids.fluid_shaders.assetbundle" })
 			h.Check(File.Exists(Path.Combine(sd, f.Replace('/', Path.DirectorySeparatorChar))), "extracted " + f);
 		int nfiles = Directory.GetFiles(sd, "*", SearchOption.AllDirectories).Length;
-		h.Check(nfiles >= 190, "all the scripts are there (" + nfiles + " files)");
+		h.Check(nfiles == 9, "the suite folder holds exactly the 8 assemblies + the shader bundle (" + nfiles + " files)");
 		h.Check(File.ReadAllText(Path.Combine(game, "Saves", "PluginPresets", "AutoTremble", "AutoTremblePreset.json")) == TremblePreset, "the user's AutoTremble preset was not overwritten");
 		h.Check(Directory.GetFiles(Path.Combine(game, "Saves", "PluginData", "Foost", "SexyFluids", "JizzSim"), "*.json").Length >= 5, "SexyFluids' shipped presets were added where missing");
-		string fbText = File.ReadAllText(Path.Combine(sd, "FluidBridge", "FluidBridge.cs"));
-		h.Check(fbText.Contains("OrgasmHooks") && fbText.Contains("const string Version = \"28\""), "FluidBridge is the patched v28");
-		h.Check(File.ReadAllText(Path.Combine(sd, "AutoTremble", "AutoTremble.cs")).Contains("Target Self (added atom)"), "AutoTremble is the self-targeting build");
+		h.Check(File.Exists(Path.Combine(sd, "old", "Leftover.cs")) == false, "files left by the earlier source-based build are removed");
+		var fbT0 = TypeOf(Asm(h, "ZeroT.OrgasmSuite.FluidBridge"), "FluidBridge");
+		h.Check(fbT0.GetMethod("OrgasmHooks", All) != null, "FluidBridge is the patched v28 (orgasm hooks)");
+		h.Check(TypeOf(Asm(h, "ZeroT.OrgasmSuite.AutoTremble"), "AutoTremble").GetField("targetSelf", All) != null, "AutoTremble is the self-targeting build");
 
 		// ---- 2. everything attaches, one change per scan
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 2 errors=" + Sim.Errors.Count);
 		St(h, 16f);
-		string[] womanWants = { "BodyLanguage_Lite/BodyLanguage_Lite.cslist", "SexyFluids/SexyFluids.cslist", "FluidBridge/FluidBridge.cslist", "AutoTremble/AutoTremble.cs", "BodyLanguage_Lite/ArousalHUD.cslist" };
+		string[] womanWants = { "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll", "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll", "FluidBridge/ZeroT.OrgasmSuite.FluidBridge.dll", "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll", "BodyLanguage_Lite/ZeroT.OrgasmSuite.ArousalHUD.dll" };
 		foreach (var u in womanWants)
 		{
 			h.Check(Has(woman, u), "Woman has " + u);
 			// every HUD pins itself to the same desktop spot: only the first Person starts with one
 			h.Check(u.Contains("ArousalHUD") ? !Has(man, u) : Has(man, u), u.Contains("ArousalHUD") ? "Man starts without a HUD (Woman has it)" : "Man has " + u);
 		}
-		h.Check(Has(core, "ZajeShuffle/ZajeShuffle.cslist"), "CoreControl has ZajeShuffle (session wide)");
-		h.Check(!Has(woman, "BodyLanguage/BodyLanguage.cslist") && !Has(woman, "StimulationHUD/StimulationHUD.cslist"), "default engine is Lite: no BodyLanguage, no Stimulation HUD");
+		h.Check(Has(core, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "CoreControl has ZajeShuffle (session wide)");
+		h.Check(!Has(woman, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll") && !Has(woman, "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll"), "default engine is Lite: no BodyLanguage, no Stimulation HUD");
 		foreach (var e in loadErrors) Console.WriteLine("  load error: " + e);
 		h.Check(loadErrors.Count == 0, "no script failed to load or Init (" + loadErrors.Count + " errors)");
 		SetCfg(h, "Man", "Hud", true);
 		St(h, 4f);
-		h.Check(Has(man, "BodyLanguage_Lite/ArousalHUD.cslist"), "...and gets its own when switched on");
+		h.Check(Has(man, "BodyLanguage_Lite/ZeroT.OrgasmSuite.ArousalHUD.dll"), "...and gets its own when switched on");
 		foreach (var set in new[] { "BodyLanguage_Lite", "SexyFluids", "FluidBridge", "AutoTremble", "ArousalHUD" })
 			h.Check(Script(woman, set) != null, "a running " + set + " script is on Woman");
 
@@ -331,32 +342,32 @@ public static class SuiteScenario
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 7 errors=" + Sim.Errors.Count);
 		SetCfg(h, "Woman", "Engine", "BodyLanguage");
 		St(h, 10f);
-		h.Check(!Has(woman, "BodyLanguage_Lite/BodyLanguage_Lite.cslist") && !Has(woman, "BodyLanguage_Lite/ArousalHUD.cslist"), "Lite and the Arousal HUD were detached");
-		h.Check(Has(woman, "BodyLanguage/BodyLanguage.cslist"), "BodyLanguage was attached");
-		h.Check(Has(woman, "StimulationHUD/StimulationHUD.cslist"), "the Stimulation HUD was attached");
-		h.Check(Has(man, "BodyLanguage_Lite/BodyLanguage_Lite.cslist") && !Has(man, "BodyLanguage/BodyLanguage.cslist"), "Man stays on Lite (own setting)");
+		h.Check(!Has(woman, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll") && !Has(woman, "BodyLanguage_Lite/ZeroT.OrgasmSuite.ArousalHUD.dll"), "Lite and the Arousal HUD were detached");
+		h.Check(Has(woman, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll"), "BodyLanguage was attached");
+		h.Check(Has(woman, "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll"), "the Stimulation HUD was attached");
+		h.Check(Has(man, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll") && !Has(man, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll"), "Man stays on Lite (own setting)");
 		h.Check(Script(woman, "BodyLanguage_Lite") == null && Script(woman, "ArousalHUD") == null, "the old scripts are really gone from Woman");
 		foreach (var e in loadErrors) Console.WriteLine("  load error: " + e);
 
 		// BodyLanguage is a singleton: a second Person asking for it is held back
 		SetCfg(h, "Man", "Engine", "BodyLanguage");
 		St(h, 6f);
-		h.Check(!Has(man, "BodyLanguage/BodyLanguage.cslist"), "a second Person cannot take BodyLanguage while Woman has it");
+		h.Check(!Has(man, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll"), "a second Person cannot take BodyLanguage while Woman has it");
 
 		// ---- 8. parts on/off
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 8 errors=" + Sim.Errors.Count);
 		SetCfg(h, "Woman", "Tremble", false);
 		St(h, 3f);
-		h.Check(!Has(woman, "AutoTremble/AutoTremble.cs"), "Tremble off: AutoTremble detached");
+		h.Check(!Has(woman, "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll"), "Tremble off: AutoTremble detached");
 		SetCfg(h, "Woman", "Fluids", false);
 		St(h, 4f);
-		h.Check(!Has(woman, "SexyFluids/SexyFluids.cslist"), "Fluids off: SexyFluids detached");
+		h.Check(!Has(woman, "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll"), "Fluids off: SexyFluids detached");
 		SetCfg(h, "Woman", "Hud", false);
 		St(h, 3f);
-		h.Check(!Has(woman, "StimulationHUD/StimulationHUD.cslist"), "HUD off: Stimulation HUD detached");
+		h.Check(!Has(woman, "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll"), "HUD off: Stimulation HUD detached");
 		SetCfg(h, "Woman", "Fluids", true); SetCfg(h, "Woman", "Tremble", true); SetCfg(h, "Woman", "Hud", true);
 		St(h, 10f);
-		h.Check(Has(woman, "SexyFluids/SexyFluids.cslist") && Has(woman, "AutoTremble/AutoTremble.cs") && Has(woman, "StimulationHUD/StimulationHUD.cslist"), "...and they come back when switched on again");
+		h.Check(Has(woman, "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll") && Has(woman, "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll") && Has(woman, "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll"), "...and they come back when switched on again");
 
 		// ---- 9. Suite OFF removes only the suite's own scripts
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 9 errors=" + Sim.Errors.Count);
@@ -364,28 +375,36 @@ public static class SuiteScenario
 		SetCfg(h, "Man", "On", false);
 		St(h, 10f);
 		h.Check(SlotUrls(man).Count == 0, "Suite OFF: Man has no suite script left (" + SlotUrls(man).Count + ")");
-		h.Check(Has(core, "ZajeShuffle/ZajeShuffle.cslist"), "ZajeShuffle on CoreControl is session wide and stays");
+		h.Check(Has(core, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "ZajeShuffle on CoreControl is session wide and stays");
 		SetCfg(h, "Man", "On", true);
 		St(h, 10f);
-		h.Check(Has(man, "FluidBridge/FluidBridge.cslist") && Has(man, "BodyLanguage_Lite/BodyLanguage_Lite.cslist"), "Suite ON again: Man's scripts are back");
+		h.Check(Has(man, "FluidBridge/ZeroT.OrgasmSuite.FluidBridge.dll") && Has(man, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll"), "Suite ON again: Man's scripts are back");
 
 		// ---- 10. a script somebody else loaded is left alone
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 10 errors=" + Sim.Errors.Count);
 		var other = Person(h, "Third", false);
-		var asmFb = Asm(h, "FluidBridge");
+		var asmFb = Asm(h, "ZeroT.OrgasmSuite.FluidBridge");
 		var fbType = TypeOf(asmFb, "FluidBridge");
 		var ext = SceneHost.Spawn(fbType, other, ((MVRPluginManager)other.GetStorableByID("PluginManager")).gameObject, "plugin#9", "ZeroT.FluidBridge.27:/Custom/Scripts/ZeroT/FluidBridge/FluidBridge.cslist");
 		ext.Init();
 		St(h, 10f);
-		h.Check(!Has(other, "FluidBridge/FluidBridge.cslist"), "a FluidBridge loaded from a .var is not duplicated");
-		h.Check(Has(other, "SexyFluids/SexyFluids.cslist") && Has(other, "BodyLanguage_Lite/BodyLanguage_Lite.cslist"), "...the rest of the suite still attaches to that Person");
+		h.Check(!Has(other, "OrgasmSuite/FluidBridge/ZeroT.OrgasmSuite.FluidBridge.dll"), "a FluidBridge loaded from a .var is not duplicated");
+		h.Check(Has(other, "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll") && Has(other, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll"), "...the rest of the suite still attaches to that Person");
 
 		// a scene's own .var plugin that is still compiling: its slot is there, its script is not yet
 		var fourth = Person(h, "Fourth", false);
 		var fm = (MVRPluginManager)fourth.GetStorableByID("PluginManager");
 		fm.CreatePlugin().pluginURLJSON.val = "ZeroT.FluidBridge.27:/Custom/Scripts/ZeroT/FluidBridge/FluidBridge.cslist";
 		St(h, 10f);
-		h.Check(!Has(fourth, "OrgasmSuite/FluidBridge/FluidBridge.cslist") && fm.plugins.Count(p => p.pluginURLJSON.val.EndsWith("FluidBridge.cslist")) == 1, "a .var's FluidBridge slot that is still compiling is not duplicated either");
+		h.Check(!Has(fourth, "OrgasmSuite/FluidBridge/ZeroT.OrgasmSuite.FluidBridge.dll") && fm.plugins.Count(p => p.pluginURLJSON.val.EndsWith("FluidBridge.cslist")) == 1, "a .var's FluidBridge slot that is still compiling is not duplicated either");
+
+		// ---- 10b. VaM is still restoring a scene: slots keep changing, nothing may be attached until it is quiet (attaching mid-restore crashed VaM)
+		var late = Person(h, "Late", false);
+		var lm = (MVRPluginManager)late.GetStorableByID("PluginManager");
+		for (int i = 0; i < 5; i++) { lm.CreatePlugin().pluginURLJSON.val = "SomePkg.1:/Custom/Scripts/x/Other" + i + ".cs"; St(h, 0.8f); }
+		h.Check(!SlotUrls(late).Any(u => u.Contains("OrgasmSuite")), "while a Person's plugin slots keep changing the suite attaches nothing");
+		St(h, 10f);
+		h.Check(Has(late, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll"), "...and starts once the scene has been quiet");
 
 		// ---- 11. a scene load: everything is replaced, the suite re-attaches from the saved per-Person settings
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 11 errors=" + Sim.Errors.Count);
@@ -395,22 +414,30 @@ public static class SuiteScenario
 			Person(h, "Woman", false);
 			Person(h, "Man", true);
 		});
+		St(h, 0.5f);
+		h.Check(SlotUrls(h.Sc.GetAtomByUid("Woman")).Count == 0, "right after a scene load nothing is attached yet (it waits for the scene to settle)");
 		St(h, 24f);
 		var woman2 = h.Sc.GetAtomByUid("Woman");
 		var man2 = h.Sc.GetAtomByUid("Man");
-		h.Check(Has(woman2, "BodyLanguage/BodyLanguage.cslist"), "after a scene load Woman is on BodyLanguage again (saved per-Person choice)");
-		h.Check(Has(man2, "BodyLanguage_Lite/BodyLanguage_Lite.cslist"), "...and Man on Lite");
-		h.Check(Has(h.Sc.GetAtomByUid("CoreControl"), "ZajeShuffle/ZajeShuffle.cslist"), "...and ZajeShuffle on the new CoreControl");
+		h.Check(Has(woman2, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll"), "after a scene load Woman is on BodyLanguage again (saved per-Person choice)");
+		h.Check(Has(man2, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll"), "...and Man on Lite");
+		h.Check(Has(h.Sc.GetAtomByUid("CoreControl"), "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "...and ZajeShuffle on the new CoreControl");
 		string people = File.ReadAllText(Path.Combine(game, "Saves", "PluginData", "ZeroT", "OrgasmSuite", "people.tsv"));
 		h.Check(people.Contains("Woman\t1\tBodyLanguage") && people.Contains("Man\t1\tLite"), "people.tsv holds the choices");
 
-		// ---- 12. the master switch
+		// ---- 12. the master switch / auto attach off
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 12 errors=" + Sim.Errors.Count);
 		h.Set("Suite", "Active", "false");
 		int before = SlotUrls(woman2).Count;
 		SetCfg(h, "Woman", "Engine", "Lite");
 		St(h, 8f);
 		h.Check(SlotUrls(woman2).Count == before, "Active=false: the suite changes nothing");
+		h.Set("Suite", "Active", "true");
+		h.Set("Suite", "AutoAttach", "false");
+		SetCfg(h, "Woman", "Engine", "BodyLanguage");
+		St(h, 8f);
+		h.Check(SlotUrls(woman2).Count == before, "AutoAttach=false: the suite never touches a Person");
+		h.Set("Suite", "AutoAttach", "true");
 		foreach (var e in loadErrors) Console.WriteLine("  load error: " + e);
 		h.Check(loadErrors.Count == 0, "no script failed to load or Init over the whole run (" + loadErrors.Count + " errors)");
 
@@ -456,8 +483,8 @@ public static class SuiteHudScenario
 		var asmCache = new Dictionary<string, Assembly>();
 		MVRPluginManager.SimLoader = (m, plugin, url) =>
 		{
-			string set = url.Contains("StimulationHUD") ? "StimulationHUD" : "BodyLanguage_Lite";
-			string type = url.EndsWith("ArousalHUD.cslist") ? "ArousalHUD" : url.EndsWith("StimulationHUD.cslist") ? "StimulationHUD" : "BodyLanguage_Lite";
+			string set = url.Contains("StimulationHUD") ? "ZeroT.OrgasmSuite.StimulationHUD" : (url.Contains("ArousalHUD") ? "ZeroT.OrgasmSuite.ArousalHUD" : "ZeroT.OrgasmSuite.BodyLanguageLite");
+			string type = url.EndsWith("ArousalHUD.dll") ? "ArousalHUD" : url.EndsWith("StimulationHUD.dll") ? "StimulationHUD" : "BodyLanguage_Lite";
 			Assembly asm;
 			if (!asmCache.TryGetValue(set, out asm)) { asm = Assembly.LoadFrom(Program.Retarget(Path.Combine(Path.GetFullPath(Path.Combine(Harness.CoresDir, "..", "suite")), set + ".dll"), h.Work)); asmCache[set] = asm; }
 			var t = asm.GetTypes().First(x => typeof(MVRScript).IsAssignableFrom(x) && !x.IsAbstract && x.Name == type);
@@ -471,8 +498,8 @@ public static class SuiteHudScenario
 			return a.gameObject.GetComponentsInChildren<MVRScript>(true).Last();
 		};
 		const string root = "Custom/Scripts/ZeroT/OrgasmSuite/";
-		var lite = attach(root + "BodyLanguage_Lite/BodyLanguage_Lite.cslist");
-		var hud = attach(root + "BodyLanguage_Lite/ArousalHUD.cslist");
+		var lite = attach(root + "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll");
+		var hud = attach(root + "BodyLanguage_Lite/ZeroT.OrgasmSuite.ArousalHUD.dll");
 		h.Step(3f);
 		var arousal = lite.GetFloatJSONParam("Arousal");
 		arousal.val = 0.62f;
@@ -489,7 +516,7 @@ public static class SuiteHudScenario
 		var bl = (CheesyFX.ReadMyLips)go.AddComponent(typeof(CheesyFX.ReadMyLips));
 		bl.containingAtom = a; bl.storeId = "plugin#7_CheesyFX.ReadMyLips"; bl.enabledJSON = new JSONStorableBool("enabled", true); bl.pluginLabelJSON = new JSONStorableString("pluginLabel", "");
 		a.RegisterAdditionalStorable(bl); bl.Init();
-		var stim = attach(root + "StimulationHUD/StimulationHUD.cslist");
+		var stim = attach(root + "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll");
 		h.Step(3f);
 		bl.stimulation.val = 0.45f;
 		h.Step(1.5f);

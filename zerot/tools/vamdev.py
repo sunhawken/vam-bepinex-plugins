@@ -143,7 +143,7 @@ def cmd_test(arg):
             continue
         if n in HEADLESS:
             if n == 'orgasmsuite':
-                ok = cmd_suitetargets() and ok
+                ok = cmd_suitetargets(None, False) and ok
             ok = sim_logic(n) and ok
             if n in UI_PLUGINS:
                 ok = sim_ui(n) and ok
@@ -335,25 +335,26 @@ def cmd_simtargets():
 SUITE_SETS = ['FluidBridge', 'AutoTremble', 'BodyLanguage_Lite', 'ZajeShuffle', 'StimulationHUD', 'SexyFluids', 'BodyLanguage']
 
 
-def cmd_suitetargets(only=None):
-    """stage the OrgasmSuite scripts from the user's .var files (patches applied) and compile each set into UiSim/in/suite/<set>.dll"""
-    prep = os.path.join(ZEROT, 'OrgasmSuite', 'prepare_scripts.py')
-    r = run([sys.executable, prep, VAM], quiet=True)
-    print((r.stdout or '').strip() or (r.stderr or '').strip())
-    if r.returncode != 0:
-        return False
-    stage = os.path.join(ZEROT, 'OrgasmSuite', 'build', 'stage', 'Custom', 'Scripts', 'ZeroT', 'OrgasmSuite')
-    ok = True
-    for name in SUITE_SETS:
-        if only and name not in only:
-            continue
-        short = os.path.join(tempfile.gettempdir(), 'osc_' + name)
-        shutil.rmtree(short, ignore_errors=True)
-        shutil.copytree(os.path.join(stage, name), os.path.join(short, 's', name))
-        print('== suite set ' + name)
-        ok = cmd_cslcheck(short, os.path.join(SIM, 'in', 'suite', name + '.dll')) and ok
-        shutil.rmtree(short, ignore_errors=True)
-    return ok
+def cmd_suitetargets(only=None, prepare=True):
+    """build the OrgasmSuite script assemblies from the user's .var files (patches applied, Roslyn net35) and copy them into UiSim/in/suite for the simulator"""
+    if prepare:
+        prep = os.path.join(ZEROT, 'OrgasmSuite', 'prepare_scripts.py')
+        r = run([sys.executable, prep, VAM], quiet=True)
+        print((r.stdout or '').strip() or (r.stderr or '').strip())
+        if r.returncode != 0:
+            return False
+    src = os.path.join(ZEROT, 'OrgasmSuite', 'build', 'dll')
+    dst = os.path.join(SIM, 'in', 'suite')
+    if os.path.isdir(dst):
+        shutil.rmtree(dst)
+    os.makedirs(dst)
+    n = 0
+    for f in sorted(os.listdir(src)):
+        if f.endswith('.dll'):
+            shutil.copy(os.path.join(src, f), dst)
+            n += 1
+    print('%d suite assemblies -> %s' % (n, dst))
+    return n > 0
 
 
 def scene_plugins(scene):

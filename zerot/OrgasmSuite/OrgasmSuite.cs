@@ -27,20 +27,23 @@ namespace ZeroT.OrgasmSuite
 		public sealed class Comp
 		{
 			public readonly string Key, Label, Url, TypeName;
-			public Comp(string key, string label, string url, string typeName)
+			public readonly string[] Ext;   // file names a scene's own .var plugin for the same script goes by
+			public Comp(string key, string label, string url, string typeName, params string[] ext)
 			{
-				Key = key; Label = label; Url = url; TypeName = typeName;
+				Key = key; Label = label; Url = url; TypeName = typeName; Ext = ext;
 			}
 		}
 
-		public static readonly Comp Lite = new Comp("lite", "BodyLanguage Lite", Root + "BodyLanguage_Lite/BodyLanguage_Lite.cslist", "BodyLanguage_Lite");
-		public static readonly Comp LiteHud = new Comp("litehud", "Arousal HUD", Root + "BodyLanguage_Lite/ArousalHUD.cslist", "ArousalHUD");
-		public static readonly Comp Full = new Comp("bl", "BodyLanguage", Root + "BodyLanguage/BodyLanguage.cslist", "ReadMyLips");
-		public static readonly Comp FullHud = new Comp("blhud", "Stimulation HUD", Root + "StimulationHUD/StimulationHUD.cslist", "StimulationHUD");
-		public static readonly Comp Sexy = new Comp("sexy", "SexyFluids", Root + "SexyFluids/SexyFluids.cslist", "SexyFluids");
-		public static readonly Comp Bridge = new Comp("bridge", "FluidBridge", Root + "FluidBridge/FluidBridge.cslist", "FluidBridge");
-		public static readonly Comp Tremble = new Comp("tremble", "AutoTremble", Root + "AutoTremble/AutoTremble.cs", "AutoTremble");
-		public static readonly Comp Zaje = new Comp("zaje", "ZajeShuffle", Root + "ZajeShuffle/ZajeShuffle.cslist", "ZajeShuffle");
+		// precompiled assemblies (built from the original scripts, see prepare_scripts.py): VaM loads them like any plugin DLL and its own
+		// script compiler / compile cache is not involved
+		public static readonly Comp Lite = new Comp("lite", "BodyLanguage Lite", Root + "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll", "BodyLanguage_Lite", "BodyLanguage_Lite.cslist");
+		public static readonly Comp LiteHud = new Comp("litehud", "Arousal HUD", Root + "BodyLanguage_Lite/ZeroT.OrgasmSuite.ArousalHUD.dll", "ArousalHUD", "ArousalHUD.cslist");
+		public static readonly Comp Full = new Comp("bl", "BodyLanguage", Root + "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll", "ReadMyLips", "BodyLanguage.cslist");
+		public static readonly Comp FullHud = new Comp("blhud", "Stimulation HUD", Root + "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll", "StimulationHUD", "StimulationHUD.cslist");
+		public static readonly Comp Sexy = new Comp("sexy", "SexyFluids", Root + "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll", "SexyFluids", "SexyFluids.cslist");
+		public static readonly Comp Bridge = new Comp("bridge", "FluidBridge", Root + "FluidBridge/ZeroT.OrgasmSuite.FluidBridge.dll", "FluidBridge", "FluidBridge.cslist");
+		public static readonly Comp Tremble = new Comp("tremble", "AutoTremble", Root + "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll", "AutoTremble", "AutoTremble.cs");
+		public static readonly Comp Zaje = new Comp("zaje", "ZajeShuffle", Root + "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll", "ZajeShuffle", "ZajeShuffle.cslist");
 		public static readonly Comp[] All = { Lite, LiteHud, Full, FullHud, Sexy, Bridge, Tremble, Zaje };
 
 		// ------------------------------------------------------------------ per Person settings
@@ -54,7 +57,8 @@ namespace ZeroT.OrgasmSuite
 		private readonly Dictionary<string, PersonCfg> _cfg = new Dictionary<string, PersonCfg>(StringComparer.Ordinal);
 
 		// ------------------------------------------------------------------ config
-		private ConfigEntry<bool> _active, _females, _males, _shuffle;
+		private ConfigEntry<bool> _active, _females, _males, _shuffle, _autoAttach;
+		private ConfigEntry<float> _settle, _quiet;
 		private ConfigEntry<bool> _showWindow, _collapsed, _dpiAware;
 		private ConfigEntry<float> _scale, _winX, _winY, _winW, _winH;
 		private ConfigEntry<string> _lastUid;
@@ -89,6 +93,9 @@ namespace ZeroT.OrgasmSuite
 			_active = Config.Bind("Suite", "Active", true, "Master switch: when off the suite attaches nothing and leaves everything as it is.");
 			_females = Config.Bind("Suite", "Females", true, "Manage female Person atoms.");
 			_males = Config.Bind("Suite", "Males", true, "Manage male Person atoms.");
+			_autoAttach = Config.Bind("Suite", "AutoAttach", true, "Attach / detach the scripts by itself. Off: the suite never touches a Person (use it only to switch the choices on and off in the window).");
+			_settle = Config.Bind("Suite", "SettleSeconds", 15f, "After a scene load finishes, wait at least this long before attaching anything: VaM keeps restoring the scene's own plugins for a while after it says loading is done, and a script added in the middle of that crashed VaM.");
+			_quiet = Config.Bind("Suite", "QuietSeconds", 6f, "...and until nothing about the atoms or their plugin slots has changed for this long (changes the suite itself makes do not count).");
 			_shuffle = Config.Bind("Suite", "ZajeShuffle", true, "Keep one ZajeShuffle on CoreControl so every orgasm can fire a shuffle.");
 			_showWindow = Config.Bind("Window", "Show", true, "Show the in-game Orgasm Suite window.");
 			_collapsed = Config.Bind("Window", "Collapsed", false, "Collapse the window to its title bar.");
@@ -125,6 +132,7 @@ namespace ZeroT.OrgasmSuite
 			if (rs == null) throw new InvalidDataException("the embedded script pack is missing");
 			int written = 0;
 			string root = Path.GetFullPath(Paths.GameRootPath);
+			HashSet<string> keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			using (rs)
 			using (DeflateStream ds = new DeflateStream(rs, CompressionMode.Decompress))
 			using (BinaryReader br = new BinaryReader(ds))
@@ -144,6 +152,7 @@ namespace ZeroT.OrgasmSuite
 						|| rel.StartsWith("Saves/PluginData/Foost/SexyFluids/", StringComparison.Ordinal)
 						|| rel.StartsWith("Saves/PluginPresets/AutoTremble/", StringComparison.Ordinal);
 					if (!allowed || rel.Contains("..")) throw new InvalidDataException("path outside the suite folders: " + rel);
+					keep.Add(rel);
 					string full = Path.GetFullPath(Path.Combine(root, rel));
 					if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("path escapes the VaM folder: " + rel);
 					if (File.Exists(full))
@@ -159,7 +168,25 @@ namespace ZeroT.OrgasmSuite
 					written++;
 				}
 			}
+			RemoveStaleFiles(root, keep);
 			return written;
+		}
+
+		// the earlier build extracted loose source; only files the current pack knows stay in the suite's own folder
+		private void RemoveStaleFiles(string root, HashSet<string> keep)
+		{
+			try
+			{
+				string dir = Path.Combine(root, Root.Replace('/', Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar));
+				if (!Directory.Exists(dir)) return;
+				string[] all = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
+				for (int i = 0; i < all.Length; i++)
+				{
+					string rel = all[i].Substring(root.Length).TrimStart(Path.DirectorySeparatorChar).Replace(Path.DirectorySeparatorChar, '/');
+					if (!keep.Contains(rel)) { try { File.Delete(all[i]); } catch { } }
+				}
+			}
+			catch (Exception e) { Logger.LogWarning("Orgasm Suite: could not tidy the old files: " + e.Message); }
 		}
 
 		private static bool SameBytes(byte[] a, byte[] b)
@@ -299,12 +326,12 @@ namespace ZeroT.OrgasmSuite
 		// a slot from somebody else (a scene's own .var plugin) for the same script file: it may still be compiling, so the type is not there yet
 		private static bool ExternalSlot(MVRPluginManager mgr, Comp c)
 		{
-			string file = Path.GetFileName(c.Url);
 			foreach (MVRPlugin p in SlotsOf(mgr))
 			{
 				string u = UrlOf(p).Replace('\\', '/');
 				if (UrlIs(u, c)) continue;
-				if (u.EndsWith("/" + file, StringComparison.OrdinalIgnoreCase)) return true;
+				for (int e = 0; e < c.Ext.Length; e++)
+					if (u.EndsWith("/" + c.Ext[e], StringComparison.OrdinalIgnoreCase)) return true;
 			}
 			return false;
 		}
@@ -355,11 +382,48 @@ namespace ZeroT.OrgasmSuite
 			if (sc == null) return;
 			if (sc.isLoading) { _wasLoading = true; return; }
 			if (_wasLoading) { _wasLoading = false; _loadedAt = Time.realtimeSinceStartup; _attachedAt.Clear(); _pushed.Clear(); }
-			if (Time.realtimeSinceStartup < _loadedAt + 3f) return;
-			if (Time.realtimeSinceStartup < _nextScan) return;
-			_nextScan = Time.realtimeSinceStartup + 1.5f;
-			try { Reconcile(sc); }
+			if (!_autoAttach.Value) { _waitNote = "Auto attach is off."; return; }
+			float now = Time.realtimeSinceStartup;
+			if (now < _loadedAt + _settle.Value) { _waitNote = "Waiting for the scene to settle (" + Mathf.CeilToInt(_loadedAt + _settle.Value - now) + " s)..."; return; }
+			if (now < _nextScan) return;
+			_nextScan = now + 1.5f;
+			try
+			{
+				// the scene is still restoring while atoms or their plugin slots keep changing: touching a Person then crashed VaM
+				int sig = SceneSignature(sc);
+				if (sig != _sig) { _sig = sig; _sigAt = now; }
+				if (now - _sigAt < _quiet.Value) { _waitNote = "Waiting for the scene to settle (atoms / plugins still changing)..."; return; }
+				_waitNote = "";
+				Reconcile(sc);
+				_sig = SceneSignature(sc);   // what the suite itself just did is not a change by the scene
+			}
 			catch (Exception e) { Logger.LogWarning("Orgasm Suite: " + e.Message); }
+		}
+
+		private int _sig;
+		private float _sigAt;
+		private string _waitNote = "";
+
+		// atoms, their plugin slots and their registered storables: all of it moves while a scene is being restored
+		private int SceneSignature(SuperController sc)
+		{
+			int h = 17;
+			List<Atom> atoms = sc.GetAtoms();
+			for (int i = 0; atoms != null && i < atoms.Count; i++)
+			{
+				Atom a = atoms[i];
+				if (a == null) continue;
+				h = h * 31 + (a.uid == null ? 0 : a.uid.GetHashCode());
+				MVRPluginManager m = FindManager(a);
+				if (m != null)
+				{
+					List<MVRPlugin> sl = SlotsOf(m);
+					h = h * 31 + sl.Count;
+					for (int k = 0; k < sl.Count; k++) h = h * 31 + UrlOf(sl[k]).Length;
+				}
+				try { List<string> ids = a.GetStorableIDs(); h = h * 31 + (ids == null ? 0 : ids.Count); } catch { }
+			}
+			return h;
 		}
 
 		private void Reconcile(SuperController sc)
@@ -461,6 +525,8 @@ namespace ZeroT.OrgasmSuite
 				if (alreadyDidOne) { status = "queued"; return alreadyDidOne; }
 				try
 				{
+					// logged BEFORE the call: if VaM dies inside it, this is the last line in the log
+					Logger.LogInfo("Orgasm Suite: attaching " + c.Label + " to " + atom.uid + "...");
 					MVRPlugin np = mgr.CreatePlugin();
 					if (np == null || np.pluginURLJSON == null) throw new InvalidOperationException("VaM could not make a plugin slot");
 					np.pluginURLJSON.val = c.Url;
@@ -694,7 +760,7 @@ namespace ZeroT.OrgasmSuite
 			y += sh + 4f * s;
 
 			string msg = Time.realtimeSinceStartup < _messageUntil ? _message : "";
-			GUI.Label(new Rect(x, y, w, 36f * s), msg.Length > 0 ? msg : "Scripts: " + _installNote);
+			GUI.Label(new Rect(x, y, w, 36f * s), msg.Length > 0 ? msg : (_waitNote.Length > 0 ? _waitNote : "Scripts: " + _installNote));
 			// resize grip is drawn by HandleDragResize
 		}
 

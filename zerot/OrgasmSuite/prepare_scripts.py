@@ -7,7 +7,7 @@ and a handful of anchored patches is applied (each anchor is asserted, so a chan
 
     python prepare_scripts.py [VAM_DIR]
 """
-import os, sys, zipfile, struct, zlib, io, shutil
+import os, sys, zipfile, struct, zlib, io, shutil, subprocess, tempfile
 
 VAM = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('VAM_DIR', r'T:\New folder')
 KEEP = os.path.join(VAM, 'AddonPackages', 'keep')
@@ -62,20 +62,57 @@ def cslist_files(z, base, cslist):
     return out
 
 
-def add_script_tree(key, base, dest, cslists, extra=(), patches=None):
-    """copy every file a cslist names (+ the cslists themselves + extra) from the package into ROOT+dest"""
+def collect_sources(key, base, cslist, patches=None):
+    """the .cs files one cslist names (patched), as {relative path: text}"""
     z = zopen(key)
-    names = set(cslists) | set(extra)
-    for c in cslists:
-        for f in cslist_files(z, base, c):
-            if f.endswith('.cs'):
-                names.add(os.path.normpath(f).replace('\\', '/'))
-    for n in sorted(names):
-        data = z.read(base + n)
+    out = {}
+    for f in cslist_files(z, base, cslist):
+        if not f.endswith('.cs'):
+            continue
+        n = os.path.normpath(f).replace('\\', '/')
+        t = z.read(base + n).decode('utf-8-sig')
         if patches and n in patches:
-            data = patches[n](data.decode('utf-8-sig')).encode('utf-8')
-        put(ROOT + dest + n, data)
-    return z
+            t = patches[n](t)
+        out[n] = t
+    return out
+
+
+NOWARN = 'CS0108;CS0114;CS0168;CS0219;CS0649;CS0169;CS0414;CS0618;CS1998;CS0659;CS0661;CS0162;CS0105;CS1591;CS0109;CS0472;CS0642;CS0252;CS0253;CS0067;CS0164;CS0660;CS0665;CS0628;CS0436;CS0458'
+
+
+def build_dll(asm, sources):
+    """Roslyn-compile a script set into an assembly for VaM's Mono. net35 reference assemblies: the compiler then emits none of the newer
+    runtime attributes (IteratorStateMachineAttribute ...) that VaM's Mono cannot load. Returns the DLL bytes."""
+    work = tempfile.mkdtemp(prefix='suite_' + asm + '_')
+    src = os.path.join(work, 'src')
+    for n, t in sources.items():
+        p = os.path.join(src, n)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        open(p, 'w', encoding='utf-8').write(t)
+    managed = os.path.join(VAM, 'VaM_Data', 'Managed')
+    refs = []
+    for f in sorted(os.listdir(managed)):
+        if f.endswith('.dll') and (f.startswith('UnityEngine') or f in ('Assembly-CSharp.dll', 'Assembly-CSharp-firstpass.dll', 'SimpleJSON.dll')):
+            refs.append('<Reference Include="%s"><HintPath>%s</HintPath><Private>false</Private></Reference>' % (f[:-4], os.path.join(managed, f)))
+    open(os.path.join(work, 'p.csproj'), 'w').write(
+        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Library</OutputType><AssemblyName>' + asm + '</AssemblyName>'
+        '<RootNamespace></RootNamespace><TargetFramework>net35</TargetFramework><LangVersion>latest</LangVersion><GenerateAssemblyInfo>false</GenerateAssemblyInfo>'
+        '<DefineConstants>VAM_GT_1_20;VAM_GT_1_20_77_13;VAM_GT_1_21;VAM_1_22</DefineConstants><DebugType>none</DebugType><Optimize>true</Optimize>'
+        '<EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>' + NOWARN + '</NoWarn></PropertyGroup>'
+        '<ItemGroup><Compile Include="src/**/*.cs" /><Reference Include="System.Core" />' + ''.join(refs) + '</ItemGroup></Project>')
+    r = subprocess.run(['dotnet', 'build', os.path.join(work, 'p.csproj'), '-c', 'Release', '--nologo', '-v', 'q', '-o', os.path.join(work, 'out')],
+                       capture_output=True, text=True, encoding='utf-8', errors='replace')
+    text = (r.stdout or '') + (r.stderr or '')
+    errs = sorted(set(l.strip() for l in text.splitlines() if ' error ' in l))
+    dll = os.path.join(work, 'out', asm + '.dll')
+    if r.returncode != 0 or not os.path.exists(dll):
+        print('COMPILE FAILED: ' + asm)
+        for e in errs[:30]:
+            print('  ' + e.replace(src, '')[:240])
+        sys.exit(1)
+    data = open(dll, 'rb').read()
+    shutil.rmtree(work, ignore_errors=True)
+    return data
 
 
 # ----------------------------------------------------------------------------------------------------------------- patches
@@ -318,32 +355,42 @@ def build():
     if os.path.isdir(STAGE):
         shutil.rmtree(STAGE)
     os.makedirs(STAGE)
+    dlldir = os.path.join(OUT, 'dll')
+    if os.path.isdir(dlldir):
+        shutil.rmtree(dlldir)
+    os.makedirs(dlldir)
 
-    # SexyFluids (+ its shader bundle + preset jpg/json, the latter only when missing)
-    z = add_script_tree('sexyfluids', 'Custom/Scripts/Foost/SexyFluids/', 'SexyFluids/', ['SexyFluids.cslist'],
-                        extra=['data/Foost.SexyFluids.fluid_shaders.assetbundle'],
-                        patches={'src/utils/DataResourceProvider.cs': patch_sexyfluids_bundle})
+    def add_dll(folder, asm, sources):
+        data = build_dll(asm, sources)
+        put(ROOT + folder + '/' + asm + '.dll', data)
+        open(os.path.join(dlldir, asm + '.dll'), 'wb').write(data)
+        print('  built %-40s %7d bytes' % (asm, len(data)))
+
+    # SexyFluids (+ its shader bundle next to the DLL, + shipped presets: those only when missing)
+    z = zopen('sexyfluids')
+    add_dll('SexyFluids', 'ZeroT.OrgasmSuite.SexyFluids',
+            collect_sources('sexyfluids', 'Custom/Scripts/Foost/SexyFluids/', 'SexyFluids.cslist', {'src/utils/DataResourceProvider.cs': patch_sexyfluids_bundle}))
+    put(ROOT + 'SexyFluids/data/Foost.SexyFluids.fluid_shaders.assetbundle', z.read('Custom/Scripts/Foost/SexyFluids/data/Foost.SexyFluids.fluid_shaders.assetbundle'))
     for n in z.namelist():
         if n.startswith('Saves/PluginData/Foost/SexyFluids/') and not n.endswith('/'):
             put(n, z.read(n), soft=True)
-
-    # BodyLanguage Lite + ArousalHUD (the Lite var ships both cslists)
-    add_script_tree('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'BodyLanguage_Lite/', ['BodyLanguage_Lite.cslist', 'ArousalHUD.cslist'])
+    # BodyLanguage Lite and ArousalHUD: two scripts, two assemblies (VaM runs every MVRScript class it finds in one)
+    add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.BodyLanguageLite', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'BodyLanguage_Lite.cslist'))
+    add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.ArousalHUD', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'ArousalHUD.cslist'))
     # BodyLanguage (full)
-    add_script_tree('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage/', ['BodyLanguage.cslist'])
+    add_dll('BodyLanguage', 'ZeroT.OrgasmSuite.BodyLanguage', collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist'))
     # FluidBridge (patched)
-    add_script_tree('fluidbridge', 'Custom/Scripts/ZeroT/FluidBridge/', 'FluidBridge/', ['FluidBridge.cslist'],
-                    patches={'FluidBridge.cs': patch_fluidbridge})
+    add_dll('FluidBridge', 'ZeroT.OrgasmSuite.FluidBridge', collect_sources('fluidbridge', 'Custom/Scripts/ZeroT/FluidBridge/', 'FluidBridge.cslist', {'FluidBridge.cs': patch_fluidbridge}))
     # AutoTremble (patched), plus the user's default preset when it is missing
     z = zopen('autotremble')
-    put(ROOT + 'AutoTremble/AutoTremble.cs',
-        patch_autotremble(z.read('Custom/Scripts/DBP/DBP.AutoTremble/AutoTremble.cs').decode('utf-8-sig')).encode('utf-8'))
+    add_dll('AutoTremble', 'ZeroT.OrgasmSuite.AutoTremble',
+            {'AutoTremble.cs': patch_autotremble(z.read('Custom/Scripts/DBP/DBP.AutoTremble/AutoTremble.cs').decode('utf-8-sig'))})
     preset = os.path.join(VAM, 'Saves', 'PluginPresets', 'AutoTremble', 'AutoTremblePreset.json')
     if os.path.exists(preset):
         put('Saves/PluginPresets/AutoTremble/AutoTremblePreset.json', open(preset, 'rb').read(), soft=True)
     # ZajeShuffle, StimulationHUD
-    add_script_tree('zaje', 'Custom/Scripts/ZeroT/ZajeShuffle/', 'ZajeShuffle/', ['ZajeShuffle.cslist'])
-    add_script_tree('stimhud', 'Custom/Scripts/ZeroT/StimulationHUD/', 'StimulationHUD/', ['StimulationHUD.cslist'])
+    add_dll('ZajeShuffle', 'ZeroT.OrgasmSuite.ZajeShuffle', collect_sources('zaje', 'Custom/Scripts/ZeroT/ZajeShuffle/', 'ZajeShuffle.cslist'))
+    add_dll('StimulationHUD', 'ZeroT.OrgasmSuite.StimulationHUD', collect_sources('stimhud', 'Custom/Scripts/ZeroT/StimulationHUD/', 'StimulationHUD.cslist'))
 
     # stage on disk (for the compile check / sim) and pack
     for p, d in files.items():
