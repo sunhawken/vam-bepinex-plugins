@@ -40,15 +40,24 @@ namespace ZeroT.HudClickShield
 		private static Vector3 lastMouse;
 		private static bool pressStartedOnHud;
 
-		public static int RectCount { get { return prev.Count; } }
+		public static int RectCount { get { return prev.Count + cur.Count; } }
+
+		// what the shield saw, written to the log every few seconds while something changes (so a "does nothing" report can be told apart: no draw hooks firing / no Repaint /
+		// rects never under the mouse / VaM not asking)
+		private static int statDraw, statRepaint, statRecorded, statErr, statProcessUi, statForced, statUiSkip, statMouseChecks, statOverlayHit, statImguiHit;
+		private static string statLast = "";
+		private static float nextStat;
+		private static string lastErr = "";
 
 		// IMGUI draw hooks call this with the control's rectangle
 		public static void Record(Rect position)
 		{
 			try
 			{
+				statDraw++;
 				Event e = Event.current;
 				if (e == null || e.type != EventType.Repaint) return;
+				statRepaint++;
 				if (position.width < 2f || position.height < 2f) return;
 				// a full-screen draw is a backdrop, not a HUD: never let it swallow every click
 				if (position.width >= Screen.width * 0.9f && position.height >= Screen.height * 0.9f) return;
@@ -64,8 +73,9 @@ namespace ZeroT.HudClickShield
 				Rect sr = new Rect(p.x, p.y, position.width, position.height);
 				if (cur.Count > 0) { Rect lr = cur[cur.Count - 1]; if (lr.x == sr.x && lr.y == sr.y && lr.width == sr.width && lr.height == sr.height) return; }   // the public GUI call and the internal draw it ends in report the same rectangle
 				cur.Add(sr);
+				statRecorded++;
 			}
-			catch { }
+			catch (Exception ex) { statErr++; lastErr = ex.GetType().Name + ": " + ex.Message; }
 		}
 
 		public static bool ImguiCovers(Vector3 mouse)
@@ -147,10 +157,11 @@ namespace ZeroT.HudClickShield
 			overFrame = f;
 			Vector3 m = Input.mousePosition;
 			bool over = false;
+			statMouseChecks++;
 			if (m.x >= 0f && m.y >= 0f && m.x <= Screen.width && m.y <= Screen.height)
 			{
-				if (_imgui.Value && ImguiCovers(m)) over = true;
-				else if (_overlay.Value && OverlayCovers(m)) over = true;
+				if (_imgui.Value && ImguiCovers(m)) { over = true; statImguiHit++; }
+				else if (_overlay.Value && OverlayCovers(m)) { over = true; statOverlayHit++; }
 			}
 			// a press belongs to wherever it started: begun on a HUD it stays the HUD's even when dragged off; begun elsewhere (a VaM slider) it is not stolen on the way over a HUD
 			bool down = Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2);
@@ -170,16 +181,30 @@ namespace ZeroT.HudClickShield
 		public static void DrawPrefix(Rect position) { Record(position); }
 
 		// VaM's own uGUI (the menus, sliders, buttons) takes the click through LookInputModule: while the mouse is on a HUD it is simply not asked
-		public static bool UiInputPrefix() { return !MouseOverHud(); }
+		public static bool UiInputPrefix() { bool over = MouseOverHud(); if (over) statUiSkip++; return !over; }
 
 		public static void ProcessUIPostfix(object __instance)
 		{
 			try
 			{
+				statProcessUi++;
 				if (guiHitMouse == null) return;
-				if (MouseOverHud()) guiHitMouse.SetValue(__instance, true);
+				if (MouseOverHud()) { guiHitMouse.SetValue(__instance, true); statForced++; }
 			}
-			catch { }
+			catch (Exception ex) { statErr++; lastErr = ex.GetType().Name + ": " + ex.Message; }
+		}
+
+		// one line every 10 s while anything changed: draw hooks called / Repaint seen / rectangles recorded / VaM's ProcessUI ran / mouse found over a HUD / clicks forced to the HUD
+		private void Update()
+		{
+			if (Time.realtimeSinceStartup < nextStat) return;
+			nextStat = Time.realtimeSinceStartup + 10f;
+			string s = "draw hooks " + statDraw + ", repaints " + statRepaint + ", rects recorded " + statRecorded + " (now " + RectCount + "), ProcessUI " + statProcessUi
+				+ ", mouse checks " + statMouseChecks + ", over IMGUI " + statImguiHit + ", over overlay " + statOverlayHit + ", GUIhitMouse forced " + statForced + ", menu input skipped " + statUiSkip
+				+ ", overlays " + overlays.Count + (statErr > 0 ? ", errors " + statErr + " (" + lastErr + ")" : "");
+			if (s == statLast) return;
+			statLast = s;
+			log.Info("[stats] " + s);
 		}
 
 		private void Awake()
@@ -188,7 +213,7 @@ namespace ZeroT.HudClickShield
 			_imgui = Config.Bind("Shield", "ImguiWindows", true, "Protect IMGUI plugin windows (every BepInEx plugin window).");
 			_overlay = Config.Bind("Shield", "OverlayHuds", true, "Protect screen-pinned overlay HUD canvases (Arousal / Stimulation / Toggle HUD).");
 			_filter = Config.Bind("Shield", "OverlayNameContains", "HUD", "Only overlay canvases whose name contains one of these words (comma separated) are protected; empty = every overlay canvas that has a GraphicRaycaster.");
-			_debug = Config.Bind("Shield", "Debug", false, "Log when the mouse enters / leaves a protected area.");
+			_debug = Config.Bind("Shield", "Debug", true, "Log when the mouse enters / leaves a protected area.");
 			log = new ManualLogSourceProxy();
 			log.Src = Logger;
 
