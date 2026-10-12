@@ -112,6 +112,7 @@ namespace BepInEx.Configuration
 		}
 		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 		internal void RaiseSettingChanged(ConfigEntryBase e) { SettingChanged?.Invoke(this, new SettingChangedEventArgs(e)); }
+		public bool TryGetEntry<T>(string section, string key, out ConfigEntry<T> entry) { var o = Find(section, key) as ConfigEntry<T>; entry = o; return o != null; }
 		public ConfigEntryBase Find(string section, string key) { object o; return entries.TryGetValue(section + "." + key, out o) ? (ConfigEntryBase)o : null; }
 		public IEnumerable<ConfigEntryBase> All() { foreach (var o in entries.Values) yield return (ConfigEntryBase)o; }
 		public void Save() { }

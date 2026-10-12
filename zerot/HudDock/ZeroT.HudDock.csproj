@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ZeroT.HudDock</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net35</TargetFramework>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\UiKit\RlChrome.cs" Link="UiKit\RlChrome.cs" />
+    <Compile Include="..\UiKit\RlExternal.cs" Link="UiKit\RlExternal.cs" />
+    <Compile Include="..\UiKit\RlImguiExternal.cs" Link="UiKit\RlImguiExternal.cs" />
+    <!-- the shared "UI Future Pack" skin of the Orgasm Suite window -->
+    <Compile Include="..\OrgasmSuite\FutureSkin.cs" Link="Skin\FutureSkin.cs" />
+    <Reference Include="System.Core" />
+    <Reference Include="BepInEx" />
+    <Reference Include="Assembly-CSharp" />
+    <Reference Include="UnityEngine" />
+    <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

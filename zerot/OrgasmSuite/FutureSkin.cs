@@ -358,7 +358,7 @@ namespace ZeroT.OrgasmSuite
 		}
 
 		// outlined square with a solid inner square when on, in the colour of the side (green Lite / blue BodyLanguage)
-		internal static bool Toggle(Rect r, string label, bool on, Color accent, float s)
+		internal static bool Toggle(Rect r, string label, bool on, Color accent, float s, bool spaced = true)
 		{
 			if (_paint)
 			{
@@ -369,7 +369,7 @@ namespace ZeroT.OrgasmSuite
 				Rect box = new Rect(r.x + 4f * s, r.y + (r.height - b) / 2f, b, b);
 				Outline(box, on ? accent : Dim, 1f);
 				if (on) Fill(new Rect(box.x + 3f * s, box.y + 3f * s, box.width - 6f * s, box.height - 6f * s), accent);
-				Text(new Rect(box.xMax + 8f * s, r.y, r.width - b - 16f * s, r.height), Spaced(label), Mathf.Max(8, Mathf.RoundToInt(10.5f * s)), TextAnchor.MiddleLeft, on ? Ink : ToggleText, false);
+				Text(new Rect(box.xMax + 8f * s, r.y, r.width - b - 16f * s, r.height), spaced ? Spaced(label) : Upper(label), Mathf.Max(8, Mathf.RoundToInt(10.5f * s)), TextAnchor.MiddleLeft, on ? Ink : ToggleText, false);
 			}
 			return Hit(r);
 		}
