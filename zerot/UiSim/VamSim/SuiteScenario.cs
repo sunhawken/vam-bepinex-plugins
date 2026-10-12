@@ -348,6 +348,28 @@ public static class SuiteScenario
 		h.Check(!trW.GetBoolJSONParam("Active").val, "AutoTremble stopped when the fluids stopped");
 		h.Check(Math.Abs(Wiggle(woman, "hipControl", h, 0.6f)) < 1e-4f, "...and Woman's hip is still again");
 
+		// ---- the shuffle cooldown (1 minute by default): an orgasm right after a shuffle does not shuffle again, one after the minute does
+		int sh1 = uia.buttonList.Sum(b => b.Invoked);
+		St(h, 20f);   // the engine needs a while after an orgasm before it can climax again
+		arP.val = 0f;
+		h.Check(Orgasm(h, woman), "a second orgasm, within the minute, is seen");
+
+		h.Check(uia.buttonList.Sum(b => b.Invoked) == sh1, "cooldown: no second shuffle straight after the first");
+		var fbWs = Script(woman, "FluidBridge");
+		h.Check(fbWs.GetFloatJSONParam("ZajeShuffle cooldown (min)") != null && Math.Abs(fbWs.GetFloatJSONParam("ZajeShuffle cooldown (min)").val - 1f) < 0.01f, "FluidBridge carries the cooldown (1 min by default)");
+		SetCfg(h, "Woman", "Collision", 0);   // no spontaneous orgasm while the minute runs out
+		St(h, 70f);
+		SetCfg(h, "Woman", "Collision", 1);
+		arP.val = 0f;
+		h.Check(Orgasm(h, woman), "an orgasm after the cooldown is seen");
+		h.Check(uia.buttonList.Sum(b => b.Invoked) == sh1 + 1, "cooldown over: the shuffle fires again");
+		SetCfg(h, "Woman", "ShuffleCooldown", 5f);
+		St(h, 2.5f);
+		h.Check(Math.Abs(Script(woman, "FluidBridge").GetFloatJSONParam("ZajeShuffle cooldown (min)").val - 5f) < 0.01f, "the window's cooldown (5 min) reaches FluidBridge");
+		SetCfg(h, "Woman", "ShuffleCooldown", 1f);
+		SetCfg(h, "Woman", "Collision", 1);
+		St(h, 16f);   // let the tremble of those orgasms end
+
 		// ---- 6. the same on the man: his AutoTremble moves HIS controllers
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 6 errors=" + Sim.Errors.Count);
 		var liteM = Script(man, "BodyLanguage_Lite");

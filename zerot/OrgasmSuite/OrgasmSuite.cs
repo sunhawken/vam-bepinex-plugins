@@ -57,6 +57,7 @@ namespace ZeroT.OrgasmSuite
 			public bool Fluids = true, Tremble = true, Shuffle = false, Wet = true, Wardrobe = true, Hud = true;
 			public int Collision = 1;   // where touch arousal may come from: 0 none, 1 other Persons / CUA, 2 self, 3 both
 			public float ShuffleDelay = 0f;   // seconds after the orgasm before ZajeShuffle runs
+			public float ShuffleCooldown = 1f;   // minutes (1..10) after a shuffle ran before another one may
 		}
 
 		private readonly Dictionary<string, PersonCfg> _cfg = new Dictionary<string, PersonCfg>(StringComparer.Ordinal);
@@ -69,7 +70,7 @@ namespace ZeroT.OrgasmSuite
 		private ConfigEntry<float> _scale, _winX, _winY, _winW, _winH;
 		private ConfigEntry<string> _lastUid;
 
-		private Rect _win = new Rect(60f, 140f, 380f, 595f);
+		private Rect _win = new Rect(60f, 140f, 380f, 660f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
 		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f;
@@ -108,7 +109,7 @@ namespace ZeroT.OrgasmSuite
 			_winX = Config.Bind("Window", "X", 60f, "Saved horizontal position.");
 			_winY = Config.Bind("Window", "Y", 140f, "Saved vertical position.");
 			_winW = Config.Bind("Window", "Width", 380f, "Saved width.");
-			_winH = Config.Bind("Window", "Height", 595f, "Saved height.");
+			_winH = Config.Bind("Window", "Height", 660f, "Saved height.");
 			_dpiAware = Config.Bind("Window", "DpiAware", true, "Scale with the monitor's DPI.");
 			_previewPeople = Config.Bind("Window", "PreviewPeople", "", "For screenshots: fake rows for the collapsed bar, 'Name:level:L,Name:level:B' (level 0..1, L = Lite, B = BodyLanguage). Empty = live.");
 			_previewFill = Config.Bind("Window", "PreviewFill", -1f, "Show this level (0..1) in the liquid bar instead of the live value (for screenshots). -1 = live.");
@@ -228,6 +229,8 @@ namespace ZeroT.OrgasmSuite
 					int cm;
 					if (f.Length >= 11 && int.TryParse(f[10], out cm)) c.Collision = Mathf.Clamp(cm, 0, 3);   // older files stop at the HUD column
 					if (f.Length >= 12) c.ModeOn = f[11] == "1";
+					float cd;
+					if (f.Length >= 13 && float.TryParse(f[12], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out cd)) c.ShuffleCooldown = Mathf.Clamp(cd, 1f, 10f);
 					_cfg[f[0]] = c;
 				}
 			}
@@ -252,7 +255,7 @@ namespace ZeroT.OrgasmSuite
 						.Append(c.Fluids ? "1" : "0").Append('\t').Append(c.Tremble ? "1" : "0").Append('\t').Append(c.Hud ? "1" : "0")
 							.Append('\t').Append(c.Shuffle ? "1" : "0").Append('\t').Append(c.Wet ? "1" : "0").Append('\t').Append(c.Wardrobe ? "1" : "0")
 							.Append('\t').Append(c.ShuffleDelay.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))
-						.Append('\t').Append(c.Collision).Append('\t').Append(c.ModeOn ? "1" : "0").Append('\n');
+						.Append('\t').Append(c.Collision).Append('\t').Append(c.ModeOn ? "1" : "0").Append('\t').Append(c.ShuffleCooldown.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
 				}
 				File.WriteAllText(p, sb.ToString());
 			}
@@ -744,7 +747,7 @@ namespace ZeroT.OrgasmSuite
 				MVRScript fb = Instance(a, Bridge);
 				if (fb == null) return;
 				bool blOwnsTremble = cfg.Engine == "BodyLanguage";   // the suite follows BodyLanguage's orgasm itself (TrackBodyLanguageOrgasm)
-				string sig = (blOwnsTremble ? "B" : "L") + (cfg.Fluids ? "1" : "0") + (cfg.Tremble ? "1" : "0") + (cfg.Shuffle ? "1" : "0") + (cfg.Wet ? "1" : "0") + (cfg.Wardrobe ? "1" : "0") + cfg.ShuffleDelay.ToString("0.##") + fb.GetInstanceID();
+				string sig = (blOwnsTremble ? "B" : "L") + (cfg.Fluids ? "1" : "0") + (cfg.Tremble ? "1" : "0") + (cfg.Shuffle ? "1" : "0") + (cfg.Wet ? "1" : "0") + (cfg.Wardrobe ? "1" : "0") + cfg.ShuffleDelay.ToString("0.##") + "c" + cfg.ShuffleCooldown.ToString("0.#") + fb.GetInstanceID();
 				string old;
 				if (_pushed.TryGetValue(a.uid, out old) && old == sig) return;
 				JSONStorableBool b = fb.GetBoolJSONParam("Use SexyFluids"); if (b != null) b.val = cfg.Fluids;
@@ -753,6 +756,7 @@ namespace ZeroT.OrgasmSuite
 				b = fb.GetBoolJSONParam("Apply Wet Clothes preset on orgasm"); if (b != null) b.val = cfg.Wet;
 				b = fb.GetBoolJSONParam("Random clothing on orgasm"); if (b != null) b.val = cfg.Wardrobe;
 				JSONStorableFloat df = fb.GetFloatJSONParam("ZajeShuffle delay (sec)"); if (df != null) df.val = cfg.ShuffleDelay;
+				JSONStorableFloat cdf = fb.GetFloatJSONParam("ZajeShuffle cooldown (min)"); if (cdf != null) cdf.val = cfg.ShuffleCooldown;
 				_pushed[a.uid] = sig;
 			}
 			catch { }
@@ -833,6 +837,13 @@ namespace ZeroT.OrgasmSuite
 		private static readonly string[] PctText = BuildPct();
 		private static string[] BuildPct() { string[] a = new string[101]; for (int i = 0; i <= 100; i++) a[i] = i + " %"; return a; }
 		private static string Pct(float v) { return PctText[Mathf.Clamp(Mathf.RoundToInt(v * 100f), 0, 100)]; }
+		private float _cooldownShownLast = -1f;
+		private string _cooldownShownText = "1.0 MIN";
+		private string CooldownText(float v)
+		{
+			if (v != _cooldownShownLast) { _cooldownShownLast = v; _cooldownShownText = v.ToString("0.0") + " MIN"; }
+			return _cooldownShownText;
+		}
 		private float _delayShownLast = -1f;
 		private string _delayShownText = "0.0 S";
 		private string DelayText(float v)
@@ -993,6 +1004,24 @@ namespace ZeroT.OrgasmSuite
 				cfg.ShuffleDelay = Mathf.Round(nv * 300f) / 10f;
 				_saveAt = Time.realtimeSinceStartup + 0.6f;   // saved when the bar has stopped moving
 				_pushed.Clear();
+			}
+			y += 18f * s + 12f * s;
+
+			// ---- how long after a shuffle ran before another orgasm may shuffle again (1..10 minutes, one press of the bar = half a minute)
+			Fx.Section(new Rect(x, y, w, 16f * s), "Shuffle cooldown", s);
+			y += 20f * s;
+			float cooldownShown = cfg != null ? cfg.ShuffleCooldown : 1f;
+			float cv2 = Fx.Bar(new Rect(x, y, w - vw - gap, 18f * s), (cooldownShown - 1f) / 9f, side, s, 7002);
+			Fx.Text(new Rect(x + w - vw, y, vw, 18f * s), CooldownText(cooldownShown), small, TextAnchor.MiddleRight, Fx.Ink, false);
+			if (cfg != null && cv2 >= 0f)
+			{
+				float nc = Mathf.Clamp(Mathf.Round((1f + cv2 * 9f) * 2f) / 2f, 1f, 10f);
+				if (Mathf.Abs(nc - cooldownShown) > 0.01f)
+				{
+					cfg.ShuffleCooldown = nc;
+					_saveAt = Time.realtimeSinceStartup + 0.6f;
+					_pushed.Clear();
+				}
 			}
 			y += 18f * s + 12f * s;
 

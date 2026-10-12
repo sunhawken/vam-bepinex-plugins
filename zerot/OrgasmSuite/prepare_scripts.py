@@ -309,7 +309,8 @@ def patch_fluidbridge(t):
     t = patch(t, '    Coroutine _wetClothesRemoveCoroutine;\n',
               '    Coroutine _wetClothesRemoveCoroutine;\n'
               '    JSONStorableBool trembleOnOrgasmJSON, shuffleOnOrgasmJSON;\n'
-              '    JSONStorableFloat shuffleDelayJSON;\n'
+              '    JSONStorableFloat shuffleDelayJSON, shuffleCooldownJSON;\n'
+              '    static float lastShuffleAt = -1e9f;   // shared by every FluidBridge: the shuffle is one session-wide button press\n'
               '    MVRScript trembleScript, zajeScript;\n'
               '    bool trembleStartedByBridge;\n'
               '    string orgasmHookStatus = "no orgasm yet";\n', what='fields')
@@ -320,12 +321,13 @@ def patch_fluidbridge(t):
               '        CreateHeader("Orgasm Hooks", false, new Color(0.78f, 0.5f, 1f));\n'
               '        trembleOnOrgasmJSON = RegisterToggle("AutoTremble on orgasm", true, false, "Starts AutoTremble on this Person when an orgasm fires and stops it when the fluids stop.");\n'
               '        shuffleOnOrgasmJSON = RegisterToggle("ZajeShuffle on orgasm", true, true, "Fires the ZajeShuffle Shuffle action (random UIAssist button) on every orgasm.");\n'
-              '        shuffleDelayJSON = RegisterSlider("ZajeShuffle delay (sec)", 0f, 0f, 60f, true, "F1", "How long after the orgasm the shuffle runs. 0 = at once.");\n',
+              '        shuffleDelayJSON = RegisterSlider("ZajeShuffle delay (sec)", 0f, 0f, 60f, true, "F1", "How long after the orgasm the shuffle runs. 0 = at once.");\n'
+              '        shuffleCooldownJSON = RegisterSlider("ZajeShuffle cooldown (min)", 1f, 1f, 10f, true, "F1", "After a shuffle ran, no further orgasm (on any Person) shuffles again for this long.");\n',
               what='ui')
     t = patch(t, '        StoreFloat(jc, wetClothesDurationJSON);\n',
-              '        StoreFloat(jc, wetClothesDurationJSON);\n        StoreBool(jc, trembleOnOrgasmJSON);\n        StoreBool(jc, shuffleOnOrgasmJSON);\n        StoreFloat(jc, shuffleDelayJSON);\n', what='store')
+              '        StoreFloat(jc, wetClothesDurationJSON);\n        StoreBool(jc, trembleOnOrgasmJSON);\n        StoreBool(jc, shuffleOnOrgasmJSON);\n        StoreFloat(jc, shuffleDelayJSON);\n        StoreFloat(jc, shuffleCooldownJSON);\n', what='store')
     t = patch(t, '            RestoreFloat(jc, wetClothesDurationJSON);\n',
-              '            RestoreFloat(jc, wetClothesDurationJSON);\n            RestoreBool(jc, trembleOnOrgasmJSON);\n            RestoreBool(jc, shuffleOnOrgasmJSON);\n            RestoreFloat(jc, shuffleDelayJSON);\n', what='restore')
+              '            RestoreFloat(jc, wetClothesDurationJSON);\n            RestoreBool(jc, trembleOnOrgasmJSON);\n            RestoreBool(jc, shuffleOnOrgasmJSON);\n            RestoreFloat(jc, shuffleDelayJSON);\n            RestoreFloat(jc, shuffleCooldownJSON);\n', what='restore')
     t = patch(t, '''        if (IsBodyLanguageOrLiteReason(reason))
         {
             ApplyWetClothesPreset();
@@ -365,17 +367,33 @@ def patch_fluidbridge(t):
             {
                 if (zajeScript == null) zajeScript = FindScript(new string[] { "ZajeShuffle" }, containingAtom, true);
                 float shuffleDelay = shuffleDelayJSON == null ? 0f : shuffleDelayJSON.val;
+                float cooldownLeft = ShuffleCooldownLeft();
                 if (zajeScript == null) note += "shuffle: ZajeShuffle not loaded; ";
+                else if (cooldownLeft > 0f) note += "shuffle: cooldown, " + Mathf.CeilToInt(cooldownLeft) + " s left; ";
                 else if (shuffleDelay > 0.01f)
                 {
                     StartCoroutine(DelayedShuffle(shuffleDelay));
                     note += "shuffle in " + shuffleDelay.ToString("0.#") + " s; ";
                 }
-                else note += CallAction(zajeScript, "Shuffle") ? "shuffled; " : "shuffle: action missing; ";
+                else note += FireShuffle() ? "shuffled; " : "shuffle: action missing; ";
             }
         }
         catch (Exception e) { note += "hook error: " + e.Message; }
         orgasmHookStatus = note.Length == 0 ? "hooks off" : note.TrimEnd(' ', ';');
+    }
+
+    // seconds until the next shuffle is allowed (0 = now): measured from the last shuffle that really ran, on any Person
+    float ShuffleCooldownLeft()
+    {
+        float minutes = shuffleCooldownJSON == null ? 1f : shuffleCooldownJSON.val;
+        return minutes * 60f - (Time.realtimeSinceStartup - lastShuffleAt);
+    }
+
+    bool FireShuffle()
+    {
+        if (!CallAction(zajeScript, "Shuffle")) return false;
+        lastShuffleAt = Time.realtimeSinceStartup;
+        return true;
     }
 
     IEnumerator DelayedShuffle(float delay)
@@ -383,7 +401,7 @@ def patch_fluidbridge(t):
         yield return new WaitForSeconds(delay);
         try
         {
-            if (shuffleOnOrgasmJSON != null && shuffleOnOrgasmJSON.val && zajeScript != null && CallAction(zajeScript, "Shuffle"))
+            if (shuffleOnOrgasmJSON != null && shuffleOnOrgasmJSON.val && zajeScript != null && ShuffleCooldownLeft() <= 0f && FireShuffle())
                 orgasmHookStatus = "shuffled after " + delay.ToString("0.#") + " s";
         }
         catch { }
