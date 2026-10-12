@@ -49,7 +49,9 @@ namespace ZeroT.OrgasmSuite
 		// ------------------------------------------------------------------ per Person settings
 		public sealed class PersonCfg
 		{
-			public bool On = true;
+			public bool On = true;       // the Suite switch: off parks this Person, on brings back exactly what was set
+			public bool ModeOn = true;   // the engine (Lite / BodyLanguage) switch of the Mode row
+			public bool Active { get { return On && ModeOn; } }
 			public string Engine = "Lite";   // Lite | BodyLanguage
 			// what happens during an orgasm on this Person (each one is a part of the suite that can be switched off) + the HUD
 			public bool Fluids = true, Tremble = true, Shuffle = false, Wet = true, Wardrobe = true, Hud = true;
@@ -225,6 +227,7 @@ namespace ZeroT.OrgasmSuite
 					if (f.Length >= 10 && float.TryParse(f[9], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sd)) c.ShuffleDelay = Mathf.Clamp(sd, 0f, 60f);
 					int cm;
 					if (f.Length >= 11 && int.TryParse(f[10], out cm)) c.Collision = Mathf.Clamp(cm, 0, 3);   // older files stop at the HUD column
+					if (f.Length >= 12) c.ModeOn = f[11] == "1";
 					_cfg[f[0]] = c;
 				}
 			}
@@ -249,7 +252,7 @@ namespace ZeroT.OrgasmSuite
 						.Append(c.Fluids ? "1" : "0").Append('\t').Append(c.Tremble ? "1" : "0").Append('\t').Append(c.Hud ? "1" : "0")
 							.Append('\t').Append(c.Shuffle ? "1" : "0").Append('\t').Append(c.Wet ? "1" : "0").Append('\t').Append(c.Wardrobe ? "1" : "0")
 							.Append('\t').Append(c.ShuffleDelay.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))
-						.Append('\t').Append(c.Collision).Append('\n');
+						.Append('\t').Append(c.Collision).Append('\t').Append(c.ModeOn ? "1" : "0").Append('\n');
 				}
 				File.WriteAllText(p, sb.ToString());
 			}
@@ -266,7 +269,7 @@ namespace ZeroT.OrgasmSuite
 			{
 				c = new PersonCfg();
 				// every HUD pins itself to the same spot on the desktop: only the first Person starts with one
-				foreach (PersonCfg o in _cfg.Values) if (o.On && o.Hud) { c.Hud = false; break; }
+				foreach (PersonCfg o in _cfg.Values) if (o.Active && o.Hud) { c.Hud = false; break; }
 				_cfg[uid] = c;
 			}
 			return c;
@@ -469,7 +472,7 @@ namespace ZeroT.OrgasmSuite
 				MVRPluginManager mgr = FindManager(a);
 				if (mgr == null) { _status[a.uid] = "VaM's plugin manager is not ready on " + a.uid; continue; }
 				bool lite = cfg.Engine != "BodyLanguage";
-				bool on = cfg.On && _installed;
+				bool on = cfg.Active && _installed;
 				bool needBridge = on && (cfg.Fluids || cfg.Tremble || cfg.Shuffle || cfg.Wet || cfg.Wardrobe);
 				StringBuilder st = new StringBuilder();
 				string s;
@@ -523,7 +526,7 @@ namespace ZeroT.OrgasmSuite
 					PersonCfg cfg = CfgFor(a.uid);
 					BlTrack t;
 					if (!_blTrack.TryGetValue(a.uid, out t)) { t = new BlTrack(); _blTrack[a.uid] = t; }
-					bool wanted = _installed && cfg.On && cfg.Tremble && cfg.Engine == "BodyLanguage";
+					bool wanted = _installed && cfg.Active && cfg.Tremble && cfg.Engine == "BodyLanguage";
 					MVRScript bl = wanted ? Instance(a, Full) : null;
 					if (bl == null)
 					{
@@ -590,7 +593,7 @@ namespace ZeroT.OrgasmSuite
 		{
 			try
 			{
-				if (!cfg.On) return;
+				if (!cfg.Active) return;
 				MVRScript m = Instance(a, lite ? Lite : Full);
 				if (m == null) return;
 				string sig = cfg.Collision + "|" + m.GetInstanceID();
@@ -647,7 +650,7 @@ namespace ZeroT.OrgasmSuite
 			for (int i = 0; i < _people.Count; i++)
 			{
 				PersonCfg c = CfgFor(_people[i].uid);
-				if (c.On && c.Shuffle) return true;
+				if (c.Active && c.Shuffle) return true;
 			}
 			return false;
 		}
@@ -667,7 +670,7 @@ namespace ZeroT.OrgasmSuite
 				Atom o = _people[i];
 				if (o == forAtom) continue;
 				PersonCfg c = CfgFor(o.uid);
-				if (c.On && c.Engine == "BodyLanguage" && string.CompareOrdinal(o.uid, forAtom.uid) < 0) return false;
+				if (c.Active && c.Engine == "BodyLanguage" && string.CompareOrdinal(o.uid, forAtom.uid) < 0) return false;
 			}
 			return true;
 		}
@@ -912,19 +915,23 @@ namespace ZeroT.OrgasmSuite
 			bool isLite = cfg == null || cfg.Engine != "BodyLanguage";
 			Color side = isLite ? Fx.Lite : Fx.Full;
 
+			// ---- master: parks / restores everything on this Person; every other choice below is kept while it is off
+			if (Fx.Button(new Rect(x, y, w, lh), cfg != null && cfg.On ? "Suite on" : "Suite off", Fx.Amber, cfg != null && cfg.On, s) && cfg != null) { cfg.On = !cfg.On; changed = true; }
+			y += lh + 10f * s;
+
 			// ---- mode: each engine is its own switch for this Person (click the lit one to turn it off, the other one to change over)
 			Fx.Section(new Rect(x, y, w, 16f * s), "Mode", s);
 			y += 20f * s;
 			float ew = (w - gap) / 2f;
-			bool liteOn = cfg != null && cfg.On && isLite, fullOn = cfg != null && cfg.On && !isLite;
+			bool liteOn = cfg != null && cfg.ModeOn && isLite, fullOn = cfg != null && cfg.ModeOn && !isLite;
 			if (Fx.Button(new Rect(x, y, ew, lh), liteOn ? "Lite on" : "Lite off", Fx.Lite, liteOn, s, false) && cfg != null)
 			{
-				if (liteOn) cfg.On = false; else { cfg.Engine = "Lite"; cfg.On = true; }
+				if (liteOn) cfg.ModeOn = false; else { cfg.Engine = "Lite"; cfg.ModeOn = true; }
 				changed = true;
 			}
 			if (Fx.Button(new Rect(x + ew + gap, y, ew, lh), fullOn ? "BodyLanguage on" : "BodyLanguage off", Fx.Full, fullOn, s, false) && cfg != null)
 			{
-				if (fullOn) cfg.On = false; else { cfg.Engine = "BodyLanguage"; cfg.On = true; }
+				if (fullOn) cfg.ModeOn = false; else { cfg.Engine = "BodyLanguage"; cfg.ModeOn = true; }
 				changed = true;
 			}
 			y += lh + 10f * s;
@@ -978,7 +985,7 @@ namespace ZeroT.OrgasmSuite
 			y += 18f * s + 12f * s;
 
 			// ---- test buttons (act on the selected Person)
-			GUI.enabled = enabled && cfg != null && cfg.On;
+			GUI.enabled = enabled && cfg != null && cfg.Active;
 			if (Fx.Bracket(new Rect(x, y, hw, 24f * s), "Orgasm now", s))
 			{
 				// the engine's own orgasm (arousal reset, its triggers), then the bridge chain: a forced orgasm at low arousal is not a threshold crossing FluidBridge could see
@@ -1063,7 +1070,7 @@ namespace ZeroT.OrgasmSuite
 			for (int i = 0; i < _people.Count; i++)
 			{
 				PersonCfg c = CfgFor(_people[i].uid);
-				if (!c.On) continue;
+				if (!c.Active) continue;
 				Row r = new Row();
 				r.Uid = r.Name = _people[i].uid; r.Lite = c.Engine != "BodyLanguage";
 				_rows.Add(r);

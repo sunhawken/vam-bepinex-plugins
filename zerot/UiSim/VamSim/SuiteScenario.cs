@@ -168,6 +168,8 @@ public static class SuiteScenario
 		return h.Plugin.GetType().GetMethod("CfgFor").Invoke(h.Plugin, new object[] { uid });
 	}
 
+	private static object CfgVal(Harness h, string uid, string field) { var c = Cfg(h, uid); return c.GetType().GetField(field).GetValue(c); }
+
 	private static void SetCfg(Harness h, string uid, string field, object value)
 	{
 		var c = Cfg(h, uid);
@@ -441,6 +443,22 @@ public static class SuiteScenario
 		SetCfg(h, "Woman", "Fluids", true); SetCfg(h, "Woman", "Tremble", true); SetCfg(h, "Woman", "Hud", true);
 		St(h, 10f);
 		h.Check(Has(woman, "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll") && Has(woman, "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll") && Has(woman, "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll"), "...and they come back when switched on again");
+
+		// the Suite switch and the mode switch both park the Person and bring back exactly what was set
+		SetCfg(h, "Man", "Engine", "Lite");   // BodyLanguage is a single-instance script: a Person waiting for it would take it while Woman is parked
+		St(h, 8f);
+		SetCfg(h, "Woman", "On", false);
+		St(h, 14f);
+		h.Check(!Has(woman, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll") && !Has(woman, "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll") && !Has(woman, "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll"), "Suite off: everything parked");
+		SetCfg(h, "Woman", "On", true);
+		St(h, 14f);
+		h.Check(Has(woman, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll") && Has(woman, "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll") && Has(woman, "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll") && (string)CfgVal(h, "Woman", "Engine") == "BodyLanguage", "Suite on again: same engine and parts as before");
+		SetCfg(h, "Woman", "ModeOn", false);
+		St(h, 14f);
+		h.Check(!Has(woman, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll") && (bool)CfgVal(h, "Woman", "Tremble") && (bool)CfgVal(h, "Woman", "Fluids"), "mode off: engine parked, the module choices are kept");
+		SetCfg(h, "Woman", "ModeOn", true);
+		St(h, 14f);
+		h.Check(Has(woman, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll") && Has(woman, "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll"), "mode on again: back as it was");
 
 		// ---- 8b. the "during orgasm" switches reach FluidBridge; ZajeShuffle leaves CoreControl when nobody wants it
 		SetCfg(h, "Woman", "Wet", false); SetCfg(h, "Woman", "Wardrobe", false);
