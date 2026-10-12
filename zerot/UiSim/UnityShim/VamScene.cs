@@ -158,6 +158,7 @@ public partial class JSONStorableUrl : JSONStorableString
 	public JSONStorableUrl(string paramName, string startingValue, SetStringCallback callback) : base(paramName, startingValue, callback) { }
 	public JSONStorableUrl(string paramName, string startingValue, SetStringCallback callback, string filter, bool forceCallbackOnSet = false) : base(paramName, startingValue, callback) { }
 	public JSONStorableUrl(string paramName, string startingValue, string filter) : base(paramName, startingValue) { }
+	public JSONStorableUrl(string paramName, string startingValue, string filter, string path) : base(paramName, startingValue) { }
 	public JSONStorableUrl(string paramName, string startingValue, SetStringCallback callback, string filter, string path) : base(paramName, startingValue, callback) { }
 }
 
@@ -490,6 +491,7 @@ public static class SimWorld
 			fc.name = kv.Key; fc.control = fc.transform; fc.containingAtom = atom;
 			fc.followWhenOffRB = rbByName[rbForController[kv.Key]];
 			fc.followWhenOffRB.mass = kv.Value;
+			fc.storeId = kv.Key; atom.storables[kv.Key] = fc;   // VaM registers every controller as a storable under its own name
 			fc.RegisterFloat(new JSONStorableFloat("mass", kv.Value, (v) => { fc.followWhenOffRB.mass = v; }, 0.001f, 20f, false));
 			controllers.Add(fc);
 		}

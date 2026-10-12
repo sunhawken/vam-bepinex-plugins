@@ -432,7 +432,7 @@ namespace UnityEngine
 
 		public static void Error(string where, Exception e)
 		{
-			string st = ""; if (e.StackTrace != null) { var ls = e.StackTrace.Split((char)10); for (int i = 0; i < Math.Min(3, ls.Length); i++) st += " | " + ls[i].Trim(); }
+			string st = ""; if (e.StackTrace != null) { var ls = e.StackTrace.Split((char)10); int maxFrames = Environment.GetEnvironmentVariable("SIM_STACK") != null ? 16 : 3; for (int i = 0; i < Math.Min(maxFrames, ls.Length); i++) st += " | " + ls[i].Trim(); }
 			string msg = where + ": " + e.GetType().Name + ": " + e.Message + st;
 			if (!Errors.Contains(msg)) Errors.Add(msg);
 		}

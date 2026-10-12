@@ -68,7 +68,9 @@ namespace AssetBundles
 	{
 		public static AssetBundleLoadAssetOperation LoadAssetAsync(string assetBundleName, string assetName, Type type)
 		{
-			return new SimAssetOperation(type == typeof(UnityEngine.GameObject) || type == null ? new UnityEngine.GameObject(assetName) : null);
+			UnityEngine.GameObject go = null;
+			if (type == typeof(UnityEngine.GameObject) || type == null) { go = new UnityEngine.GameObject(assetName); go.AddComponent<UnityEngine.RectTransform>(); }   // UI prefabs are RectTransforms
+			return new SimAssetOperation(go);
 		}
 	}
 }

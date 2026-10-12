@@ -9,6 +9,61 @@ public partial class MVRPluginManager : JSONStorable
 {
 	// plugin id ("plugin#2") -> "Package.N:/path/script.cs", what the scene's PluginManager storable lists
 	public readonly Dictionary<string, string> pluginSpecs = new Dictionary<string, string>();
+
+	// the manager's own slot list (protected in VaM; plugins find it by reflection) and the loader a scenario installs to turn a URL into a running script
+	public readonly List<MVRPlugin> plugins = new List<MVRPlugin>();
+	public static Func<MVRPluginManager, MVRPlugin, string, GameObject> SimLoader;
+	private readonly Dictionary<string, GameObject> spawned = new Dictionary<string, GameObject>();
+
+	public MVRPlugin CreatePlugin()
+	{
+		var p = new MVRPlugin();
+		for (int i = 0; i < 1000; i++)
+		{
+			string u = "plugin#" + i;
+			if (!plugins.Exists(x => x.uid == u) && !pluginSpecs.ContainsKey(u)) { p.uid = u; break; }
+		}
+		var url = new JSONStorableUrl(p.uid, "");
+		url.setCallbackFunction = v => LoadPlugin(p, v);
+		p.pluginURLJSON = url;
+		plugins.Add(p);
+		return p;
+	}
+
+	private void LoadPlugin(MVRPlugin p, string url)
+	{
+		GameObject old;
+		if (spawned.TryGetValue(p.uid, out old)) { DropScript(old); spawned.Remove(p.uid); }
+		pluginSpecs[p.uid] = url;
+		if (SimLoader != null && !string.IsNullOrEmpty(url))
+		{
+			var go = SimLoader(this, p, url);
+			if (go != null) spawned[p.uid] = go;
+		}
+	}
+
+	private void DropScript(GameObject go)
+	{
+		if (go == null) return;
+		foreach (var sc in go.GetComponents<MVRScript>()) { try { if (containingAtom != null) containingAtom.UnregisterAdditionalStorable(sc); } catch { } }
+		UnityEngine.Object.Destroy(go);
+	}
+
+	public void RemovePluginWithUID(string uid)
+	{
+		GameObject go;
+		if (spawned.TryGetValue(uid, out go)) { DropScript(go); spawned.Remove(uid); }
+		plugins.RemoveAll(x => x.uid == uid);
+		pluginSpecs.Remove(uid);
+	}
+
+	public void RemoveAllPlugins() { foreach (var p in plugins.ToArray()) RemovePluginWithUID(p.uid); }
+
+	public void ReloadPluginWithUID(string uid)
+	{
+		var p = plugins.Find(x => x.uid == uid);
+		if (p != null && p.pluginURLJSON != null) { string u = p.pluginURLJSON.val; p.pluginURLJSON.valNoCallback = ""; p.pluginURLJSON.val = u; }
+	}
 	public override SimpleJSON.JSONClass GetJSON(bool includePhysical = true, bool includeAppearance = true, bool forceStore = false)
 	{
 		var jc = new SimpleJSON.JSONClass();
@@ -27,6 +82,8 @@ public partial class MVRScript : JSONStorable
 	public readonly List<UIDynamic> uiLeft = new List<UIDynamic>(), uiRight = new List<UIDynamic>();
 
 	public virtual void Init() { }
+	public SimpleJSON.JSONNode LoadJSON(string saveName) { return SuperController.singleton == null ? null : SuperController.singleton.LoadJSON(saveName); }
+	public void SaveJSON(SimpleJSON.JSONClass jc, string saveName) { if (SuperController.singleton != null) SuperController.singleton.SaveJSON(jc, saveName); }
 	public override void InitUI() { }
 	public void ForceAwake() { }
 	public Atom GetContainingAtom() { return containingAtom; }
@@ -241,6 +298,11 @@ namespace UnityEngine
 	public sealed partial class Random
 	{
 		private static readonly System.Random Rnd = new System.Random(1234);
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static float Range(float min, float max) { return min + (float)Rnd.NextDouble() * (max - min); }
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static int Range(int min, int max) { return Rnd.Next(min, max); }
+		public static float value { [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] get { return (float)Rnd.NextDouble(); } }
 		public static Vector3 insideUnitSphere { [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] get { Vector3 v; do { v = new Vector3((float)Rnd.NextDouble() * 2 - 1, (float)Rnd.NextDouble() * 2 - 1, (float)Rnd.NextDouble() * 2 - 1); } while (v.sqrMagnitude > 1f); return v; } }
 	}
 
@@ -380,3 +442,4 @@ namespace UnityEngine.Events
 		public void Invoke(T0 arg) { foreach (var d in SimCalls.ToArray()) ((UnityAction<T0>)d)(arg); }
 	}
 }
+

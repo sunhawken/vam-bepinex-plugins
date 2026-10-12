@@ -3,6 +3,6 @@ $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 dotnet build StubGen/StubGen.csproj -c Release --nologo -v q -o stubgen_bin | Out-Null
 dotnet build UnityShim/UnityShim.csproj -c Release --nologo -v q -p:NoStubs=true -o bin_nostubs | Select-String 'error' | Select-Object -First 5
-$dlls = @(Get-ChildItem in -Filter *.dll | ForEach-Object { $_.FullName }) + @(Get-ChildItem in\cores -Filter *.dll -ErrorAction SilentlyContinue | ForEach-Object { '@types:' + $_.FullName }) + @(Get-ChildItem in\targets -Filter *.dll -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }) + @(Get-ChildItem in\scene -Filter *.dll -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+$dlls = @(Get-ChildItem in -Filter *.dll | ForEach-Object { $_.FullName }) + @(Get-ChildItem in\cores -Filter *.dll -ErrorAction SilentlyContinue | ForEach-Object { '@types:' + $_.FullName }) + @(Get-ChildItem in\targets -Filter *.dll -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }) + @(Get-ChildItem in\scene -Filter *.dll -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }) + @(Get-ChildItem in\suite -Filter *.dll -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
 & .\stubgen_bin\stubgen.exe UnityShim\VamStubs.g.cs bin_nostubs\UnityShim.dll 'T:\New folder\VaM_Data\Managed' @dlls | Where-Object { $_ -notmatch '^note' }
 dotnet build Runner/Runner.csproj -c Release --nologo -v q -o bin | Select-String 'error' | Select-Object -First 15

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ZeroT.OrgasmSuite</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net35</TargetFramework>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\UiKit\RlChrome.cs" Link="UiKit\RlChrome.cs" />
+    <Compile Include="..\UiKit\RlExternal.cs" Link="UiKit\RlExternal.cs" />
+    <Compile Include="..\UiKit\RlImguiExternal.cs" Link="UiKit\RlImguiExternal.cs" />
+    <Compile Remove="build**" />
+    <Compile Remove="build\**" />
+    <Reference Include="System.Core" />
+    <Reference Include="BepInEx" />
+    <Reference Include="Assembly-CSharp" />
+    <Reference Include="UnityEngine" />
+    <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <EmbeddedResource Include="build\OrgasmSuite.scripts.bin" LogicalName="OrgasmSuite.scripts" />
+  </ItemGroup>
+  <!-- the script pack is built from the user's own .var files (prepare_scripts.py), never from git -->
+  <Target Name="PrepareScripts" BeforeTargets="BeforeBuild" Condition="!Exists('build\OrgasmSuite.scripts.bin')">
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)\prepare_scripts.py&quot; &quot;$(VaMDir)&quot;" />
+  </Target>
+</Project>

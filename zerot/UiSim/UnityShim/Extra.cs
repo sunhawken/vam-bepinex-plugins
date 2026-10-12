@@ -114,3 +114,23 @@ namespace UnityEngine
 	public static partial class Time { public static int frameCount { get; set; } }
 }
 namespace UnityEngine { public partial struct Color { public static Color red => new Color(1, 0, 0, 1); public static Color green => new Color(0, 1, 0, 1); public static Color blue => new Color(0, 0, 1, 1); public static Color yellow => new Color(1, .92f, .016f, 1); } }
+namespace UnityEngine
+{
+	public static partial class Mathf
+	{
+		public static float SmoothStep(float from, float to, float t) { t = t < 0f ? 0f : (t > 1f ? 1f : t); t = -2f * t * t * t + 3f * t * t; return to * t + from * (1f - t); }
+		public static float LerpUnclamped(float a, float b, float t) { return a + (b - a) * t; }
+		public static float Log(float f) { return (float)System.Math.Log(f); }
+	}
+	public partial struct Color
+	{
+		public static Color Lerp(Color a, Color b, float t) { t = t < 0f ? 0f : (t > 1f ? 1f : t); return new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t); }
+	}
+}
+namespace UnityEngine
+{
+	public partial struct Vector3
+	{
+		public void Normalize() { var n = normalized; x = n.x; y = n.y; z = n.z; }
+	}
+}

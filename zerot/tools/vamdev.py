@@ -57,12 +57,13 @@ P = {
     'microphysics': ('MicroPhysicsFixerStandalone/ZeroT.MicroPhysicsFixerStandalone.csproj', 'ZeroT.MicroPhysicsFixerStandalone.dll', None),
     'bodyweight': ('BodyWeightStandalone/ZeroT.BodyWeightStandalone.csproj', 'ZeroT.BodyWeightStandalone.dll', None),
     'extraautogenitals': ('ExtraAutoGenitalsStandalone/ZeroT.ExtraAutoGenitalsStandalone.csproj', 'ZeroT.ExtraAutoGenitalsStandalone.dll', None),
+    'orgasmsuite': ('OrgasmSuite/ZeroT.OrgasmSuite.csproj', 'ZeroT.OrgasmSuite.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HEADLESS = {'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
 HELPERS = {'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper', 'appearanceloaderhelper', 'zajeshufflehelper'}   # Harmony helpers: need the script assemblies from `simtargets`
 UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
-              'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook'}
+              'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook', 'orgasmsuite'}
 
 
 def run(cmd, cwd=None, quiet=False):
@@ -83,6 +84,12 @@ def names(arg):
 
 def build(name):
     proj, dll, _ = P[name]
+    if name == 'orgasmsuite':   # the embedded script pack is rebuilt from the .var files (and the patches) on every build
+        r0 = run([sys.executable, os.path.join(ZEROT, 'OrgasmSuite', 'prepare_scripts.py'), VAM], quiet=True)
+        if r0.returncode != 0:
+            print('prepare_scripts FAILED')
+            print((r0.stdout or '') + (r0.stderr or ''))
+            return False
     r = run(['dotnet', 'build', os.path.join(ZEROT, proj), '-c', 'Release', '--nologo', '-v', 'q'], quiet=True)
     text = (r.stdout or '') + (r.stderr or '')
     errs = sorted(set(l.strip() for l in text.splitlines() if ' error ' in l))
@@ -134,7 +141,11 @@ def cmd_test(arg):
             ok = False
             continue
         if n in HEADLESS:
+            if n == 'orgasmsuite':
+                ok = cmd_suitetargets() and ok
             ok = sim_logic(n) and ok
+            if n in UI_PLUGINS:
+                ok = sim_ui(n) and ok
         elif n in UI_PLUGINS:
             ok = sim_ui(n) and ok
         else:
@@ -317,6 +328,30 @@ def cmd_simtargets():
             continue
         print('== %s <- %s' % (name, os.path.basename(v)))
         ok = cmd_cslcheck(v, os.path.join(SIM, 'in', 'targets', name + '.dll')) and ok
+    return ok
+
+
+SUITE_SETS = ['FluidBridge', 'AutoTremble', 'BodyLanguage_Lite', 'ZajeShuffle', 'StimulationHUD', 'SexyFluids', 'BodyLanguage']
+
+
+def cmd_suitetargets(only=None):
+    """stage the OrgasmSuite scripts from the user's .var files (patches applied) and compile each set into UiSim/in/suite/<set>.dll"""
+    prep = os.path.join(ZEROT, 'OrgasmSuite', 'prepare_scripts.py')
+    r = run([sys.executable, prep, VAM], quiet=True)
+    print((r.stdout or '').strip() or (r.stderr or '').strip())
+    if r.returncode != 0:
+        return False
+    stage = os.path.join(ZEROT, 'OrgasmSuite', 'build', 'stage', 'Custom', 'Scripts', 'ZeroT', 'OrgasmSuite')
+    ok = True
+    for name in SUITE_SETS:
+        if only and name not in only:
+            continue
+        short = os.path.join(tempfile.gettempdir(), 'osc_' + name)
+        shutil.rmtree(short, ignore_errors=True)
+        shutil.copytree(os.path.join(stage, name), os.path.join(short, 's', name))
+        print('== suite set ' + name)
+        ok = cmd_cslcheck(short, os.path.join(SIM, 'in', 'suite', name + '.dll')) and ok
+        shutil.rmtree(short, ignore_errors=True)
     return ok
 
 
@@ -587,6 +622,8 @@ def main(argv):
         cmd_unpack(a[0], a[1] if len(a) > 1 else None)
     elif c == 'pack':
         cmd_pack(a[0], a[1])
+    elif c == 'suitetargets':
+        return 0 if cmd_suitetargets(a or None) else 1
     elif c == 'cslcheck':
         return 0 if cmd_cslcheck(a[0]) else 1
     elif c == 'cslbuild':

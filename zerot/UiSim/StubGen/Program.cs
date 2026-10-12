@@ -246,6 +246,7 @@ internal static class Program
 			sb.AppendLine("  public " + (f.IsStatic ? "static " : "") + (f.IsLiteral ? "" : "") + Name(f.FieldType) + " " + f.Name + (!f.IsStatic && IsPlainUnityClass(f.FieldType) ? " = new " + Name(f.FieldType) + "();" : ";"));
 		}
 		if (have == null && !(hand != null && hand.Contains(".ctor")) && kind == "class" && !(d.IsAbstract && d.IsSealed) && !n.methods.Any(x => x.IsConstructor && !x.IsStatic && x.Parameters.Count == 0)) sb.AppendLine("  public " + SimpleName(d) + "() {}");
+		if (kind == "class" && !d.IsAbstract && d.BaseType != null && d.BaseType.FullName == "UnityEngine.CustomYieldInstruction") sb.AppendLine("  public override bool keepWaiting { get { return false; } }");   // abstract in the shim
 		foreach (var nt in d.NestedTypes)
 			if (needs.TryGetValue(nt.FullName, out var nn) && !nn.existsInShim) Emit(sb, nn);
 		sb.AppendLine("}");
@@ -256,7 +257,7 @@ internal static class Program
 	// members of these types that UnityShim/ScriptHost.cs implements for real (the rest of the type is still generated)
 	private static readonly Dictionary<string, HashSet<string>> HandWritten = new Dictionary<string, HashSet<string>>
 	{
-		{ "MVRScript", new HashSet<string> { "Init", "InitUI", "ForceAwake", "CreateSlider", "CreateToggle", "CreateButton", "CreateTextField", "CreatePopup", "CreateScrollablePopup", "CreateFilterablePopup", "CreateSpacer",
+		{ "MVRScript", new HashSet<string> { "LoadJSON", "SaveJSON", "Init", "InitUI", "ForceAwake", "CreateSlider", "CreateToggle", "CreateButton", "CreateTextField", "CreatePopup", "CreateScrollablePopup", "CreateFilterablePopup", "CreateSpacer",
 			"GetContainingAtom", "RemoveSlider", "RemoveToggle", "RemoveButton", "RemoveTextField", "RemovePopup", "RemoveColorPicker", "RemoveSpacer", "enabledJSON", "pluginLabelJSON", "manager" } },
 		{ "DAZCharacterSelector", new HashSet<string> { "GetClothingItem" } },
 		{ "UnityEngine.Mesh", new HashSet<string> { ".ctor", "get_vertices", "set_vertices", "SetIndices", "Clear", "RecalculateBounds" } },
@@ -267,7 +268,7 @@ internal static class Program
 		{ "UnityEngine.Events.UnityEventBase", new HashSet<string> { "RemoveAllListeners", "SimCalls" } },
 		{ "UnityEngine.Events.UnityEvent", new HashSet<string> { "AddListener", "RemoveListener", "Invoke" } },
 		{ "UnityEngine.Events.UnityEvent`1", new HashSet<string> { "AddListener", "RemoveListener", "Invoke" } },
-		{ "UnityEngine.Random", new HashSet<string> { "get_insideUnitSphere" } },
+		{ "UnityEngine.Random", new HashSet<string> { "get_insideUnitSphere", "Range", "get_value", "set_value", "value" } },
 		{ "UnityEngine.LineRenderer", new HashSet<string> { "SetVertexCount", "SetWidth", "SetPosition" } },
 		{ "UnityEngine.GameObject", new HashSet<string> { "CreatePrimitive" } },
 		{ "UnityEngine.Graphics", new HashSet<string> { "DrawMesh" } },
@@ -276,6 +277,7 @@ internal static class Program
 		{ "UnityEngine.JsonUtility", new HashSet<string> { "FromJson", "ToJson" } },
 		{ "MVR.FileManagementSecure.FileManagerSecure", new HashSet<string> { "FileExists", "DirectoryExists", "GetFiles", "GetDirectories", "ReadAllText", "CreateDirectory", "NormalizePath" } },
 		{ "MVR.FileManagement.FileManager", new HashSet<string> { "GetPackageUids", "get_lastPackageRefreshTime" } },
+		{ "MVRPluginManager", new HashSet<string> { "CreatePlugin", "RemovePluginWithUID", "RemoveAllPlugins", "ReloadPluginWithUID" } },
 	};
 
 	// reference-typed members the real engine always fills (RectOffset padding, UnityEvents...) start as live objects, not null

@@ -75,6 +75,34 @@ public static class SceneHost
 
 	public sealed class Result { public Entry E; public MVRScript Script; public string Error; }
 
+	// one MVRScript component as VaM's plugin manager builds it (no Init yet)
+	public static MVRScript Spawn(Type type, Atom atom, GameObject parent, string key, string spec)
+	{
+		var go = new GameObject(key + "_" + type.FullName);
+		go.transform.SetParent(parent.transform, false);
+		var script = (MVRScript)go.AddComponent(type);
+		script.containingAtom = atom;
+		script.storeId = key + "_" + type.FullName;
+		script.manager = parent.GetComponent<MVRPluginManager>() ?? parent.AddComponent<MVRPluginManager>();
+		script.manager.pluginSpecs[key] = spec;
+		script.enabledJSON = new JSONStorableBool("enabled", true);
+		script.pluginLabelJSON = new JSONStorableString("pluginLabel", "");
+		script.RegisterBool(script.enabledJSON); script.RegisterString(script.pluginLabelJSON);
+		// the script's UI panel as the plugin manager builds it: MVRScriptUI with left/right content rects
+		var ui = new GameObject("scriptUI " + script.storeId); ui.transform.SetParent(go.transform, false);
+		var msu = ui.AddComponent<MVRScriptUI>();
+		var left = new GameObject("left"); left.transform.SetParent(ui.transform, false); msu.leftUIContent = left.AddComponent<RectTransform>();
+		var right = new GameObject("right"); right.transform.SetParent(ui.transform, false); msu.rightUIContent = right.AddComponent<RectTransform>();
+		script.UITransform = ui.transform;
+		foreach (var fn in new[] { "leftUIContent", "rightUIContent" })
+		{
+			var fld = typeof(MVRScript).GetField(fn);
+			if (fld != null) fld.SetValue(script, fn.StartsWith("left") ? msu.leftUIContent : msu.rightUIContent);
+		}
+		atom.RegisterAdditionalStorable(script);
+		return script;
+	}
+
 	public static List<Result> Start(SuperController sc, List<Entry> entries, Func<string, Atom> atomOf, Func<string, string, GameObject> holderOf)
 	{
 		var results = new List<Result>();
@@ -91,28 +119,7 @@ public static class SceneHost
 				if (type == null) { r.Error = r.Error ?? "no MVRScript class in " + e.Package; continue; }
 				var atom = atomOf(e.AtomId);
 				var parent = holderOf(e.AtomId, e.Clothing);
-				var go = new GameObject(e.Key + "_" + type.FullName);
-				go.transform.SetParent(parent.transform, false);
-				var script = (MVRScript)go.AddComponent(type);
-				script.containingAtom = atom;
-				script.storeId = e.Key + "_" + type.FullName;
-				script.manager = parent.GetComponent<MVRPluginManager>() ?? parent.AddComponent<MVRPluginManager>();
-				script.manager.pluginSpecs[e.Key] = e.Package + ":/" + e.Path;
-				script.enabledJSON = new JSONStorableBool("enabled", true);
-				script.pluginLabelJSON = new JSONStorableString("pluginLabel", "");
-				script.RegisterBool(script.enabledJSON); script.RegisterString(script.pluginLabelJSON);
-				// the script's UI panel as the plugin manager builds it: MVRScriptUI with left/right content rects
-				var ui = new GameObject("scriptUI " + script.storeId); ui.transform.SetParent(go.transform, false);
-				var msu = ui.AddComponent<MVRScriptUI>();
-				var left = new GameObject("left"); left.transform.SetParent(ui.transform, false); msu.leftUIContent = left.AddComponent<RectTransform>();
-				var right = new GameObject("right"); right.transform.SetParent(ui.transform, false); msu.rightUIContent = right.AddComponent<RectTransform>();
-				script.UITransform = ui.transform;
-				foreach (var fn in new[] { "leftUIContent", "rightUIContent" })
-				{
-					var fld = typeof(MVRScript).GetField(fn);
-					if (fld != null) fld.SetValue(script, fn.StartsWith("left") ? msu.leftUIContent : msu.rightUIContent);
-				}
-				atom.RegisterAdditionalStorable(script);
+				var script = Spawn(type, atom, parent, e.Key, e.Package + ":/" + e.Path);
 				r.Script = script;
 			}
 			catch (Exception ex) { r.Error = (ex.InnerException ?? ex).GetType().Name + ": " + (ex.InnerException ?? ex).Message; }

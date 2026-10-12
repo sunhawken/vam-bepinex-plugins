@@ -93,7 +93,7 @@ namespace SimpleJSON
 		public override int Count { get { return list.Count; } }
 		public override void Add(string key, JSONNode item) { list.Add(item); }
 		public override void Add(JSONNode item) { list.Add(item); }
-		public IEnumerator<JSONNode> GetEnumerator() { return list.GetEnumerator(); }
+		public System.Collections.IEnumerator GetEnumerator() { return ((System.Collections.IEnumerable)list).GetEnumerator(); }
 		internal override void Write(StringBuilder sb)
 		{
 			sb.Append('[');
