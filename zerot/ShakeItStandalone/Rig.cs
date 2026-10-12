@@ -430,7 +430,7 @@ namespace ZeroT.ShakeItStandalone
 					}
 				}
 				work.FetchSkin();
-				if (sWorkInfo != null && work.Info != null) sWorkInfo.valNoCallback = work.Info;
+				if (sWorkInfo != null) { string wi = work.BuildInfo(); if (wi != null && sWorkInfo.val != wi) sWorkInfo.valNoCallback = wi; }
 				if (sStatus != null)
 				{
 					string s = Status + (TotalErrors > 0 ? "; " + TotalErrors + " error(s), last: " + LastError : "") + "; " + MorphCount + " morph(s)";

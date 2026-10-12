@@ -39,6 +39,8 @@ namespace ZeroT.ShakeItStandalone
 		private readonly HashSet<Atom> skipLogged = new HashSet<Atom>();
 		private readonly HashSet<Atom> originals = new HashSet<Atom>();
 		private float nextDiscover, nextOriginalCheck;
+		private readonly List<Rig> updBuf = new List<Rig>();
+		private readonly Dictionary<Atom, float> deepAt = new Dictionary<Atom, float>();
 		private bool wasActive = true;
 
 		public static void ForgetDefaultsCache() { Rig.ForgetDefaults(); }
@@ -125,10 +127,19 @@ namespace ZeroT.ShakeItStandalone
 		}
 
 		// the .var's own scripts, if loaded on this person: classes named ShakeIt / FlexIt / WorkOut in the CheesyFX namespace
-		private static bool HasOriginal(Atom atom)
+		private static bool HasOriginal(Atom atom, bool deep)
 		{
 			try
 			{
+				// cheap: the plugin's storable id ("plugin#N_CheesyFX.ShakeIt")
+				List<string> ids = atom.GetStorableIDs();
+				for (int i = 0; ids != null && i < ids.Count; i++)
+				{
+					string s = ids[i];
+					if (s != null && s.Contains("CheesyFX.") && (s.EndsWith(".ShakeIt") || s.EndsWith(".FlexIt") || s.EndsWith(".WorkOut"))) return true;
+				}
+				// the walk over every component of the person is the expensive part (a visible hitch): rarely
+				if (!deep) return false;
 				MonoBehaviour[] all = atom.GetComponentsInChildren<MonoBehaviour>(true);
 				for (int i = 0; i < all.Length; i++)
 				{
@@ -219,8 +230,11 @@ namespace ZeroT.ShakeItStandalone
 			{
 				return;
 			}
-			foreach (Rig r in new List<Rig>(rigs.Values))
+			updBuf.Clear();
+			updBuf.AddRange(rigs.Values);
+			for (int ri = 0; ri < updBuf.Count; ri++)
 			{
+				Rig r = updBuf[ri];
 				try
 				{
 					r.Update();
@@ -248,7 +262,7 @@ namespace ZeroT.ShakeItStandalone
 					r.host = null;
 					DropRigGone(r);
 				}
-				if (a != null) { shells.Remove(a); retryAt.Remove(a); retries.Remove(a); rebuildAt.Remove(a); skipLogged.Remove(a); originals.Remove(a); }
+				if (a != null) { shells.Remove(a); retryAt.Remove(a); retries.Remove(a); rebuildAt.Remove(a); skipLogged.Remove(a); originals.Remove(a); deepAt.Remove(a); }
 			}
 			bool checkOriginal = Time.unscaledTime >= nextOriginalCheck;
 			if (checkOriginal) nextOriginalCheck = Time.unscaledTime + 3f;
@@ -266,7 +280,10 @@ namespace ZeroT.ShakeItStandalone
 				}
 				if (checkOriginal)
 				{
-					if (HasOriginal(a)) originals.Add(a); else originals.Remove(a);
+					float dAt;
+						bool deep = !deepAt.TryGetValue(a, out dAt) || Time.unscaledTime >= dAt;
+						if (deep) deepAt[a] = Time.unscaledTime + 30f + (a.uid == null ? 0 : (a.uid.Length % 7));
+						if (HasOriginal(a, deep)) originals.Add(a); else if (deep) originals.Remove(a);
 				}
 				if (originals.Contains(a))
 				{

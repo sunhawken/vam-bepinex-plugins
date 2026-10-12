@@ -380,7 +380,14 @@ namespace ZeroT.ShakeItStandalone
 					glossTextureOffset.val = minGlossTextureOffset.val;
 				}
 			}
+		}
+
+		// built on demand (once a second from the housekeeping), not every physics step
+		public string BuildInfo()
+		{
+			if (gloss == null || glossTextureOffset == null) return Info;
 			Info = "Gloss: " + gloss.val.ToString("0.000") + "  Offset: " + glossTextureOffset.val.ToString("0.000") + "  Exh: " + exhaustion.val.ToString("0.00");
+			return Info;
 		}
 
 		public void TickTriggers()

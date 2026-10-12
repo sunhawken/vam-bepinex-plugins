@@ -52,7 +52,22 @@ namespace ZeroT.ShakeItStandalone
 		}
 
 		// package uids of the ShakeIt package, newest first
+		private static List<string> prefixCache;
+		private static float prefixUntil;
+
+		// the package list is thousands of entries long: look through it at most every 10 s, not on every morph lookup
 		public static List<string> PackagePrefixes()
+		{
+			if (prefixCache != null && Time.unscaledTime < prefixUntil)
+			{
+				return new List<string>(prefixCache);
+			}
+			prefixCache = ScanPrefixes();
+			prefixUntil = Time.unscaledTime + 10f;
+			return new List<string>(prefixCache);
+		}
+
+		private static List<string> ScanPrefixes()
 		{
 			List<KeyValuePair<int, string>> found = new List<KeyValuePair<int, string>>();
 			try
@@ -196,12 +211,12 @@ namespace ZeroT.ShakeItStandalone
 			if (missingUntil.Count == 0) return false;
 			GenerateDAZMorphsControlUI ui = UI;
 			if (ui == null) return false;
+			List<string> pk = PackagePrefixes();
+			pk.Add("");
 			foreach (string key in new List<string>(missingUntil.Keys))
 			{
 				bool flex = key.StartsWith("F:");
 				string rel = Dir(flex) + key.Substring(2) + ".vmi";
-				List<string> pk = PackagePrefixes();
-				pk.Add("");
 				for (int i = 0; i < pk.Count; i++)
 				{
 					try
