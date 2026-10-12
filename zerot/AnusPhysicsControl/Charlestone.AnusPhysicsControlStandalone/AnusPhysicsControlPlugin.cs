@@ -448,7 +448,7 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		_vulvaSpring = ((BaseUnityPlugin)this).Config.Bind<float>("Global", "VulvaFirmnessSpring", 8000f, "Range: 0 to 20000.");
 		_vulvaDamper = ((BaseUnityPlugin)this).Config.Bind<float>("Global", "VulvaFirmnessDamper", 200f, "Range: 0 to 1000.");
 		_active = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn the plugin off completely (restores the original joint settings and stops scanning).");
-		_visible = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Visible", true, "F9 toggles the desktop window.");
+		_visible = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Visible", true, "Show the desktop window (no hotkey).");
 		_collapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember whether the desktop window is collapsed to its title bar.");
 		_windowX = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "WindowX", 30f, "Last desktop window position X.");
 		_windowY = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "WindowY", 80f, "Last desktop window position Y.");
@@ -495,10 +495,6 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 				UpdateWindowResize();
 				FinishWindowResize();
 			}
-		}
-		if (Input.GetKeyDown((KeyCode)290))
-		{
-			_visible.Value = !_visible.Value;
 		}
 		_scanTimer += Time.unscaledDeltaTime;
 		if (_scanTimer < 3f)
@@ -972,7 +968,7 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		}
 		GUILayout.BeginArea(ZeroT.UiKit.RlChrome.Body(width, _window.height));
 		_scroll = GUILayout.BeginScrollView(_scroll, new GUILayoutOption[1] { GUILayout.Height(Mathf.Max(80f, _window.height - 52f)) });
-		GUILayout.Label("F9 show/hide  |  S-/S+ scale  |  arrow resizes", new GUILayoutOption[0]);
+		GUILayout.Label("S-/S+ scale  |  arrow resizes", new GUILayoutOption[0]);
 		bool flag = GUILayout.Toggle(_applyAll.Value, "Apply to all female Persons (session mode)", new GUILayoutOption[0]);
 		if (flag != _applyAll.Value)
 		{
