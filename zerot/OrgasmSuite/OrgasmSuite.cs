@@ -70,7 +70,7 @@ namespace ZeroT.OrgasmSuite
 		private Rect _win = new Rect(60f, 140f, 380f, 595f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
-		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f, CollapsedH = 34f;
+		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f, CollapsedH = 64f;
 
 		// ------------------------------------------------------------------ runtime
 		private bool _installed;
@@ -837,7 +837,17 @@ namespace ZeroT.OrgasmSuite
 			if (Fx.Mini(new Rect(bx + 2f * (bw + gap), by, bw, bh), collapsed ? "+" : "-", s)) { _collapsed.Value = !collapsed; Config.Save(); }
 			if (Fx.Mini(new Rect(bx + 3f * (bw + gap), by, bw, bh), "x", s)) { _showWindow.Value = false; Config.Save(); }
 			HandleDragResize(panel, s, collapsed);
-			if (collapsed) return;
+			if (collapsed)
+			{
+				// the collapsed bar keeps the arousal / stimulation level in view: the same liquid bar and the same value as the full window
+				PersonCfg ccfg = string.IsNullOrEmpty(_uid) ? null : CfgFor(_uid);
+				bool cLite = ccfg == null || ccfg.Engine != "BodyLanguage";
+				float cv = _previewFill.Value >= 0f ? _previewFill.Value : LiquidValue(_uid);
+				float cpw = 48f * s;
+				Fx.Liquid(new Rect(panel.x + pad, panel.y + 36f * s, panel.width - 2f * pad - cpw - gap, 20f * s), Mathf.Max(0f, cv), cLite ? Fx.Lite : Fx.Full, s, 7101);
+				Fx.Text(new Rect(panel.xMax - pad - cpw, panel.y + 36f * s, cpw, 20f * s), cv < 0f ? "-- %" : Mathf.RoundToInt(cv * 100f) + " %", Mathf.Max(8, Mathf.RoundToInt(10f * s)), TextAnchor.MiddleRight, Fx.Ink, false);
+				return;
+			}
 			// the rule under the title: hairline, node dots at both ends, a brighter stretch in the middle
 			float ty = panel.y + 34f * s;
 			Fx.HLine(panel.x + pad, ty, panel.width - 2f * pad, Fx.Faint, 1f);
