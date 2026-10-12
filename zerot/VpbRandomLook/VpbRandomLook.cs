@@ -8,6 +8,7 @@ using System.Text;
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
+using VPB;
 using VPB.Api;
 
 namespace ZeroT.VpbRandomLook
@@ -50,7 +51,7 @@ namespace ZeroT.VpbRandomLook
         private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
 
         private const float MinW = 280f, MaxW = 640f, MinH = 150f, MaxH = 720f;
-        private const float CollapsedH = 34f;
+        private const float CollapsedH = 58f;
 
         // ---- data ----
         private string[] _creators = new string[0];
@@ -373,7 +374,11 @@ namespace ZeroT.VpbRandomLook
             }
 
             HandleDragResize(panel, s, collapsed);
-            if (collapsed) return;
+            if (collapsed)
+            {
+                DrawCoreButtons(panel, s, pad);
+                return;
+            }
 
             float y = panel.y + 28f * s;
 
@@ -524,6 +529,39 @@ namespace ZeroT.VpbRandomLook
             _cachedDpiScale = -1f;
             Config.Save();
         }
+
+        // Close All / Create Gallery: VPB's own calls, locked to the VPB core (greyed out while it is not loaded).
+        // Every VPB type is touched only inside the small NoInlining helpers below, each called under try/catch,
+        // so a missing VPB cannot break the window itself.
+        private void DrawCoreButtons(Rect panel, float s, float pad)
+        {
+            float bw = (panel.width - 2f * pad - 4f * s) / 2f;
+            float by = panel.y + 29f * s;
+            bool coreUp = false;
+            try { coreUp = CoreUp(); } catch { }
+            bool was = GUI.enabled;
+            GUI.enabled = was && coreUp;
+            if (GUI.Button(new Rect(panel.x + pad, by, bw, 22f * s), "Close All"))
+            {
+                try { CoreCloseAll(); }
+                catch (Exception ex) { Logger.LogWarning("Close All: " + ex.Message); }
+            }
+            if (GUI.Button(new Rect(panel.x + pad + bw + 4f * s, by, bw, 22f * s), "Create Gallery"))
+            {
+                try { CoreCreateGallery(); }
+                catch (Exception ex) { Logger.LogWarning("Create Gallery: " + ex.Message); }
+            }
+            GUI.enabled = was;
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private bool CoreUp() { return _apiOk && Gallery.singleton != null && VamHookPlugin.singleton != null; }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static void CoreCloseAll() { Gallery.singleton.CloseAll(); }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static void CoreCreateGallery() { VamHookPlugin.singleton.OpenCreateGallery(); }
 
         /// <summary>Pixel-space drag/resize: accurate at any DPI, unlike scaling through GUI.matrix.</summary>
         private void HandleDragResize(Rect panel, float s, bool collapsed)
