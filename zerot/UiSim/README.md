@@ -33,4 +33,10 @@ VamSim (headless plugins and whole scenes, no VaM)
 - VamSim/SceneSim.cs + SceneHost.cs: scene loader. Real MVRScript plugins run on the shim (UnityShim/ScriptHost.cs = MVRScript host, Yield.cs = yield
   instructions, Native.cs = NativeArray/Pose). Asset bundles are not opened (requests complete with placeholders); bone poses are derived from saved
   stud positions; VaM link/Hold physics is not modelled.
+- Sim facilities added for the headless ports: Rigidbody forces/torque/inertia, ForceReceiver bodies (hip, knees, fingers, toes), VaM triggers (HasActions / Restore / GetJSON, actions counted),
+  UnityEvent listeners that really run (UI buttons and sliders can be clicked from a scenario), in-memory FileManagerSecure (text files, `*` globs, files saved through SaveJSON), DAZ morphs with uids,
+  Vector3/Vector4 indexers and operators, LineRenderer / CreatePrimitive, a `skin` storable with Gloss params.
+- Scenarios (`VamSim/*Scenario*.cs`, `Scenarios.cs`, `HelperScenarios.cs`): one per headless plugin (autoflutterhip, shakeit, togglehud, zajeshuffle, clothingbackface, ...).
+- `python zerot	ools\lookview.py <package.var|scene.json> --atom <id>` is a separate software viewer for a person look (VaM base mesh from the asset bundles, morphs, skin, skin-wrapped clothing, hair strands; rest pose,
+  built-in morphs not decoded). It needs `pip install numpy pillow numba scipy UnityPy TypeTreeGeneratorAPI` and caches the base mesh in `UiSim\cache` (not committed).
 - Built binaries are attached to the GitHub Release `sim-*` (no VaM or third-party plugin DLLs are included).
