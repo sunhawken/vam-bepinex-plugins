@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ParticlePinnacleThighCompressor</AssemblyName>
+    <TargetFramework>net35</TargetFramework>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <LangVersion>latest</LangVersion>
+    <OutputPath>$(MSBuildThisFileDirectory)..\artifacts\ParticlePinnacleThighCompressor\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx" />
+    <Reference Include="Assembly-CSharp" />
+    <Reference Include="ICSharpCode.SharpZipLib" />
+    <Reference Include="UnityEngine" />
+    <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\_ppa_current_original.cs" Link="ParticlePinnacleNativeController.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="T:\New folder\AddonPackages\keep\ParticlePinnacle.ppthighcompressorandvibrations.52.var" LogicalName="ParticlePinnacle.ppthighcompressorandvibrations.52.var" />
+  </ItemGroup>
+</Project>
