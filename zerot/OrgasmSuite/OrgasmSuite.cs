@@ -70,7 +70,7 @@ namespace ZeroT.OrgasmSuite
 		private Rect _win = new Rect(60f, 140f, 380f, 595f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
-		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f, CollapsedH = 64f;
+		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f;
 
 		// ------------------------------------------------------------------ runtime
 		private bool _installed;
@@ -108,6 +108,7 @@ namespace ZeroT.OrgasmSuite
 			_winW = Config.Bind("Window", "Width", 380f, "Saved width.");
 			_winH = Config.Bind("Window", "Height", 595f, "Saved height.");
 			_dpiAware = Config.Bind("Window", "DpiAware", true, "Scale with the monitor's DPI.");
+			_previewPeople = Config.Bind("Window", "PreviewPeople", "", "For screenshots: fake rows for the collapsed bar, 'Name:level:L,Name:level:B' (level 0..1, L = Lite, B = BodyLanguage). Empty = live.");
 			_previewFill = Config.Bind("Window", "PreviewFill", -1f, "Show this level (0..1) in the liquid bar instead of the live value (for screenshots). -1 = live.");
 			_lastUid = Config.Bind("State", "LastPerson", "", "Person remembered across sessions.");
 			_win = new Rect(_winX.Value, _winY.Value, Mathf.Clamp(_winW.Value, MinW, MaxW), Mathf.Clamp(_winH.Value, MinH, MaxH));
@@ -813,7 +814,7 @@ namespace ZeroT.OrgasmSuite
 			float scale = DpiScale() * Mathf.Clamp(_scale.Value, 0.3f, 2.5f);
 			bool collapsed = _collapsed.Value;
 			float w = _win.width * scale;
-			float h = (collapsed ? CollapsedH : _win.height) * scale;
+			float h = (collapsed ? CollapsedHeight() : _win.height) * scale;
 			_home.Begin(ref _win);
 			_win.x = Mathf.Clamp(_win.x, -(w - 60f), Mathf.Max(0f, Screen.width - 60f));
 			_win.y = Mathf.Clamp(_win.y, 0f, Mathf.Max(0f, Screen.height - 24f));
@@ -839,13 +840,21 @@ namespace ZeroT.OrgasmSuite
 			HandleDragResize(panel, s, collapsed);
 			if (collapsed)
 			{
-				// the collapsed bar keeps the arousal / stimulation level in view: the same liquid bar and the same value as the full window
-				PersonCfg ccfg = string.IsNullOrEmpty(_uid) ? null : CfgFor(_uid);
-				bool cLite = ccfg == null || ccfg.Engine != "BodyLanguage";
-				float cv = _previewFill.Value >= 0f ? _previewFill.Value : LiquidValue(_uid);
-				float cpw = 48f * s;
-				Fx.Liquid(new Rect(panel.x + pad, panel.y + 36f * s, panel.width - 2f * pad - cpw - gap, 20f * s), Mathf.Max(0f, cv), cLite ? Fx.Lite : Fx.Full, s, 7101);
-				Fx.Text(new Rect(panel.xMax - pad - cpw, panel.y + 36f * s, cpw, 20f * s), cv < 0f ? "-- %" : Mathf.RoundToInt(cv * 100f) + " %", Mathf.Max(8, Mathf.RoundToInt(10f * s)), TextAnchor.MiddleRight, Fx.Ink, false);
+				// the collapsed bar keeps every active Person's arousal / stimulation level in view: the same liquid bar and value as the full window
+				List<Row> rows = CollapsedRows();
+				float ry = panel.y + 36f * s, rh = 20f * s, nameW = 70f * s, cpw = 46f * s;
+				if (rows.Count == 0)
+					Fx.Text(new Rect(panel.x + pad, ry, panel.width - 2f * pad, rh), Fx.Spaced("No person active"), Mathf.Max(8, Mathf.RoundToInt(10f * s)), TextAnchor.MiddleLeft, Fx.Dim, false);
+				for (int ri = 0; ri < rows.Count; ri++)
+				{
+					Row r = rows[ri];
+					float cv = r.Fake >= 0f ? r.Fake : (_previewFill.Value >= 0f ? _previewFill.Value : LiquidValue(r.Uid));
+					Color sc = r.Lite ? Fx.Lite : Fx.Full;
+					Fx.Text(new Rect(panel.x + pad, ry, nameW, rh), Fit(r.Name, 9).ToUpperInvariant(), Mathf.Max(8, Mathf.RoundToInt(10f * s)), TextAnchor.MiddleLeft, sc, false);
+					Fx.Liquid(new Rect(panel.x + pad + nameW, ry, panel.width - 2f * pad - nameW - cpw - gap, rh), Mathf.Max(0f, cv), sc, s, 7200 + ri);
+					Fx.Text(new Rect(panel.xMax - pad - cpw, ry, cpw, rh), cv < 0f ? "-- %" : Mathf.RoundToInt(cv * 100f) + " %", Mathf.Max(8, Mathf.RoundToInt(10f * s)), TextAnchor.MiddleRight, Fx.Ink, false);
+					ry += 24f * s;
+				}
 				return;
 			}
 			// the rule under the title: hairline, node dots at both ends, a brighter stretch in the middle
@@ -1019,6 +1028,52 @@ namespace ZeroT.OrgasmSuite
 		}
 
 		private static string Box(bool on) { return on ? "[x] " : "[ ] "; }
+
+		private ConfigEntry<string> _previewPeople;
+
+		// the collapsed bar: one liquid bar per Person the suite is switched on for
+		private sealed class Row { public string Uid, Name; public bool Lite; public float Fake = -1f; }
+		private readonly List<Row> _rows = new List<Row>();
+		private float _rowsAt = -100f;
+
+		private List<Row> CollapsedRows()
+		{
+			float now = Time.realtimeSinceStartup;
+			if (now - _rowsAt < 0.25f && _rows.Count > 0) return _rows;
+			_rowsAt = now;
+			_rows.Clear();
+			string fake = _previewPeople == null ? "" : _previewPeople.Value;
+			if (!string.IsNullOrEmpty(fake))
+			{
+				string[] parts = fake.Split(',');
+				for (int i = 0; i < parts.Length; i++)
+				{
+					string[] f = parts[i].Split(':');
+					if (f.Length < 2) continue;
+					Row r = new Row();
+					r.Uid = r.Name = f[0].Trim();
+					float v; r.Fake = float.TryParse(f[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out v) ? v : 0f;
+					r.Lite = !(f.Length > 2 && f[2].Trim().ToUpperInvariant() == "B");
+					_rows.Add(r);
+				}
+				return _rows;
+			}
+			for (int i = 0; i < _people.Count; i++)
+			{
+				PersonCfg c = CfgFor(_people[i].uid);
+				if (!c.On) continue;
+				Row r = new Row();
+				r.Uid = r.Name = _people[i].uid; r.Lite = c.Engine != "BodyLanguage";
+				_rows.Add(r);
+			}
+			return _rows;
+		}
+
+		private float CollapsedHeight()
+		{
+			int n = Mathf.Max(1, CollapsedRows().Count);
+			return 36f + n * 24f + 4f;
+		}
 
 		private float _resChecked = -100f;
 		private bool _resPresent;
