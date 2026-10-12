@@ -10,7 +10,7 @@ public class AddonPackagesOrganizerPlugin : BaseUnityPlugin
 {
 	private static readonly HashSet<string> KeepAtTop = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 	{
-		"AcidBubbles.Timeline.210", "DJ.NailPolish.1", "DJ.TanLines.1", "DJ.TanLines.2", "Jackaroo.SmartSuitJaR.1", "JayC_Re-animator.Hair_Curly_Bob.1", "MacGruber.Life.12", "MeshedVR.3PointLightSetup.1", "MeshedVR.AssetsPack.1", "MeshedVR.BonusScenes.9",
+		"AcidBubbles.Timeline.210", "DJ.NailPolish.1", "DJ.TanLines.1", "DJ.TanLines.2", "Jackaroo.SmartSuitJaR.1", "JayC_Re-animator.Hair_Curly_Bob.1", "MacGruber.Essentials.16", "MacGruber.Life.12", "MeshedVR.3PointLightSetup.1", "MeshedVR.AssetsPack.1", "MeshedVR.BonusScenes.9",
 		"MeshedVR.DemoScenes.2", "MeshedVR.OlderContent.1", "MeshedVR.PresetsPack.2", "NoOC.Clothing_SailorLingerie.2", "NoStage3.Hair_Long_Upswept_Top_Bun.1", "NoStage3.UnityAssetVamifier.20", "Vince.Clothing_PleatedSkirtV2T.2", "Xstatic.MegaParticlePack.1"
 	};
 
