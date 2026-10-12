@@ -661,6 +661,17 @@ namespace ZeroT.OrgasmSuite
 			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Hud) + hudName) && cfg != null) { cfg.Hud = !cfg.Hud; changed = true; }
 			GUI.enabled = enabled;
 			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(_shuffle.Value) + "ZajeShuffle")) { _shuffle.Value = !_shuffle.Value; Config.Save(); }
+			y += lh + 4f * s;
+
+			// ---- test buttons (act on the selected Person)
+			GUI.enabled = enabled && cfg != null && cfg.On;
+			if (GUI.Button(new Rect(x, y, hw, lh), "Orgasm now")) {
+				// the engine's own orgasm (arousal reset, its triggers), then the bridge chain: a forced orgasm at low arousal is not a threshold crossing FluidBridge could see
+				TriggerAction(isLite ? Lite : Full, isLite ? "Force Orgasm" : "Orgasm Now", "Orgasm");
+				TriggerAction(Bridge, "Test Orgasm Fluids", "Orgasm");
+			}
+			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), "Test fluids")) TriggerAction(Bridge, "Test Orgasm Fluids", "Test fluids");
+			GUI.enabled = enabled;
 			y += lh + 8f * s;
 
 			if (changed) { SavePeople(); _nextScan = 0f; _pushed.Clear(); }
@@ -685,6 +696,22 @@ namespace ZeroT.OrgasmSuite
 			string msg = Time.realtimeSinceStartup < _messageUntil ? _message : "";
 			GUI.Label(new Rect(x, y, w, 36f * s), msg.Length > 0 ? msg : "Scripts: " + _installNote);
 			// resize grip is drawn by HandleDragResize
+		}
+
+		// press a script's own action on the selected Person (the engine's orgasm, FluidBridge's test)
+		private void TriggerAction(Comp c, string action, string what)
+		{
+			try
+			{
+				Atom a = SuperController.singleton == null ? null : SuperController.singleton.GetAtomByUid(_uid);
+				MVRScript m = a == null ? null : Instance(a, c);
+				if (m == null) { SetMessage(what + ": " + c.Label + " is not running on " + _uid + " yet."); return; }
+				JSONStorableAction act = m.GetAction(action);
+				if (act == null || act.actionCallback == null) { SetMessage(what + ": " + c.Label + " has no '" + action + "' action."); return; }
+				act.actionCallback.Invoke();
+				SetMessage(what + " fired on " + _uid + ".");
+			}
+			catch (Exception e) { SetMessage(what + " failed: " + e.Message); Logger.LogWarning("Orgasm Suite: " + what + ": " + e.Message); }
 		}
 
 		private static string Box(bool on) { return on ? "[x] " : "[ ] "; }

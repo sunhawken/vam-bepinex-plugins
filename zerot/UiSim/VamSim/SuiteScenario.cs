@@ -310,6 +310,23 @@ public static class SuiteScenario
 		h.Check(Math.Abs(Wiggle(woman, "hipControl", h, 0.4f)) < 1e-4f, "...while Woman stays still");
 		St(h, 12f);
 
+		// ---- 6b. the window's "Orgasm now" and "Test fluids" buttons (they act on the selected Person)
+		var pt = h.Plugin.GetType();
+		pt.GetField("_uid", All).SetValue(h.Plugin, "Woman");
+		Func<string, string, string, bool> press = (comp, action, what) =>
+		{
+			var cf = pt.GetField(comp, BindingFlags.Public | BindingFlags.Static).GetValue(null);
+			pt.GetMethod("TriggerAction", All).Invoke(h.Plugin, new object[] { cf, action, what });
+			return true;
+		};
+		int t0 = Triggers(fbW);
+		press("Lite", "Force Orgasm", "Orgasm"); press("Bridge", "Test Orgasm Fluids", "Orgasm"); St(h, 1.2f);   // what the button does
+		h.Check(Triggers(fbW) == t0 + 1 && trW.GetBoolJSONParam("Active").val, "'Orgasm now' fires the engine's orgasm: FluidBridge triggers and AutoTremble starts");
+		St(h, 12f);
+		int t1 = Triggers(fbW);
+		press("Bridge", "Test Orgasm Fluids", "Test fluids"); St(h, 0.5f);
+		h.Check(Triggers(fbW) == t1 + 1, "'Test fluids' runs FluidBridge's test");
+		St(h, 12f);
 		// ---- 7. switch Woman to BodyLanguage: Lite + Arousal HUD go, BodyLanguage + Stimulation HUD come
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 7 errors=" + Sim.Errors.Count);
 		SetCfg(h, "Woman", "Engine", "BodyLanguage");
