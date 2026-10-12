@@ -222,14 +222,39 @@ public static class OrgasmSuiteFilter
 '''
 
 
-def patch_bl_listener(t):
-    t = t.replace('\r\n', '\n')
-    t = patch(t, """		public void RegisterCollision(TouchCollisionTrigger collisionTrigger){
-			if(touchEnabled.val){""", """		public void RegisterCollision(TouchCollisionTrigger collisionTrigger){
-			// [OrgasmSuite] touch arousal only from the sources the window allows (none / self / other Person+CUA / both)
-			Atom suiteOther = null;
-			try { if (collisionTrigger.lastCollision != null && collisionTrigger.lastCollision.collider != null) suiteOther = collisionTrigger.lastCollision.collider.GetAtom(); } catch { }
-			if(touchEnabled.val && OrgasmSuiteFilter.Allows(FillMeUp.atom, suiteOther)){""", what='bl listener')
+def patch_bl_trigger(t):
+    """touch arousal: only from the sources the window allows (none / self / other Person+CUA / both)"""
+    t = t.replace(chr(13) + chr(10), chr(10))
+    t = patch(t, """		void RegisterCollision(Collision collision){
+			if(TouchMe.excludedAtoms.Contains(collision.rigidbody.GetAtom())) return;
+""", """		void RegisterCollision(Collision collision){
+			if(TouchMe.excludedAtoms.Contains(collision.rigidbody.GetAtom())) return;
+			if(!OrgasmSuiteFilter.Allows(FillMeUp.atom, collision.rigidbody.GetAtom())) return;   // [OrgasmSuite]
+""", what='bl trigger')
+    return t
+
+
+def patch_bl_orificetrigger(t):
+    """penetration arousal goes through the same switch"""
+    t = t.replace(chr(13) + chr(10), chr(10))
+    t = patch(t, """            lastColliding = collider;
+            numCollisions++;
+            if (!enabled)""", """            if (!OrgasmSuiteFilter.Allows(FillMeUp.atom, collider.GetAtom())) return;   // [OrgasmSuite] collision arousal mode
+            lastColliding = collider;
+            numCollisions++;
+            if (!enabled)""", what='bl orifice trigger')
+    return t
+
+
+def patch_bl_resources(t):
+    """BodyLanguage decides 'am I in a package' from its own plugin path; attached from a DLL it is not, so it looked for the morphs, expression sets,
+    audio bundles and textures as loose files that do not exist (Anus / ReadMyLips / TouchMe / WatchMe init errors). Use the resources package whenever it is installed."""
+    t = t.replace(chr(13) + chr(10), chr(10))
+    t = patch(t, """			isVar = Utils.GetPackagePath(this) != string.Empty;
+			packageUid = isVar? GetLatestPackageUid("CheesyFX.BodyLanguage_Resources")+":/" : string.Empty;""",
+              """			string suiteRes = GetLatestPackageUid("CheesyFX.BodyLanguage_Resources");   // [OrgasmSuite]
+			isVar = Utils.GetPackagePath(this) != string.Empty || suiteRes != null;
+			packageUid = suiteRes != null ? suiteRes + ":/" : string.Empty;""", what='bl resources')
     return t
 
 
@@ -508,7 +533,7 @@ def build():
     add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.BodyLanguageLite', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'BodyLanguage_Lite.cslist', {'BodyLanguage_Lite.cs': patch_lite_collision}))
     add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.ArousalHUD', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'ArousalHUD.cslist'))
     # BodyLanguage (full)
-    bl_sources = collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist', {'src/FillMeUp/Orifice.cs': patch_bl_orifice, 'src/shared/TouchCollisionListener.cs': patch_bl_listener, 'src/FillMeUp/FillMeUp.cs': patch_bl_fillmeup})
+    bl_sources = collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist', {'src/FillMeUp/Orifice.cs': patch_bl_orifice, 'src/shared/TouchCollisionTrigger.cs': patch_bl_trigger, 'src/FillMeUp/OrificeTriggerHandler.cs': patch_bl_orificetrigger, 'src/FillMeUp/FillMeUp.cs': lambda s: patch_bl_resources(patch_bl_fillmeup(s))})
     bl_sources['OrgasmSuiteFilter.cs'] = FILTER_CS
     add_dll('BodyLanguage', 'ZeroT.OrgasmSuite.BodyLanguage', bl_sources)
     # FluidBridge (patched)
