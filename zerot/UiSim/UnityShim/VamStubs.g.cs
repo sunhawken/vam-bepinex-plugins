@@ -2823,7 +2823,6 @@ public partial class SuperController {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetMainMenuTab(string tabName) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetOnlyShowControllers(global::System.Collections.Generic.HashSet<global::FreeControllerV3> onlyControllers) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ShowMainHUD(bool setAnchors = default, bool forceMonitor = default) { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ShowMainHUDAuto() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void StartIsolateEditAtom(global::Atom atom) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SyncMonitorRigPosition() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ToggleTargetsOnWithButton() { }
@@ -2832,7 +2831,6 @@ public partial class SuperController {
   public bool disableInternalKeyBindings;
   public bool disableInternalNavigationKeyBindings;
   public bool disableNavigation;
-  public global::UnityEngine.Transform errorLogPanel;
   public global::uFileBrowser.FileBrowser fileBrowserUI;
   public global::uFileBrowser.FileBrowser fileBrowserWorldUI;
   public float focusDistance;

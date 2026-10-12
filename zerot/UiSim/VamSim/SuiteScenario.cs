@@ -248,7 +248,10 @@ public static class SuiteScenario
 			// every HUD pins itself to the same desktop spot: only the first Person starts with one
 			h.Check(u.Contains("ArousalHUD") ? !Has(man, u) : Has(man, u), u.Contains("ArousalHUD") ? "Man starts without a HUD (Woman has it)" : "Man has " + u);
 		}
-		h.Check(Has(core, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "CoreControl has ZajeShuffle (session wide)");
+		h.Check(!Has(core, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "ZajeShuffle is off by default: nothing on CoreControl");
+		SetCfg(h, "Woman", "Shuffle", true);
+		St(h, 8f);
+		h.Check(Has(core, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "CoreControl has ZajeShuffle (session wide) once a Person turns it on");
 		h.Check(!Has(woman, "BodyLanguage/ZeroT.OrgasmSuite.BodyLanguage.dll") && !Has(woman, "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll"), "default engine is Lite: no BodyLanguage, no Stimulation HUD");
 		foreach (var e in loadErrors) Console.WriteLine("  load error: " + e);
 		h.Check(loadErrors.Count == 0, "no script failed to load or Init (" + loadErrors.Count + " errors)");

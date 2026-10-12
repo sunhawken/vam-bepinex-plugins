@@ -52,7 +52,7 @@ namespace ZeroT.OrgasmSuite
 			public bool On = true;
 			public string Engine = "Lite";   // Lite | BodyLanguage
 			// what happens during an orgasm on this Person (each one is a part of the suite that can be switched off) + the HUD
-			public bool Fluids = true, Tremble = true, Shuffle = true, Wet = true, Wardrobe = true, Hud = true;
+			public bool Fluids = true, Tremble = true, Shuffle = false, Wet = true, Wardrobe = true, Hud = true;
 			public int Collision = 1;   // where touch arousal may come from: 0 none, 1 other Persons / CUA, 2 self, 3 both
 			public float ShuffleDelay = 0f;   // seconds after the orgasm before ZajeShuffle runs
 		}
