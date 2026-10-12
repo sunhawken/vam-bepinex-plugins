@@ -123,6 +123,36 @@ def patch_sexyfluids_bundle(t):
                  'bundleFileName = $"{metaData.pluginPath}/data/Foost.SexyFluids.fluid_shaders.assetbundle";', what='bundle name')
 
 
+def patch_bl_orifice(t):
+    t = t.replace('\r\n', '\n')
+    t = patch(t, """		public void GetDepthAndSpeed()
+		{
+			if (penetrator.type == 0)
+			{
+				GetDepthAndSpeedSimple();
+				return;
+			}
+""", """		public void GetDepthAndSpeed()
+		{
+			// [OrgasmSuite] an orifice that is enabled with no (or a half-built) penetrator threw here on every physics step
+			if (penetrator == null || enterPointTF == null) return;
+			if (penetrator.type == 0)
+			{
+				if (depthMeter == null) return;
+				GetDepthAndSpeedSimple();
+				return;
+			}
+			if (penetrator.tip == null || penetrator.rigidbodies == null || penetrator.rigidbodies.Count < 3) return;
+""", what='orifice depth')
+    t = patch(t, """			base.FixedUpdate();
+			GetDepthAndSpeed();
+""", """			base.FixedUpdate();
+			if (penetrator == null) return;   // [OrgasmSuite] nothing in the orifice: the depth / stretch / stimulation below all need the penetrator
+			GetDepthAndSpeed();
+""", what='orifice fixedupdate')
+    return t
+
+
 def patch_fluidbridge(t):
     t = patch(t, 'const string Version = "27";', 'const string Version = "28";', what='version')
     t = patch(t, '// FluidBridge v13', '// FluidBridge v28 (OrgasmSuite build: orgasm hooks for AutoTremble + ZajeShuffle, per-person settings, male emitters)', what='header')
@@ -287,6 +317,8 @@ def patch_autotremble(t):
                         : (atomChoices.Count > 0
                             ? atomChoices[0]
                             : "None"),''', what='chooser')
+    # tremble is only ever started by an orgasm (FluidBridge) or by hand: a scene saved while it ran must not restart it on load
+    t = patch(t, "            RegisterBool(active);\n", "            RegisterBool(active);\n            active.isStorable = false;   // [OrgasmSuite]\n", what='active not stored')
     t = patch(t, '''    private void OnTargetAtomChanged(
         string uid)
     {
@@ -378,7 +410,7 @@ def build():
     add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.BodyLanguageLite', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'BodyLanguage_Lite.cslist'))
     add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.ArousalHUD', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'ArousalHUD.cslist'))
     # BodyLanguage (full)
-    add_dll('BodyLanguage', 'ZeroT.OrgasmSuite.BodyLanguage', collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist'))
+    add_dll('BodyLanguage', 'ZeroT.OrgasmSuite.BodyLanguage', collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist', {'src/FillMeUp/Orifice.cs': patch_bl_orifice}))
     # FluidBridge (patched)
     add_dll('FluidBridge', 'ZeroT.OrgasmSuite.FluidBridge', collect_sources('fluidbridge', 'Custom/Scripts/ZeroT/FluidBridge/', 'FluidBridge.cslist', {'FluidBridge.cs': patch_fluidbridge}))
     # AutoTremble (patched), plus the user's default preset when it is missing

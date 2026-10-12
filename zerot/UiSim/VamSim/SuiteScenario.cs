@@ -269,6 +269,7 @@ public static class SuiteScenario
 		h.Check(trW != null && trW.GetStringChooserJSONParam("Target Atom").val == "Woman", "Woman's AutoTremble targets Woman");
 		h.Check(trM != null && trM.GetStringChooserJSONParam("Target Atom").val == "Man", "Man's AutoTremble targets Man although the default preset says 'Woman'");
 		h.Check(trM.GetFloatJSONParam("Frequency") != null && Math.Abs(trM.GetFloatJSONParam("Frequency").val - 4.784571f) < 1e-3f, "the default preset was applied (Frequency " + (trM.GetFloatJSONParam("Frequency") == null ? "?" : trM.GetFloatJSONParam("Frequency").val.ToString("0.000")) + ")");
+		h.Check(!trW.GetBoolJSONParam("Active").isStorable, "AutoTremble's Active flag is not saved in a scene: tremble only ever starts from an orgasm or by hand");
 		var tsM = trM.GetBoolJSONParam("Target Self (added atom)");
 		h.Check(tsM != null && tsM.val, "'Target Self' is on by default");
 		// asking for another atom while Target Self is on is refused
