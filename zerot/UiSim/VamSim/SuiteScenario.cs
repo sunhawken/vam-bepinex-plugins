@@ -370,6 +370,23 @@ public static class SuiteScenario
 		St(h, 10f);
 		h.Check(Has(woman, "SexyFluids/ZeroT.OrgasmSuite.SexyFluids.dll") && Has(woman, "AutoTremble/ZeroT.OrgasmSuite.AutoTremble.dll") && Has(woman, "StimulationHUD/ZeroT.OrgasmSuite.StimulationHUD.dll"), "...and they come back when switched on again");
 
+		// ---- 8b. the "during orgasm" switches reach FluidBridge; ZajeShuffle leaves CoreControl when nobody wants it
+		SetCfg(h, "Woman", "Wet", false); SetCfg(h, "Woman", "Wardrobe", false);
+		St(h, 2f);
+		var fbS = Script(woman, "FluidBridge");
+		h.Check(!fbS.GetBoolJSONParam("Apply Wet Clothes preset on orgasm").val && !fbS.GetBoolJSONParam("Random clothing on orgasm").val, "Wet clothes / Wardrobe off: pushed into FluidBridge");
+		SetCfg(h, "Woman", "Wet", true); SetCfg(h, "Woman", "Wardrobe", true);
+		St(h, 2f);
+		h.Check(fbS.GetBoolJSONParam("Apply Wet Clothes preset on orgasm").val && fbS.GetBoolJSONParam("Random clothing on orgasm").val, "...and back on");
+		SetCfg(h, "Woman", "Shuffle", false); SetCfg(h, "Man", "Shuffle", false);
+		St(h, 4f);
+		h.Check(!Has(core, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "no Person wants a shuffle: ZajeShuffle leaves CoreControl");
+		h.Check(!fbS.GetBoolJSONParam("ZajeShuffle on orgasm").val, "...and FluidBridge's shuffle hook is off");
+		SetCfg(h, "Woman", "Shuffle", true);
+		St(h, 4f);
+		h.Check(Has(core, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "one Person wants it again: ZajeShuffle is back (session wide)");
+		SetCfg(h, "Man", "Shuffle", true);
+
 		// ---- 9. Suite OFF removes only the suite's own scripts
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 9 errors=" + Sim.Errors.Count);
 		SetCfg(h, "Man", "Engine", "Lite");

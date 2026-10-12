@@ -51,19 +51,20 @@ namespace ZeroT.OrgasmSuite
 		{
 			public bool On = true;
 			public string Engine = "Lite";   // Lite | BodyLanguage
-			public bool Fluids = true, Tremble = true, Hud = true;
+			// what happens during an orgasm on this Person (each one is a part of the suite that can be switched off) + the HUD
+			public bool Fluids = true, Tremble = true, Shuffle = true, Wet = true, Wardrobe = true, Hud = true;
 		}
 
 		private readonly Dictionary<string, PersonCfg> _cfg = new Dictionary<string, PersonCfg>(StringComparer.Ordinal);
 
 		// ------------------------------------------------------------------ config
-		private ConfigEntry<bool> _active, _females, _males, _shuffle, _autoAttach;
+		private ConfigEntry<bool> _active, _females, _males, _autoAttach;
 		private ConfigEntry<float> _settle, _quiet;
 		private ConfigEntry<bool> _showWindow, _collapsed, _dpiAware;
 		private ConfigEntry<float> _scale, _winX, _winY, _winW, _winH;
 		private ConfigEntry<string> _lastUid;
 
-		private Rect _win = new Rect(60f, 140f, 380f, 400f);
+		private Rect _win = new Rect(60f, 140f, 380f, 450f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
 		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f, CollapsedH = 34f;
@@ -96,14 +97,13 @@ namespace ZeroT.OrgasmSuite
 			_autoAttach = Config.Bind("Suite", "AutoAttach", true, "Attach / detach the scripts by itself. Off: the suite never touches a Person (use it only to switch the choices on and off in the window).");
 			_settle = Config.Bind("Suite", "SettleSeconds", 15f, "After a scene load finishes, wait at least this long before attaching anything: VaM keeps restoring the scene's own plugins for a while after it says loading is done, and a script added in the middle of that crashed VaM.");
 			_quiet = Config.Bind("Suite", "QuietSeconds", 6f, "...and until nothing about the atoms or their plugin slots has changed for this long (changes the suite itself makes do not count).");
-			_shuffle = Config.Bind("Suite", "ZajeShuffle", true, "Keep one ZajeShuffle on CoreControl so every orgasm can fire a shuffle.");
 			_showWindow = Config.Bind("Window", "Show", true, "Show the in-game Orgasm Suite window.");
 			_collapsed = Config.Bind("Window", "Collapsed", false, "Collapse the window to its title bar.");
 			_scale = Config.Bind("Window", "Scale", 1.0f, "Extra scale multiplier applied on top of DPI (S- / S+).");
 			_winX = Config.Bind("Window", "X", 60f, "Saved horizontal position.");
 			_winY = Config.Bind("Window", "Y", 140f, "Saved vertical position.");
 			_winW = Config.Bind("Window", "Width", 380f, "Saved width.");
-			_winH = Config.Bind("Window", "Height", 400f, "Saved height.");
+			_winH = Config.Bind("Window", "Height", 450f, "Saved height.");
 			_dpiAware = Config.Bind("Window", "DpiAware", true, "Scale with the monitor's DPI.");
 			_lastUid = Config.Bind("State", "LastPerson", "", "Person remembered across sessions.");
 			_win = new Rect(_winX.Value, _winY.Value, Mathf.Clamp(_winW.Value, MinW, MaxW), Mathf.Clamp(_winH.Value, MinH, MaxH));
@@ -215,6 +215,7 @@ namespace ZeroT.OrgasmSuite
 					c.Fluids = f[3] == "1";
 					c.Tremble = f[4] == "1";
 					c.Hud = f[5] == "1";
+					if (f.Length >= 9) { c.Shuffle = f[6] == "1"; c.Wet = f[7] == "1"; c.Wardrobe = f[8] == "1"; }   // older files stop at the HUD column
 					_cfg[f[0]] = c;
 				}
 			}
@@ -236,7 +237,8 @@ namespace ZeroT.OrgasmSuite
 				{
 					PersonCfg c = kv.Value;
 					sb.Append(kv.Key).Append('\t').Append(c.On ? "1" : "0").Append('\t').Append(c.Engine).Append('\t')
-						.Append(c.Fluids ? "1" : "0").Append('\t').Append(c.Tremble ? "1" : "0").Append('\t').Append(c.Hud ? "1" : "0").Append('\n');
+						.Append(c.Fluids ? "1" : "0").Append('\t').Append(c.Tremble ? "1" : "0").Append('\t').Append(c.Hud ? "1" : "0")
+							.Append('\t').Append(c.Shuffle ? "1" : "0").Append('\t').Append(c.Wet ? "1" : "0").Append('\t').Append(c.Wardrobe ? "1" : "0").Append('\n');
 				}
 				File.WriteAllText(p, sb.ToString());
 			}
@@ -442,7 +444,7 @@ namespace ZeroT.OrgasmSuite
 			{
 				MVRPluginManager cm = FindManager(core);
 				string zs = "CoreControl's plugin manager is not ready";
-				if (cm != null) attachedOne = Apply(core, cm, Zaje, _shuffle.Value, ref attachedOne, out zs);
+				if (cm != null) attachedOne = Apply(core, cm, Zaje, AnyWantsShuffle(), ref attachedOne, out zs);
 				_status["Zaje"] = zs;
 			}
 
@@ -454,7 +456,7 @@ namespace ZeroT.OrgasmSuite
 				if (mgr == null) { _status[a.uid] = "VaM's plugin manager is not ready on " + a.uid; continue; }
 				bool lite = cfg.Engine != "BodyLanguage";
 				bool on = cfg.On && _installed;
-				bool needBridge = on && (cfg.Fluids || cfg.Tremble || _shuffle.Value);
+				bool needBridge = on && (cfg.Fluids || cfg.Tremble || cfg.Shuffle || cfg.Wet || cfg.Wardrobe);
 				StringBuilder st = new StringBuilder();
 				string s;
 				// engine first (everything else listens to it), then the hub, then the outputs
@@ -472,6 +474,18 @@ namespace ZeroT.OrgasmSuite
 				PushBridgeSettings(a, cfg);
 			}
 			if (attachedOne) _nextScan = Time.realtimeSinceStartup + 0.8f;
+		}
+
+		// ZajeShuffle is one script for the whole session: it stays while any managed Person still wants a shuffle on orgasm
+		private bool AnyWantsShuffle()
+		{
+			if (!_installed) return false;
+			for (int i = 0; i < _people.Count; i++)
+			{
+				PersonCfg c = CfgFor(_people[i].uid);
+				if (c.On && c.Shuffle) return true;
+			}
+			return false;
 		}
 
 		// BodyLanguage keeps a static singleton: one Person at a time. Whoever already has it keeps it; only when nobody does the
@@ -562,12 +576,14 @@ namespace ZeroT.OrgasmSuite
 			{
 				MVRScript fb = Instance(a, Bridge);
 				if (fb == null) return;
-				string sig = (cfg.Fluids ? "1" : "0") + (cfg.Tremble ? "1" : "0") + (_shuffle.Value ? "1" : "0") + fb.GetInstanceID();
+				string sig = (cfg.Fluids ? "1" : "0") + (cfg.Tremble ? "1" : "0") + (cfg.Shuffle ? "1" : "0") + (cfg.Wet ? "1" : "0") + (cfg.Wardrobe ? "1" : "0") + fb.GetInstanceID();
 				string old;
 				if (_pushed.TryGetValue(a.uid, out old) && old == sig) return;
 				JSONStorableBool b = fb.GetBoolJSONParam("Use SexyFluids"); if (b != null) b.val = cfg.Fluids;
 				b = fb.GetBoolJSONParam("AutoTremble on orgasm"); if (b != null) b.val = cfg.Tremble;
-				b = fb.GetBoolJSONParam("ZajeShuffle on orgasm"); if (b != null) b.val = _shuffle.Value;
+				b = fb.GetBoolJSONParam("ZajeShuffle on orgasm"); if (b != null) b.val = cfg.Shuffle;
+				b = fb.GetBoolJSONParam("Apply Wet Clothes preset on orgasm"); if (b != null) b.val = cfg.Wet;
+				b = fb.GetBoolJSONParam("Random clothing on orgasm"); if (b != null) b.val = cfg.Wardrobe;
 				_pushed[a.uid] = sig;
 			}
 			catch { }
@@ -711,22 +727,28 @@ namespace ZeroT.OrgasmSuite
 			if (GUI.Button(new Rect(x + 2f * (third + 2f * s), y, third, lh), "All OFF")) { foreach (Atom a in _people) CfgFor(a.uid).On = false; changed = true; }
 			y += lh + 6f * s;
 
-			// ---- engine switch
+			// ---- mode
+			GUI.Label(new Rect(x, y, w, lh), "Mode");
+			y += lh;
 			float ew = (w - 4f * s) / 2f;
 			bool isLite = cfg == null || cfg.Engine != "BodyLanguage";
 			if (GUI.Button(new Rect(x, y, ew, lh), isLite ? "[ Lite ]" : "Lite") && cfg != null && !isLite) { cfg.Engine = "Lite"; changed = true; }
 			if (GUI.Button(new Rect(x + ew + 4f * s, y, ew, lh), !isLite ? "[ BodyLanguage ]" : "BodyLanguage") && cfg != null && isLite) { cfg.Engine = "BodyLanguage"; changed = true; }
 			y += lh + 6f * s;
 
-			// ---- part switches
+			// ---- what happens during an orgasm: one switch per module
 			float hw = (w - 4f * s) / 2f;
-			string hudName = isLite ? "Arousal HUD" : "Stimulation HUD";
-			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Fluids) + "Fluids") && cfg != null) { cfg.Fluids = !cfg.Fluids; changed = true; }
-			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(cfg != null && cfg.Tremble) + "AutoTremble") && cfg != null) { cfg.Tremble = !cfg.Tremble; changed = true; }
+			GUI.Label(new Rect(x, y, w, lh), "During orgasm");
+			y += lh;
+			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Tremble) + "AutoTremble") && cfg != null) { cfg.Tremble = !cfg.Tremble; changed = true; }
+			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(cfg != null && cfg.Shuffle) + "ZajeShuffle") && cfg != null) { cfg.Shuffle = !cfg.Shuffle; changed = true; }
 			y += lh + 2f * s;
-			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Hud) + hudName) && cfg != null) { cfg.Hud = !cfg.Hud; changed = true; }
-			GUI.enabled = enabled;
-			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(_shuffle.Value) + "ZajeShuffle")) { _shuffle.Value = !_shuffle.Value; Config.Save(); }
+			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Fluids) + "SexyFluids") && cfg != null) { cfg.Fluids = !cfg.Fluids; changed = true; }
+			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(cfg != null && cfg.Wet) + "Wet clothes") && cfg != null) { cfg.Wet = !cfg.Wet; changed = true; }
+			y += lh + 2f * s;
+			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Wardrobe) + "Wardrobe") && cfg != null) { cfg.Wardrobe = !cfg.Wardrobe; changed = true; }
+			string hudName = isLite ? "Arousal HUD" : "Stimulation HUD";
+			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(cfg != null && cfg.Hud) + hudName) && cfg != null) { cfg.Hud = !cfg.Hud; changed = true; }
 			y += lh + 4f * s;
 
 			// ---- test buttons (act on the selected Person)
