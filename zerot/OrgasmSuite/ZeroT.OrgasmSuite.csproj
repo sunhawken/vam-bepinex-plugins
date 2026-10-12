@@ -16,6 +16,10 @@
     <Reference Include="Assembly-CSharp" />
     <Reference Include="UnityEngine" />
     <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(VaMManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>$(VaMManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>

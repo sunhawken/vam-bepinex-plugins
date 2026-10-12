@@ -642,8 +642,9 @@ namespace ZeroT.OrgasmSuite
 		private void DrawExternal(float w, float h)
 		{
 			Rect panel = new Rect(0f, 0f, w, h);
-			ZeroT.UiKit.RlChrome.Panel(panel);
-			DrawWindow(panel, Mathf.Clamp(_scale.Value, 0.3f, 2.5f), false);
+			float es = Mathf.Clamp(_scale.Value, 0.3f, 2.5f);
+			Fx.Window(panel, es, false);
+			DrawWindow(panel, es, false);
 		}
 
 		private void OnGUI()
@@ -660,7 +661,7 @@ namespace ZeroT.OrgasmSuite
 			_win.y = Mathf.Clamp(_win.y, 0f, Mathf.Max(0f, Screen.height - 24f));
 			_home.End(ref _win);
 			Rect panel = new Rect(_win.x, _win.y, w, h);
-			ZeroT.UiKit.RlChrome.Panel(panel);
+			Fx.Window(panel, scale, collapsed);
 			DrawWindow(panel, scale, collapsed);
 		}
 
@@ -668,129 +669,133 @@ namespace ZeroT.OrgasmSuite
 
 		private void DrawWindow(Rect panel, float s, bool collapsed)
 		{
-			float pad = 8f * s, lh = 22f * s;
-			GUI.Label(new Rect(panel.x + pad, panel.y + 3f * s, panel.width - 118f * s, 22f * s), "Orgasm Suite");
-			float bx = panel.xMax - 112f * s;
-			if (GUI.Button(new Rect(bx, panel.y + 3f * s, 26f * s, 18f * s), "S-")) SetScale(_scale.Value - 0.1f);
-			if (GUI.Button(new Rect(bx + 29f * s, panel.y + 3f * s, 26f * s, 18f * s), "S+")) SetScale(_scale.Value + 0.1f);
-			if (GUI.Button(new Rect(bx + 58f * s, panel.y + 3f * s, 22f * s, 18f * s), collapsed ? "+" : "-")) { _collapsed.Value = !collapsed; Config.Save(); }
-			if (GUI.Button(new Rect(bx + 83f * s, panel.y + 3f * s, 22f * s, 18f * s), "x")) { _showWindow.Value = false; Config.Save(); }
+			float pad = 14f * s, lh = 22f * s;
+			int ts = Mathf.Max(9, Mathf.RoundToInt(13f * s));
+			Fx.Text(new Rect(panel.x + pad, panel.y + 6f * s, panel.width - 150f * s, 22f * s), Fx.Spaced("Orgasm Suite"), ts, TextAnchor.MiddleLeft, Fx.Ink, true);
+			float bw = 24f * s, bh = 18f * s, gap = 4f * s, by = panel.y + 8f * s;
+			float bx = panel.xMax - pad - (4f * bw + 3f * gap);
+			if (Fx.Mini(new Rect(bx, by, bw, bh), "S-", s)) SetScale(_scale.Value - 0.1f);
+			if (Fx.Mini(new Rect(bx + (bw + gap), by, bw, bh), "S+", s)) SetScale(_scale.Value + 0.1f);
+			if (Fx.Mini(new Rect(bx + 2f * (bw + gap), by, bw, bh), collapsed ? "+" : "-", s)) { _collapsed.Value = !collapsed; Config.Save(); }
+			if (Fx.Mini(new Rect(bx + 3f * (bw + gap), by, bw, bh), "x", s)) { _showWindow.Value = false; Config.Save(); }
 			HandleDragResize(panel, s, collapsed);
 			if (collapsed) return;
+			// the rule under the title: hairline, node dots at both ends, a brighter stretch in the middle
+			float ty = panel.y + 34f * s;
+			Fx.HLine(panel.x + pad, ty, panel.width - 2f * pad, Fx.Faint, 1f);
+			Fx.HLine(panel.x + panel.width / 2f - 30f * s, ty, 60f * s, Fx.Dim, 1f);
+			Fx.Dot(panel.x + pad, ty, 4f * s, Fx.Ink); Fx.Dot(panel.xMax - pad, ty, 4f * s, Fx.Ink);
 
-			float x = panel.x + pad, w = panel.width - 2f * pad, y = panel.y + 30f * s;
+			float x = panel.x + pad, w = panel.width - 2f * pad, y = panel.y + 44f * s;
+			int small = Mathf.Max(8, Mathf.RoundToInt(10f * s));
 
 			if (!_installed)
 			{
-				GUI.Label(new Rect(x, y, w, 60f * s), "The embedded scripts could not be written:\n" + _installNote);
+				Fx.Text(new Rect(x, y, w, 60f * s), "THE EMBEDDED SCRIPTS COULD NOT BE WRITTEN\n" + _installNote, small, TextAnchor.UpperLeft, Fx.Amber, false);
 				return;
 			}
 
 			// ---- person picker
 			if (_people.Count == 0)
 			{
-				GUI.Label(new Rect(x, y, w, lh), "No Person atom yet.");
-				y += lh + 4f * s;
+				Fx.Text(new Rect(x, y, w, lh), Fx.Spaced("No person atom yet"), small, TextAnchor.MiddleLeft, Fx.Dim, false);
+				y += lh + 6f * s;
 			}
 			else
 			{
 				int per = 3;
 				int pages = (_people.Count + per - 1) / per;
 				_page = Mathf.Clamp(_page, 0, Mathf.Max(0, pages - 1));
-				float arrow = 24f * s;
-				float tw = (w - (pages > 1 ? 2f * arrow + 4f * s : 0f)) / per;
+				float arrow = 22f * s;
+				float tw = (w - (pages > 1 ? 2f * (arrow + gap) : 0f)) / per;
 				float tx = x;
 				if (pages > 1)
 				{
-					if (GUI.Button(new Rect(tx, y, arrow, lh), "<")) _page = (_page + pages - 1) % pages;
-					tx += arrow + 2f * s;
+					if (Fx.Mini(new Rect(tx, y, arrow, lh), "<", s)) _page = (_page + pages - 1) % pages;
+					tx += arrow + gap;
 				}
 				for (int i = 0; i < per; i++)
 				{
 					int idx = _page * per + i;
 					if (idx >= _people.Count) break;
-					Atom a = _people[idx];
-					bool sel = a.uid == _uid;
+					Atom a2 = _people[idx];
+					bool sel = a2.uid == _uid;
 					bool fem;
-					string g = _female.TryGetValue(a.uid, out fem) && !fem ? "M " : "F ";
-					if (GUI.Button(new Rect(tx + i * tw, y, tw - 2f * s, lh), (sel ? "[" : "") + g + Fit(a.uid, 9) + (sel ? "]" : "")))
-					{
-						_uid = a.uid; _lastUid.Value = _uid; Config.Save();
-					}
+					string g = _female.TryGetValue(a2.uid, out fem) && !fem ? "M " : "F ";
+					if (Fx.Button(new Rect(tx + i * tw, y, tw - gap, lh), g + Fit(a2.uid, 9), Fx.Amber, sel, s, false)) { _uid = a2.uid; _lastUid.Value = _uid; Config.Save(); }
 				}
-				if (pages > 1 && GUI.Button(new Rect(x + w - arrow, y, arrow, lh), ">")) _page = (_page + 1) % pages;
-				y += lh + 6f * s;
+				if (pages > 1 && Fx.Mini(new Rect(x + w - arrow, y, arrow, lh), ">", s)) _page = (_page + 1) % pages;
+				y += lh + 8f * s;
 			}
 
 			PersonCfg cfg = string.IsNullOrEmpty(_uid) ? null : CfgFor(_uid);
 			bool enabled = GUI.enabled;
 			GUI.enabled = enabled && cfg != null;
 			bool changed = false;
+			bool isLite = cfg == null || cfg.Engine != "BodyLanguage";
+			Color side = isLite ? Fx.Lite : Fx.Full;
 
 			// ---- master
-			float third = (w - 4f * s) / 3f;
-			if (GUI.Button(new Rect(x, y, third, lh), "Suite: " + (cfg != null && cfg.On ? "ON" : "OFF"))) { cfg.On = !cfg.On; changed = true; }
-			if (GUI.Button(new Rect(x + third + 2f * s, y, third, lh), "All ON")) { foreach (Atom a in _people) CfgFor(a.uid).On = true; changed = true; }
-			if (GUI.Button(new Rect(x + 2f * (third + 2f * s), y, third, lh), "All OFF")) { foreach (Atom a in _people) CfgFor(a.uid).On = false; changed = true; }
-			y += lh + 6f * s;
+			float third = (w - 2f * gap) / 3f;
+			if (Fx.Button(new Rect(x, y, third, lh), cfg != null && cfg.On ? "Suite on" : "Suite off", Fx.Amber, cfg != null && cfg.On, s) && cfg != null) { cfg.On = !cfg.On; changed = true; }
+			if (Fx.Button(new Rect(x + third + gap, y, third, lh), "All on", Fx.Amber, false, s)) { foreach (Atom a2 in _people) CfgFor(a2.uid).On = true; changed = true; }
+			if (Fx.Button(new Rect(x + 2f * (third + gap), y, third, lh), "All off", Fx.Amber, false, s)) { foreach (Atom a2 in _people) CfgFor(a2.uid).On = false; changed = true; }
+			y += lh + 10f * s;
 
 			// ---- mode
-			GUI.Label(new Rect(x, y, w, lh), "Mode");
-			y += lh;
-			float ew = (w - 4f * s) / 2f;
-			bool isLite = cfg == null || cfg.Engine != "BodyLanguage";
-			Color bg = GUI.backgroundColor;
-			if (isLite) GUI.backgroundColor = LiteColor;
-			if (GUI.Button(new Rect(x, y, ew, lh), isLite ? "[ Lite ]" : "Lite") && cfg != null && !isLite) { cfg.Engine = "Lite"; changed = true; }
-			GUI.backgroundColor = !isLite ? FullColor : bg;
-			if (GUI.Button(new Rect(x + ew + 4f * s, y, ew, lh), !isLite ? "[ BodyLanguage ]" : "BodyLanguage") && cfg != null && isLite) { cfg.Engine = "BodyLanguage"; changed = true; }
-			GUI.backgroundColor = bg;
-			y += lh + 6f * s;
+			Fx.Section(new Rect(x, y, w, 16f * s), "Mode", s);
+			y += 20f * s;
+			float ew = (w - gap) / 2f;
+			if (Fx.Button(new Rect(x, y, ew, lh), "Lite", Fx.Lite, isLite, s) && cfg != null && !isLite) { cfg.Engine = "Lite"; changed = true; }
+			if (Fx.Button(new Rect(x + ew + gap, y, ew, lh), "BodyLanguage", Fx.Full, !isLite, s) && cfg != null && isLite) { cfg.Engine = "BodyLanguage"; changed = true; }
+			y += lh + 10f * s;
 
-			// ---- what happens during an orgasm: one switch per module
-			float hw = (w - 4f * s) / 2f;
-			GUI.Label(new Rect(x, y, w, lh), "During orgasm");
+			// ---- what happens during an orgasm: one switch per module, in the colour of the side
+			float hw = (w - gap) / 2f;
+			Fx.Section(new Rect(x, y, w, 16f * s), "During orgasm", s);
+			y += 20f * s;
+			if (Fx.Toggle(new Rect(x, y, hw, lh), "AutoTremble", cfg != null && cfg.Tremble, side, s) && cfg != null) { cfg.Tremble = !cfg.Tremble; changed = true; }
+			if (Fx.Toggle(new Rect(x + hw + gap, y, hw, lh), "ZajeShuffle", cfg != null && cfg.Shuffle, side, s) && cfg != null) { cfg.Shuffle = !cfg.Shuffle; changed = true; }
 			y += lh;
-			if (BoxToggle(new Rect(x, y, hw, lh), "AutoTremble", cfg != null && cfg.Tremble, isLite, s) && cfg != null) { cfg.Tremble = !cfg.Tremble; changed = true; }
-			if (BoxToggle(new Rect(x + hw + 4f * s, y, hw, lh), "ZajeShuffle", cfg != null && cfg.Shuffle, isLite, s) && cfg != null) { cfg.Shuffle = !cfg.Shuffle; changed = true; }
-			y += lh + 2f * s;
-			if (BoxToggle(new Rect(x, y, hw, lh), "SexyFluids", cfg != null && cfg.Fluids, isLite, s) && cfg != null) { cfg.Fluids = !cfg.Fluids; changed = true; }
-			if (BoxToggle(new Rect(x + hw + 4f * s, y, hw, lh), "Wet clothes", cfg != null && cfg.Wet, isLite, s) && cfg != null) { cfg.Wet = !cfg.Wet; changed = true; }
-			y += lh + 2f * s;
-			if (BoxToggle(new Rect(x, y, hw, lh), "Wardrobe", cfg != null && cfg.Wardrobe, isLite, s) && cfg != null) { cfg.Wardrobe = !cfg.Wardrobe; changed = true; }
-			string hudName = isLite ? "Arousal HUD" : "Stimulation HUD";
-			if (BoxToggle(new Rect(x + hw + 4f * s, y, hw, lh), hudName, cfg != null && cfg.Hud, isLite, s) && cfg != null) { cfg.Hud = !cfg.Hud; changed = true; }
-			y += lh + 4f * s;
+			if (Fx.Toggle(new Rect(x, y, hw, lh), "SexyFluids", cfg != null && cfg.Fluids, side, s) && cfg != null) { cfg.Fluids = !cfg.Fluids; changed = true; }
+			if (Fx.Toggle(new Rect(x + hw + gap, y, hw, lh), "Wet clothes", cfg != null && cfg.Wet, side, s) && cfg != null) { cfg.Wet = !cfg.Wet; changed = true; }
+			y += lh;
+			if (Fx.Toggle(new Rect(x, y, hw, lh), "Wardrobe", cfg != null && cfg.Wardrobe, side, s) && cfg != null) { cfg.Wardrobe = !cfg.Wardrobe; changed = true; }
+			if (Fx.Toggle(new Rect(x + hw + gap, y, hw, lh), isLite ? "Arousal HUD" : "Stimulation HUD", cfg != null && cfg.Hud, side, s) && cfg != null) { cfg.Hud = !cfg.Hud; changed = true; }
+			y += lh + 10f * s;
 
-			// ---- how long after the orgasm ZajeShuffle runs
+			// ---- how long after the orgasm ZajeShuffle runs: the segmented loading bar
+			Fx.Section(new Rect(x, y, w, 16f * s), "Shuffle delay", s);
+			y += 20f * s;
 			float delayShown = cfg != null ? cfg.ShuffleDelay : 0f;
-			GUI.Label(new Rect(x, y, 64f * s, lh), "Delay");
-			float nd = GUI.HorizontalSlider(new Rect(x + 66f * s, y + 6f * s, w - 66f * s - 62f * s, lh), delayShown, 0f, 30f);
-			GUI.Label(new Rect(x + w - 58f * s, y, 58f * s, lh), delayShown.ToString("0.0") + " s");
-			if (cfg != null && Mathf.Abs(nd - delayShown) > 0.04f)
+			float vw = 54f * s;
+			float nv = Fx.Bar(new Rect(x, y, w - vw - gap, 18f * s), delayShown / 30f, side, s, 7001);
+			Fx.Text(new Rect(x + w - vw, y, vw, 18f * s), delayShown.ToString("0.0") + " S", small, TextAnchor.MiddleRight, Fx.Ink, false);
+			if (cfg != null && nv >= 0f && Mathf.Abs(nv * 30f - delayShown) > 0.04f)
 			{
-				cfg.ShuffleDelay = Mathf.Round(nd * 10f) / 10f;
-				_saveAt = Time.realtimeSinceStartup + 0.6f;   // saved when the slider has stopped moving
+				cfg.ShuffleDelay = Mathf.Round(nv * 300f) / 10f;
+				_saveAt = Time.realtimeSinceStartup + 0.6f;   // saved when the bar has stopped moving
 				_pushed.Clear();
 			}
-			y += lh + 4f * s;
+			y += 18f * s + 12f * s;
 
 			// ---- test buttons (act on the selected Person)
 			GUI.enabled = enabled && cfg != null && cfg.On;
-			if (GUI.Button(new Rect(x, y, hw, lh), "Orgasm now")) {
+			if (Fx.Bracket(new Rect(x, y, hw, 24f * s), "Orgasm now", s))
+			{
 				// the engine's own orgasm (arousal reset, its triggers), then the bridge chain: a forced orgasm at low arousal is not a threshold crossing FluidBridge could see
 				TriggerAction(isLite ? Lite : Full, isLite ? "Force Orgasm" : "Orgasm Now", "Orgasm");
 				TriggerAction(Bridge, "Test Orgasm Fluids", "Orgasm");
 			}
-			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), "Test fluids")) TriggerAction(Bridge, "Test Orgasm Fluids", "Test fluids");
+			if (Fx.Bracket(new Rect(x + hw + gap, y, hw, 24f * s), "Test fluids", s)) TriggerAction(Bridge, "Test Orgasm Fluids", "Test fluids");
 			GUI.enabled = enabled;
-			y += lh + 8f * s;
+			y += 24f * s + 10f * s;
 
 			if (changed) { SavePeople(); _nextScan = 0f; _pushed.Clear(); }
 
 			// ---- status
-			float footer = 40f * s;
-			float sh = Mathf.Max(40f * s, panel.yMax - y - footer - 6f * s);
+			float footer = 34f * s;
+			float sh = Mathf.Max(40f * s, panel.yMax - y - footer - 8f * s);
 			string text = "";
 			if (!string.IsNullOrEmpty(_uid))
 			{
@@ -801,13 +806,13 @@ namespace ZeroT.OrgasmSuite
 			if (_status.TryGetValue("Zaje", out zs)) text += "ZajeShuffle (CoreControl): " + zs + "\n";
 			if (!isLite && cfg != null && !BodyLanguageResourcesPresent()) text += "BodyLanguage needs the CheesyFX.BodyLanguage_Resources package.\n";
 			Rect view = new Rect(x, y, w, sh);
-			GUI.Box(view, "");
-			GUI.Label(new Rect(view.x + 4f * s, view.y + 2f * s, view.width - 8f * s, view.height - 4f * s), text.Length == 0 ? "Waiting for a Person atom..." : text.TrimEnd());
-			y += sh + 4f * s;
+			Fx.Frame(view, s);
+			Fx.Text(new Rect(view.x + 8f * s, view.y + 4f * s, view.width - 16f * s, 14f * s), Fx.Spaced("Status"), Mathf.Max(8, Mathf.RoundToInt(9f * s)), TextAnchor.UpperLeft, Fx.Dim, false);
+			Fx.Text(new Rect(view.x + 8f * s, view.y + 18f * s, view.width - 16f * s, view.height - 22f * s), text.Length == 0 ? "Waiting for a Person atom..." : text.TrimEnd(), small, TextAnchor.UpperLeft, new Color(0.72f, 0.77f, 0.85f, 1f), false);
+			y += sh + 6f * s;
 
 			string msg = Time.realtimeSinceStartup < _messageUntil ? _message : "";
-			GUI.Label(new Rect(x, y, w, 36f * s), msg.Length > 0 ? msg : (_waitNote.Length > 0 ? _waitNote : "Scripts: " + _installNote));
-			// resize grip is drawn by HandleDragResize
+			Fx.Text(new Rect(x, y, w - 14f * s, 20f * s), msg.Length > 0 ? msg : (_waitNote.Length > 0 ? _waitNote : "Scripts: " + _installNote), small, TextAnchor.UpperLeft, msg.Length > 0 ? Fx.Amber : Fx.Dim, false);
 		}
 
 		// press a script's own action on the selected Person (the engine's orgasm, FluidBridge's test)
@@ -826,40 +831,6 @@ namespace ZeroT.OrgasmSuite
 			catch (Exception e) { SetMessage(what + " failed: " + e.Message); Logger.LogWarning("Orgasm Suite: " + what + ": " + e.Message); }
 		}
 
-		// small square switches: green on the Lite side, blue on the BodyLanguage side
-		private static Texture2D texFrame, texOff, texLite, texFull;
-		private static GUIStyle clickStyle;
-		private static readonly Color LiteColor = new Color(0.20f, 0.85f, 0.35f, 1f);
-		private static readonly Color FullColor = new Color(0.25f, 0.55f, 1.00f, 1f);
-
-		private static Texture2D MakeTex(Color c)
-		{
-			Texture2D t = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-			t.SetPixel(0, 0, c);
-			t.Apply();
-			t.hideFlags = HideFlags.HideAndDontSave;
-			return t;
-		}
-
-		private static bool BoxToggle(Rect r, string label, bool on, bool lite, float s)
-		{
-			if (texFrame == null)
-			{
-				texFrame = MakeTex(new Color(0.02f, 0.02f, 0.02f, 1f));
-				texOff = MakeTex(new Color(0.20f, 0.20f, 0.22f, 1f));
-				texLite = MakeTex(LiteColor);
-				texFull = MakeTex(FullColor);
-				clickStyle = new GUIStyle();
-			}
-			GUI.Box(r, "");
-			float b = 14f * s;
-			Rect box = new Rect(r.x + 6f * s, r.y + (r.height - b) / 2f, b, b);
-			GUI.DrawTexture(box, texFrame);
-			GUI.DrawTexture(new Rect(box.x + 2f * s, box.y + 2f * s, box.width - 4f * s, box.height - 4f * s), on ? (lite ? texLite : texFull) : texOff);
-			GUI.Label(new Rect(box.xMax + 6f * s, r.y, r.width - b - 14f * s, r.height), label);
-			return GUI.Button(r, "", clickStyle);
-		}
-
 		private static string Box(bool on) { return on ? "[x] " : "[ ] "; }
 
 		private bool BodyLanguageResourcesPresent()
@@ -875,7 +846,7 @@ namespace ZeroT.OrgasmSuite
 
 		private void HandleDragResize(Rect panel, float s, bool collapsed)
 		{
-			Rect title = new Rect(panel.x, panel.y, panel.width - 118f * s, 24f * s);
+			Rect title = new Rect(panel.x, panel.y, panel.width - 130f * s, 30f * s);
 			Event e = Event.current;
 			if (!collapsed)
 			{
