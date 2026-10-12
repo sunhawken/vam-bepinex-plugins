@@ -917,7 +917,20 @@ namespace ZeroT.OrgasmSuite
 
 		private static string Box(bool on) { return on ? "[x] " : "[ ] "; }
 
+		private float _resChecked = -100f;
+		private bool _resPresent;
+
+		// FileManager.GetPackageUids() builds a list of every installed package: not something to run on every IMGUI event
 		private bool BodyLanguageResourcesPresent()
+		{
+			float now = Time.realtimeSinceStartup;
+			if (now - _resChecked < 10f) return _resPresent;
+			_resChecked = now;
+			_resPresent = ScanResources();
+			return _resPresent;
+		}
+
+		private bool ScanResources()
 		{
 			try
 			{

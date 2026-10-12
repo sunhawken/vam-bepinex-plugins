@@ -17,7 +17,9 @@ namespace ZeroT.OrgasmSuite
 		internal static readonly Color Full = new Color(0.28f, 0.58f, 1.00f, 1f);          // BodyLanguage side
 
 		private static readonly Dictionary<int, Texture2D> tex = new Dictionary<int, Texture2D>();
-		private static readonly Dictionary<string, GUIStyle> styles = new Dictionary<string, GUIStyle>();
+		private static readonly Dictionary<long, GUIStyle> styles = new Dictionary<long, GUIStyle>();
+		private static readonly Dictionary<string, string> spacedCache = new Dictionary<string, string>();
+		private static readonly Dictionary<string, string> upperCache = new Dictionary<string, string>();
 		private static GUIStyle click;
 
 		private static Texture2D T(Color c)
@@ -36,7 +38,10 @@ namespace ZeroT.OrgasmSuite
 		// dimmed while the GUI is disabled (no Person selected, suite off)
 		internal static Color A(Color c) { return GUI.enabled ? c : new Color(c.r, c.g, c.b, c.a * 0.38f); }
 
-		internal static void Fill(Rect r, Color c) { if (r.width > 0f && r.height > 0f) GUI.DrawTexture(r, T(A(c))); }
+		// pure drawing only happens on the repaint event: the layout / mouse events of the same frame skip all of it
+		private static bool Painting { get { Event e = Event.current; return e != null && e.type == EventType.Repaint; } }
+
+		internal static void Fill(Rect r, Color c) { if (r.width > 0f && r.height > 0f && Painting) GUI.DrawTexture(r, T(A(c))); }
 		internal static void HLine(float x, float y, float w, Color c, float th) { Fill(new Rect(x, y, w, th), c); }
 		internal static void VLine(float x, float y, float h, Color c, float th) { Fill(new Rect(x, y, th, h), c); }
 
@@ -68,7 +73,8 @@ namespace ZeroT.OrgasmSuite
 
 		internal static GUIStyle Style(int size, TextAnchor anchor, Color c, bool bold)
 		{
-			string key = size + "|" + (int)anchor + "|" + c.r + c.g + c.b + "|" + bold;
+			long key = ((long)size << 40) | ((long)(int)anchor << 33) | ((long)(bold ? 1 : 0) << 32)
+				| ((long)(int)(c.r * 255f) << 16) | ((long)(int)(c.g * 255f) << 8) | (long)(int)(c.b * 255f);
 			GUIStyle st;
 			if (styles.TryGetValue(key, out st)) return st;
 			st = new GUIStyle(GUI.skin.label);
@@ -86,6 +92,7 @@ namespace ZeroT.OrgasmSuite
 
 		internal static void Text(Rect r, string text, int size, TextAnchor anchor, Color c, bool bold)
 		{
+			if (!Painting) return;
 			GUIStyle st = Style(size, anchor, c, bold);
 			Color old = GUI.contentColor;
 			GUI.contentColor = GUI.enabled ? Color.white : new Color(1f, 1f, 1f, 0.4f);
@@ -95,6 +102,24 @@ namespace ZeroT.OrgasmSuite
 
 		// a caption of the sheet: letter-spaced capitals
 		internal static string Spaced(string t)
+		{
+			string cached;
+			if (spacedCache.TryGetValue(t, out cached)) return cached;
+			cached = BuildSpaced(t);
+			spacedCache[t] = cached;
+			return cached;
+		}
+
+		private static string Upper(string t)
+		{
+			string cached;
+			if (upperCache.TryGetValue(t, out cached)) return cached;
+			cached = t.ToUpperInvariant();
+			upperCache[t] = cached;
+			return cached;
+		}
+
+		private static string BuildSpaced(string t)
 		{
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			string[] words = t.ToUpperInvariant().Split(' ');
@@ -143,7 +168,7 @@ namespace ZeroT.OrgasmSuite
 			else if (hover) Fill(r, new Color(1f, 1f, 1f, 0.05f));
 			Outline(r, selected ? accent : (hover ? Ink : Dim), 1f);
 			if (selected) Corners(r, accent, 6f * s, 2f);
-			Text(r, spaced ? Spaced(text) : text.ToUpperInvariant(), Mathf.Max(8, Mathf.RoundToInt(10.5f * s)), TextAnchor.MiddleCenter, selected ? Ink : (hover ? Ink : new Color(0.75f, 0.79f, 0.86f, 1f)), false);
+			Text(r, spaced ? Spaced(text) : Upper(text), Mathf.Max(8, Mathf.RoundToInt(10.5f * s)), TextAnchor.MiddleCenter, selected ? Ink : (hover ? Ink : new Color(0.75f, 0.79f, 0.86f, 1f)), false);
 			return Hit(r);
 		}
 
@@ -223,6 +248,7 @@ namespace ZeroT.OrgasmSuite
 		// v is 0..1 (the same number the arousal / stimulation HUD shows); full level pulses amber.
 		internal static void Liquid(Rect r, float v, Color accent, float s, int id)
 		{
+			if (!Painting) return;
 			float now = Time.realtimeSinceStartup;
 			float cur;
 			if (!shown.TryGetValue(id, out cur)) cur = v;
@@ -240,7 +266,7 @@ namespace ZeroT.OrgasmSuite
 			Color skin = Color.Lerp(new Color(Mathf.Min(1f, accent.r + 0.25f), Mathf.Min(1f, accent.g + 0.25f), Mathf.Min(1f, accent.b + 0.25f), 1f), Amber, pulse);
 			Color mid = Color.Lerp(accent, Amber, pulse);
 
-			float rowH = Mathf.Max(2f, Mathf.Round(2f * s));
+			float rowH = Mathf.Max(3f, Mathf.Round(3f * s));
 			int rows = Mathf.Max(1, Mathf.FloorToInt(tank.height / rowH));
 			float edgeBase = tank.width * full;
 			for (int i = 0; i < rows; i++)
@@ -260,7 +286,7 @@ namespace ZeroT.OrgasmSuite
 				Fill(new Rect(tank.x + w - skinW, y, skinW, rowH), skin);
 			}
 			// bubbles rising inside the liquid
-			for (int b = 0; b < 7; b++)
+			for (int b = 0; b < 4; b++)
 			{
 				float fx = (b * 0.137f + 0.09f) % 1f;
 				float bx = tank.x + fx * Mathf.Max(0f, edgeBase - 6f * s) + 2f * s;
