@@ -235,6 +235,9 @@ namespace ZeroT.HudClickShield
 			total++; ok += TryPatch(h, typeof(LookInputModule), "ProcessMouseAlt", skip, null, -1, false);
 			total++; ok += TryPatch(h, typeof(LookInputModule), "Process", skip, null, -1, false);
 
+			// the scene itself: select / grab / drag are already covered by GUIhitMouse; right-drag orbit, middle-drag pan and the wheel zoom of the monitor camera go through ProcessMouseControl
+			total++; ok += TryPatch(h, typeof(SuperController), "ProcessMouseControl", skip, null, -1, false);
+
 			log.Info("HUD Click Shield ready: " + ok + " of " + total + " hooks in place.");
 		}
 
