@@ -394,6 +394,7 @@ namespace ZeroT.OrgasmSuite
 			SuperController sc = SuperController.singleton;
 			if (sc == null) return;
 			if (sc.isLoading) { _wasLoading = true; return; }
+			TrackBodyLanguageOrgasm();
 			if (_wasLoading) { _wasLoading = false; _loadedAt = Time.realtimeSinceStartup; _attachedAt.Clear(); _pushed.Clear(); }
 			if (!_autoAttach.Value) { _waitNote = "Auto attach is off."; return; }
 			float now = Time.realtimeSinceStartup;
@@ -489,6 +490,97 @@ namespace ZeroT.OrgasmSuite
 			}
 			if (attachedOne) _nextScan = Time.realtimeSinceStartup + 0.8f;
 		}
+
+		// BodyLanguage (full): AutoTremble follows its orgasm directly - starts when the orgasm starts, stops when it is over.
+		// (BodyLanguage keeps its orgasm state in statics of ReadMyLips; FluidBridge only sees it by scanning, which proved unreliable.)
+		private sealed class BlTrack
+		{
+			public int ScriptId;
+			public FieldInfo Pleasure, Orgasming, Count;
+			public bool Was, Started;
+			public float Last = -1f, EndedAt = -1f;
+		}
+
+		private readonly Dictionary<string, BlTrack> _blTrack = new Dictionary<string, BlTrack>();
+		private float _nextBlPoll;
+
+		private static bool ReadBool(FieldInfo f)
+		{
+			try { object o = f == null ? null : f.GetValue(null); return o is bool && (bool)o; } catch { return false; }
+		}
+
+		private void TrackBodyLanguageOrgasm()
+		{
+			float now = Time.realtimeSinceStartup;
+			if (now < _nextBlPoll) return;
+			_nextBlPoll = now + 0.1f;
+			for (int i = 0; i < _people.Count; i++)
+			{
+				Atom a = _people[i];
+				try
+				{
+					PersonCfg cfg = CfgFor(a.uid);
+					BlTrack t;
+					if (!_blTrack.TryGetValue(a.uid, out t)) { t = new BlTrack(); _blTrack[a.uid] = t; }
+					bool wanted = _installed && cfg.On && cfg.Tremble && cfg.Engine == "BodyLanguage";
+					MVRScript bl = wanted ? Instance(a, Full) : null;
+					if (bl == null)
+					{
+						if (t.Started) StopTremble(a, t);
+						t.Was = false; t.Last = -1f; t.ScriptId = 0;
+						continue;
+					}
+					if (t.ScriptId != bl.GetInstanceID())
+					{
+						Type ty = bl.GetType().Assembly.GetType("CheesyFX.ReadMyLips");
+						if (ty == null) continue;
+						BindingFlags bf = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+						t.Pleasure = ty.GetField("isOrgasmPleasure", bf);
+						t.Orgasming = ty.GetField("isOrgasming", bf);
+						t.Count = ty.GetField("orgasmCount", bf);
+						t.ScriptId = bl.GetInstanceID();
+						t.Last = -1f; t.Was = false;
+					}
+					bool org = ReadBool(t.Pleasure) || ReadBool(t.Orgasming);
+					float cnt = -1f;
+					try { JSONStorableFloat cf = t.Count == null ? null : t.Count.GetValue(null) as JSONStorableFloat; if (cf != null) cnt = cf.val; } catch { }
+					bool advanced = t.Last >= 0f && cnt > t.Last + 0.1f;
+					if (cnt >= 0f) t.Last = cnt;
+					if ((org && !t.Was) || advanced) StartTremble(a, t);
+					if (org) t.EndedAt = -1f;
+					else if (t.Was && t.EndedAt < 0f) t.EndedAt = now;
+					if (!org && t.Started && t.EndedAt >= 0f && now - t.EndedAt > 0.4f) StopTremble(a, t);
+					t.Was = org;
+				}
+				catch (Exception e) { Logger.LogWarning("Orgasm Suite: orgasm tracking on " + a.uid + ": " + e.Message); }
+			}
+		}
+
+		private void StartTremble(Atom a, BlTrack t)
+		{
+			MVRScript tr = Instance(a, Tremble);
+			if (tr == null) { SetStatus(a.uid + "|tremble", "tremble: AutoTremble is not on " + a.uid + " yet"); return; }
+			JSONStorableBool act = tr.GetBoolJSONParam("Active");
+			if (act == null || !act.val)
+			{
+				JSONStorableAction s = tr.GetAction("Start");
+				if (s != null && s.actionCallback != null) s.actionCallback.Invoke();
+			}
+			t.Started = true; t.EndedAt = -1f;
+			Logger.LogInfo("Orgasm Suite: BodyLanguage orgasm on " + a.uid + " -> AutoTremble started");
+		}
+
+		private void StopTremble(Atom a, BlTrack t)
+		{
+			t.Started = false; t.EndedAt = -1f;
+			MVRScript tr = Instance(a, Tremble);
+			if (tr == null) return;
+			JSONStorableAction s = tr.GetAction("Stop");
+			if (s != null && s.actionCallback != null) s.actionCallback.Invoke();
+			Logger.LogInfo("Orgasm Suite: BodyLanguage orgasm over on " + a.uid + " -> AutoTremble stopped");
+		}
+
+		private void SetStatus(string key, string text) { _status[key] = text; }
 
 		// where touch arousal may come from: Lite gets its two switches, BodyLanguage a filter in its touch code
 		private readonly Dictionary<string, string> _collisionPushed = new Dictionary<string, string>();
@@ -647,11 +739,12 @@ namespace ZeroT.OrgasmSuite
 			{
 				MVRScript fb = Instance(a, Bridge);
 				if (fb == null) return;
-				string sig = (cfg.Fluids ? "1" : "0") + (cfg.Tremble ? "1" : "0") + (cfg.Shuffle ? "1" : "0") + (cfg.Wet ? "1" : "0") + (cfg.Wardrobe ? "1" : "0") + cfg.ShuffleDelay.ToString("0.##") + fb.GetInstanceID();
+				bool blOwnsTremble = cfg.Engine == "BodyLanguage";   // the suite follows BodyLanguage's orgasm itself (TrackBodyLanguageOrgasm)
+				string sig = (blOwnsTremble ? "B" : "L") + (cfg.Fluids ? "1" : "0") + (cfg.Tremble ? "1" : "0") + (cfg.Shuffle ? "1" : "0") + (cfg.Wet ? "1" : "0") + (cfg.Wardrobe ? "1" : "0") + cfg.ShuffleDelay.ToString("0.##") + fb.GetInstanceID();
 				string old;
 				if (_pushed.TryGetValue(a.uid, out old) && old == sig) return;
 				JSONStorableBool b = fb.GetBoolJSONParam("Use SexyFluids"); if (b != null) b.val = cfg.Fluids;
-				b = fb.GetBoolJSONParam("AutoTremble on orgasm"); if (b != null) b.val = cfg.Tremble;
+				b = fb.GetBoolJSONParam("AutoTremble on orgasm"); if (b != null) b.val = cfg.Tremble && !blOwnsTremble;
 				b = fb.GetBoolJSONParam("ZajeShuffle on orgasm"); if (b != null) b.val = cfg.Shuffle;
 				b = fb.GetBoolJSONParam("Apply Wet Clothes preset on orgasm"); if (b != null) b.val = cfg.Wet;
 				b = fb.GetBoolJSONParam("Random clothing on orgasm"); if (b != null) b.val = cfg.Wardrobe;

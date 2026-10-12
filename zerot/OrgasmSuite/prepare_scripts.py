@@ -258,6 +258,46 @@ def patch_bl_resources(t):
     return t
 
 
+def patch_bl_orgasm(t):
+    """DoOrgasm sets isOrgasming / isOrgasmPleasure first and the orgasm timer in the MIDDLE; a null reference in one of the cosmetic steps (voice, ahegao morphs,
+    stimulation spread) left the timer unset, so the orgasm lasted a frame or two and 'Orgasm Now' threw. Every step is guarded, the timer is always set."""
+    t = t.replace(chr(13) + chr(10), chr(10))
+    t = patch(t, """			isOrgasming = true;
+			isOrgasmPleasure = true;
+			orgasmCount.val += 1f;
+			Stimulate(3f, true);
+			onOrgasmStartTrigger.Trigger();
+			// float eyeRoll = Random.Range(-22, -10f);
+			ahegao.Run();
+			orgasmTimer = orgasmTime.val + orgasmFadeTime.val;
+			PlayRandomMoan(5);
+			multiOrgasmCount.val += 1;
+			if(FillMeUp.isFuta) altFutaStim.Orgasm();
+			foreach (var fuckable in FillMeUp.fuckables)
+			{
+				if(fuckable.penetrator != null && fuckable.penetrator.stimReceiver) fuckable.penetrator.stimReceiver.ForceOrgasm(true);
+			}""", """			isOrgasming = true;
+			isOrgasmPleasure = true;
+			orgasmCount.val += 1f;
+			orgasmTimer = orgasmTime.val + orgasmFadeTime.val;   // [OrgasmSuite] set first: the steps below may throw
+			try { Stimulate(3f, true); } catch (System.Exception e) { SuperController.LogError("BodyLanguage orgasm (stimulate): " + e.Message); }
+			try { onOrgasmStartTrigger.Trigger(); } catch (System.Exception e) { SuperController.LogError("BodyLanguage orgasm (start trigger): " + e.Message); }
+			try { ahegao.Run(); } catch (System.Exception e) { SuperController.LogError("BodyLanguage orgasm (ahegao): " + e.Message); }
+			orgasmTimer = orgasmTime.val + orgasmFadeTime.val;
+			try { PlayRandomMoan(5); } catch (System.Exception e) { SuperController.LogError("BodyLanguage orgasm (moan): " + e.Message); }
+			multiOrgasmCount.val += 1;
+			try { if(FillMeUp.isFuta) altFutaStim.Orgasm(); } catch (System.Exception e) { SuperController.LogError("BodyLanguage orgasm (futa): " + e.Message); }
+			try
+			{
+				foreach (var fuckable in FillMeUp.fuckables)
+				{
+					if(fuckable.penetrator != null && fuckable.penetrator.stimReceiver) fuckable.penetrator.stimReceiver.ForceOrgasm(true);
+				}
+			}
+			catch (System.Exception e) { SuperController.LogError("BodyLanguage orgasm (penetrators): " + e.Message); }""", what='bl doorgasm')
+    return t
+
+
 def patch_fluidbridge(t):
     t = patch(t, 'const string Version = "27";', 'const string Version = "28";', what='version')
     t = patch(t, '// FluidBridge v13', '// FluidBridge v28 (OrgasmSuite build: orgasm hooks for AutoTremble + ZajeShuffle, per-person settings, male emitters)', what='header')
@@ -533,7 +573,7 @@ def build():
     add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.BodyLanguageLite', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'BodyLanguage_Lite.cslist', {'BodyLanguage_Lite.cs': patch_lite_collision}))
     add_dll('BodyLanguage_Lite', 'ZeroT.OrgasmSuite.ArousalHUD', collect_sources('bllite', 'Custom/Scripts/CheesyFX/BodyLanguage_Lite/', 'ArousalHUD.cslist'))
     # BodyLanguage (full)
-    bl_sources = collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist', {'src/FillMeUp/Orifice.cs': patch_bl_orifice, 'src/shared/TouchCollisionTrigger.cs': patch_bl_trigger, 'src/FillMeUp/OrificeTriggerHandler.cs': patch_bl_orificetrigger, 'src/FillMeUp/FillMeUp.cs': lambda s: patch_bl_resources(patch_bl_fillmeup(s))})
+    bl_sources = collect_sources('bl', 'Custom/Scripts/CheesyFX/BodyLanguage/', 'BodyLanguage.cslist', {'src/FillMeUp/Orifice.cs': patch_bl_orifice, 'src/shared/TouchCollisionTrigger.cs': patch_bl_trigger, 'src/FillMeUp/OrificeTriggerHandler.cs': patch_bl_orificetrigger, 'src/FillMeUp/FillMeUp.cs': lambda s: patch_bl_resources(patch_bl_fillmeup(s)), 'src/ReadMyLips/ReadMyLips.cs': patch_bl_orgasm})
     bl_sources['OrgasmSuiteFilter.cs'] = FILTER_CS
     add_dll('BodyLanguage', 'ZeroT.OrgasmSuite.BodyLanguage', bl_sources)
     # FluidBridge (patched)

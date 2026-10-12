@@ -392,6 +392,33 @@ public static class SuiteScenario
 		SetCfg(h, "Woman", "Collision", 1); St(h, 3f);
 		foreach (var e in loadErrors) Console.WriteLine("  load error: " + e);
 
+		// AutoTremble follows BodyLanguage's own orgasm state: starts with it, runs while it lasts, stops when it is over
+		{
+			var sf = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+			var rmlT = blAsm.GetType("CheesyFX.ReadMyLips");
+			var pleasureF = rmlT == null ? null : rmlT.GetField("isOrgasmPleasure", sf);
+			var orgasmingF = rmlT == null ? null : rmlT.GetField("isOrgasming", sf);
+			var trem = Script(woman, "AutoTremble");
+			var tact = trem == null ? null : trem.GetBoolJSONParam("Active");
+			h.Check(pleasureF != null && orgasmingF != null && tact != null, "BodyLanguage orgasm state + AutoTremble 'Active' are reachable");
+			if (pleasureF != null && orgasmingF != null && tact != null)
+			{
+				St(h, 2f);
+				h.Check(!tact.val, "BodyLanguage: AutoTremble is idle before an orgasm");
+				orgasmingF.SetValue(null, true); pleasureF.SetValue(null, true);
+				St(h, 2f);
+				h.Check(tact.val, "BodyLanguage orgasm started AutoTremble");
+				St(h, 4f);
+				h.Check(tact.val, "AutoTremble keeps running while the orgasm lasts");
+				pleasureF.SetValue(null, false);
+				St(h, 2f);
+				h.Check(tact.val, "AutoTremble keeps running through the orgasm fade (isOrgasming still set)");
+				orgasmingF.SetValue(null, false);
+				St(h, 2f);
+				h.Check(!tact.val, "AutoTremble stopped when the BodyLanguage orgasm was over");
+			}
+		}
+
 		// BodyLanguage is a singleton: a second Person asking for it is held back
 		SetCfg(h, "Man", "Engine", "BodyLanguage");
 		St(h, 6f);
