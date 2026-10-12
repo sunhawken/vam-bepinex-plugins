@@ -82,3 +82,21 @@ Every plugin window under `zerot/` (Orifice, FluidBridgeHelper, AnusPhysicsContr
 `zerot/UiSim` renders those windows and flags clipped text without VaM or Unity; see its README.
 
 Built DLLs are attached to the GitHub Release instead of being committed; embedded third-party assets (`OrificeDynamics.Resources`, XRaySlap audio, ProceduralSlaps asset bundle) are not in git and must be copied out of the original DLL to rebuild those projects.
+
+## Standalone ports and helpers (2026-10)
+
+Headless BepInEx plugins written from a deep read of the original `.var` scripts; each has a scenario in the simulator (`python zerot/tools/vamdev.py test <name>`, all with `simall`). None has been run in VaM itself.
+
+| Plugin | Port of | Notes |
+|---|---|---|
+| `UXPlusHelper` | everlaster.UXPlus | Speed-ups, settings autosave, error containment. |
+| `ControllersAppearanceStandalone` | Datel.ControllersAppearance | Pink female / blue male controller lines. |
+| `AppearanceLoaderHelper` | ky1001.AppearanceLoader | Fast lookups, failed-load recovery. |
+| `ZajeShuffleHelper` | ZeroT.ZajeShuffle | All features, storable on CoreControl. |
+| `ClothingBackfaceStandalone` | Nial Clothing backface | Backface shader swap with profiles. |
+| `ForcePersonCacheStandalone` | JayJayWon.ForcePersonCache | Warm-up at start and after HardReset. |
+| `AutoFlutterHipStandalone` | 14mhz AutoFlutterHip | Hip/leg morphs by body angle + 8-tab technic player, female persons. |
+| `ShakeItStandalone` | CheesyFX ShakeIt + FlexIt + WorkOut | Jiggle, flex and sweat for female persons, defaults from `Preset_Butt.vap`. |
+| `ToggleHUD` (v5 script) | zerot.ToggleHUD | Adds a High Physics toggle mirroring VaM's High Quality Physics setting. |
+
+Tools: `zerot/tools/vamdev.py` (build / test / ship / pack), `zerot/tools/lookview.py` (software render of a person look from a `.var` or scene: body, morphs, skin, clothing, hair; rest pose, built-in morphs not decoded) with `vabparse.py` (reader for VaM `.vab` clothing/hair stores).

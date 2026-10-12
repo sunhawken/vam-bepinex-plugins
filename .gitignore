@@ -27,3 +27,4 @@ zerot/ScenePerformanceStandalone/var_x/
 zerot/ScenePerformanceStandalone/dec/
 zerot/UiSim/hosts/
 zerot/UiSim/cache/
+__pycache__/
