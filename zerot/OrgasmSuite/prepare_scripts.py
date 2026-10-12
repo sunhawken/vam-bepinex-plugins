@@ -164,6 +164,7 @@ def patch_fluidbridge(t):
     t = patch(t, '    Coroutine _wetClothesRemoveCoroutine;\n',
               '    Coroutine _wetClothesRemoveCoroutine;\n'
               '    JSONStorableBool trembleOnOrgasmJSON, shuffleOnOrgasmJSON;\n'
+              '    JSONStorableFloat shuffleDelayJSON;\n'
               '    MVRScript trembleScript, zajeScript;\n'
               '    bool trembleStartedByBridge;\n'
               '    string orgasmHookStatus = "no orgasm yet";\n', what='fields')
@@ -173,12 +174,13 @@ def patch_fluidbridge(t):
               '        // [OrgasmSuite] orgasm hooks\n'
               '        CreateHeader("Orgasm Hooks", false, new Color(0.78f, 0.5f, 1f));\n'
               '        trembleOnOrgasmJSON = RegisterToggle("AutoTremble on orgasm", true, false, "Starts AutoTremble on this Person when an orgasm fires and stops it when the fluids stop.");\n'
-              '        shuffleOnOrgasmJSON = RegisterToggle("ZajeShuffle on orgasm", true, true, "Fires the ZajeShuffle Shuffle action (random UIAssist button) on every orgasm.");\n',
+              '        shuffleOnOrgasmJSON = RegisterToggle("ZajeShuffle on orgasm", true, true, "Fires the ZajeShuffle Shuffle action (random UIAssist button) on every orgasm.");\n'
+              '        shuffleDelayJSON = RegisterSlider("ZajeShuffle delay (sec)", 0f, 0f, 60f, true, "F1", "How long after the orgasm the shuffle runs. 0 = at once.");\n',
               what='ui')
     t = patch(t, '        StoreFloat(jc, wetClothesDurationJSON);\n',
-              '        StoreFloat(jc, wetClothesDurationJSON);\n        StoreBool(jc, trembleOnOrgasmJSON);\n        StoreBool(jc, shuffleOnOrgasmJSON);\n', what='store')
+              '        StoreFloat(jc, wetClothesDurationJSON);\n        StoreBool(jc, trembleOnOrgasmJSON);\n        StoreBool(jc, shuffleOnOrgasmJSON);\n        StoreFloat(jc, shuffleDelayJSON);\n', what='store')
     t = patch(t, '            RestoreFloat(jc, wetClothesDurationJSON);\n',
-              '            RestoreFloat(jc, wetClothesDurationJSON);\n            RestoreBool(jc, trembleOnOrgasmJSON);\n            RestoreBool(jc, shuffleOnOrgasmJSON);\n', what='restore')
+              '            RestoreFloat(jc, wetClothesDurationJSON);\n            RestoreBool(jc, trembleOnOrgasmJSON);\n            RestoreBool(jc, shuffleOnOrgasmJSON);\n            RestoreFloat(jc, shuffleDelayJSON);\n', what='restore')
     t = patch(t, '''        if (IsBodyLanguageOrLiteReason(reason))
         {
             ApplyWetClothesPreset();
@@ -217,13 +219,29 @@ def patch_fluidbridge(t):
             if (shuffleOnOrgasmJSON != null && shuffleOnOrgasmJSON.val)
             {
                 if (zajeScript == null) zajeScript = FindScript(new string[] { "ZajeShuffle" }, containingAtom, true);
-                if (zajeScript != null)
-                    note += CallAction(zajeScript, "Shuffle") ? "shuffled; " : "shuffle: action missing; ";
-                else note += "shuffle: ZajeShuffle not loaded; ";
+                float shuffleDelay = shuffleDelayJSON == null ? 0f : shuffleDelayJSON.val;
+                if (zajeScript == null) note += "shuffle: ZajeShuffle not loaded; ";
+                else if (shuffleDelay > 0.01f)
+                {
+                    StartCoroutine(DelayedShuffle(shuffleDelay));
+                    note += "shuffle in " + shuffleDelay.ToString("0.#") + " s; ";
+                }
+                else note += CallAction(zajeScript, "Shuffle") ? "shuffled; " : "shuffle: action missing; ";
             }
         }
         catch (Exception e) { note += "hook error: " + e.Message; }
         orgasmHookStatus = note.Length == 0 ? "hooks off" : note.TrimEnd(' ', ';');
+    }
+
+    IEnumerator DelayedShuffle(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        try
+        {
+            if (shuffleOnOrgasmJSON != null && shuffleOnOrgasmJSON.val && zajeScript != null && CallAction(zajeScript, "Shuffle"))
+                orgasmHookStatus = "shuffled after " + delay.ToString("0.#") + " s";
+        }
+        catch { }
     }
 
     void StopOrgasmTremble()

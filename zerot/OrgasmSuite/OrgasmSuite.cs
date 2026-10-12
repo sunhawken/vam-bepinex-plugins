@@ -53,6 +53,7 @@ namespace ZeroT.OrgasmSuite
 			public string Engine = "Lite";   // Lite | BodyLanguage
 			// what happens during an orgasm on this Person (each one is a part of the suite that can be switched off) + the HUD
 			public bool Fluids = true, Tremble = true, Shuffle = true, Wet = true, Wardrobe = true, Hud = true;
+			public float ShuffleDelay = 0f;   // seconds after the orgasm before ZajeShuffle runs
 		}
 
 		private readonly Dictionary<string, PersonCfg> _cfg = new Dictionary<string, PersonCfg>(StringComparer.Ordinal);
@@ -64,7 +65,7 @@ namespace ZeroT.OrgasmSuite
 		private ConfigEntry<float> _scale, _winX, _winY, _winW, _winH;
 		private ConfigEntry<string> _lastUid;
 
-		private Rect _win = new Rect(60f, 140f, 380f, 450f);
+		private Rect _win = new Rect(60f, 140f, 380f, 480f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
 		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f, CollapsedH = 34f;
@@ -103,7 +104,7 @@ namespace ZeroT.OrgasmSuite
 			_winX = Config.Bind("Window", "X", 60f, "Saved horizontal position.");
 			_winY = Config.Bind("Window", "Y", 140f, "Saved vertical position.");
 			_winW = Config.Bind("Window", "Width", 380f, "Saved width.");
-			_winH = Config.Bind("Window", "Height", 450f, "Saved height.");
+			_winH = Config.Bind("Window", "Height", 480f, "Saved height.");
 			_dpiAware = Config.Bind("Window", "DpiAware", true, "Scale with the monitor's DPI.");
 			_lastUid = Config.Bind("State", "LastPerson", "", "Person remembered across sessions.");
 			_win = new Rect(_winX.Value, _winY.Value, Mathf.Clamp(_winW.Value, MinW, MaxW), Mathf.Clamp(_winH.Value, MinH, MaxH));
@@ -215,7 +216,9 @@ namespace ZeroT.OrgasmSuite
 					c.Fluids = f[3] == "1";
 					c.Tremble = f[4] == "1";
 					c.Hud = f[5] == "1";
-					if (f.Length >= 9) { c.Shuffle = f[6] == "1"; c.Wet = f[7] == "1"; c.Wardrobe = f[8] == "1"; }   // older files stop at the HUD column
+					if (f.Length >= 9) { c.Shuffle = f[6] == "1"; c.Wet = f[7] == "1"; c.Wardrobe = f[8] == "1"; }
+					float sd;
+					if (f.Length >= 10 && float.TryParse(f[9], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sd)) c.ShuffleDelay = Mathf.Clamp(sd, 0f, 60f);   // older files stop at the HUD column
 					_cfg[f[0]] = c;
 				}
 			}
@@ -238,7 +241,8 @@ namespace ZeroT.OrgasmSuite
 					PersonCfg c = kv.Value;
 					sb.Append(kv.Key).Append('\t').Append(c.On ? "1" : "0").Append('\t').Append(c.Engine).Append('\t')
 						.Append(c.Fluids ? "1" : "0").Append('\t').Append(c.Tremble ? "1" : "0").Append('\t').Append(c.Hud ? "1" : "0")
-							.Append('\t').Append(c.Shuffle ? "1" : "0").Append('\t').Append(c.Wet ? "1" : "0").Append('\t').Append(c.Wardrobe ? "1" : "0").Append('\n');
+							.Append('\t').Append(c.Shuffle ? "1" : "0").Append('\t').Append(c.Wet ? "1" : "0").Append('\t').Append(c.Wardrobe ? "1" : "0")
+							.Append('\t').Append(c.ShuffleDelay.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
 				}
 				File.WriteAllText(p, sb.ToString());
 			}
@@ -379,6 +383,7 @@ namespace ZeroT.OrgasmSuite
 		// ------------------------------------------------------------------ the reconcile loop
 		private void Update()
 		{
+			if (_saveAt > 0f && Time.realtimeSinceStartup >= _saveAt) { _saveAt = 0f; SavePeople(); }
 			if (_active == null || !_active.Value) return;
 			SuperController sc = SuperController.singleton;
 			if (sc == null) return;
@@ -402,6 +407,7 @@ namespace ZeroT.OrgasmSuite
 			catch (Exception e) { Logger.LogWarning("Orgasm Suite: " + e.Message); }
 		}
 
+		private float _saveAt;
 		private int _sig;
 		private float _sigAt;
 		private string _waitNote = "";
@@ -576,7 +582,7 @@ namespace ZeroT.OrgasmSuite
 			{
 				MVRScript fb = Instance(a, Bridge);
 				if (fb == null) return;
-				string sig = (cfg.Fluids ? "1" : "0") + (cfg.Tremble ? "1" : "0") + (cfg.Shuffle ? "1" : "0") + (cfg.Wet ? "1" : "0") + (cfg.Wardrobe ? "1" : "0") + fb.GetInstanceID();
+				string sig = (cfg.Fluids ? "1" : "0") + (cfg.Tremble ? "1" : "0") + (cfg.Shuffle ? "1" : "0") + (cfg.Wet ? "1" : "0") + (cfg.Wardrobe ? "1" : "0") + cfg.ShuffleDelay.ToString("0.##") + fb.GetInstanceID();
 				string old;
 				if (_pushed.TryGetValue(a.uid, out old) && old == sig) return;
 				JSONStorableBool b = fb.GetBoolJSONParam("Use SexyFluids"); if (b != null) b.val = cfg.Fluids;
@@ -584,6 +590,7 @@ namespace ZeroT.OrgasmSuite
 				b = fb.GetBoolJSONParam("ZajeShuffle on orgasm"); if (b != null) b.val = cfg.Shuffle;
 				b = fb.GetBoolJSONParam("Apply Wet Clothes preset on orgasm"); if (b != null) b.val = cfg.Wet;
 				b = fb.GetBoolJSONParam("Random clothing on orgasm"); if (b != null) b.val = cfg.Wardrobe;
+				JSONStorableFloat df = fb.GetFloatJSONParam("ZajeShuffle delay (sec)"); if (df != null) df.val = cfg.ShuffleDelay;
 				_pushed[a.uid] = sig;
 			}
 			catch { }
@@ -732,23 +739,40 @@ namespace ZeroT.OrgasmSuite
 			y += lh;
 			float ew = (w - 4f * s) / 2f;
 			bool isLite = cfg == null || cfg.Engine != "BodyLanguage";
+			Color bg = GUI.backgroundColor;
+			if (isLite) GUI.backgroundColor = LiteColor;
 			if (GUI.Button(new Rect(x, y, ew, lh), isLite ? "[ Lite ]" : "Lite") && cfg != null && !isLite) { cfg.Engine = "Lite"; changed = true; }
+			GUI.backgroundColor = !isLite ? FullColor : bg;
 			if (GUI.Button(new Rect(x + ew + 4f * s, y, ew, lh), !isLite ? "[ BodyLanguage ]" : "BodyLanguage") && cfg != null && isLite) { cfg.Engine = "BodyLanguage"; changed = true; }
+			GUI.backgroundColor = bg;
 			y += lh + 6f * s;
 
 			// ---- what happens during an orgasm: one switch per module
 			float hw = (w - 4f * s) / 2f;
 			GUI.Label(new Rect(x, y, w, lh), "During orgasm");
 			y += lh;
-			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Tremble) + "AutoTremble") && cfg != null) { cfg.Tremble = !cfg.Tremble; changed = true; }
-			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(cfg != null && cfg.Shuffle) + "ZajeShuffle") && cfg != null) { cfg.Shuffle = !cfg.Shuffle; changed = true; }
+			if (BoxToggle(new Rect(x, y, hw, lh), "AutoTremble", cfg != null && cfg.Tremble, isLite, s) && cfg != null) { cfg.Tremble = !cfg.Tremble; changed = true; }
+			if (BoxToggle(new Rect(x + hw + 4f * s, y, hw, lh), "ZajeShuffle", cfg != null && cfg.Shuffle, isLite, s) && cfg != null) { cfg.Shuffle = !cfg.Shuffle; changed = true; }
 			y += lh + 2f * s;
-			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Fluids) + "SexyFluids") && cfg != null) { cfg.Fluids = !cfg.Fluids; changed = true; }
-			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(cfg != null && cfg.Wet) + "Wet clothes") && cfg != null) { cfg.Wet = !cfg.Wet; changed = true; }
+			if (BoxToggle(new Rect(x, y, hw, lh), "SexyFluids", cfg != null && cfg.Fluids, isLite, s) && cfg != null) { cfg.Fluids = !cfg.Fluids; changed = true; }
+			if (BoxToggle(new Rect(x + hw + 4f * s, y, hw, lh), "Wet clothes", cfg != null && cfg.Wet, isLite, s) && cfg != null) { cfg.Wet = !cfg.Wet; changed = true; }
 			y += lh + 2f * s;
-			if (GUI.Button(new Rect(x, y, hw, lh), Box(cfg != null && cfg.Wardrobe) + "Wardrobe") && cfg != null) { cfg.Wardrobe = !cfg.Wardrobe; changed = true; }
+			if (BoxToggle(new Rect(x, y, hw, lh), "Wardrobe", cfg != null && cfg.Wardrobe, isLite, s) && cfg != null) { cfg.Wardrobe = !cfg.Wardrobe; changed = true; }
 			string hudName = isLite ? "Arousal HUD" : "Stimulation HUD";
-			if (GUI.Button(new Rect(x + hw + 4f * s, y, hw, lh), Box(cfg != null && cfg.Hud) + hudName) && cfg != null) { cfg.Hud = !cfg.Hud; changed = true; }
+			if (BoxToggle(new Rect(x + hw + 4f * s, y, hw, lh), hudName, cfg != null && cfg.Hud, isLite, s) && cfg != null) { cfg.Hud = !cfg.Hud; changed = true; }
+			y += lh + 4f * s;
+
+			// ---- how long after the orgasm ZajeShuffle runs
+			float delayShown = cfg != null ? cfg.ShuffleDelay : 0f;
+			GUI.Label(new Rect(x, y, 64f * s, lh), "Delay");
+			float nd = GUI.HorizontalSlider(new Rect(x + 66f * s, y + 6f * s, w - 66f * s - 62f * s, lh), delayShown, 0f, 30f);
+			GUI.Label(new Rect(x + w - 58f * s, y, 58f * s, lh), delayShown.ToString("0.0") + " s");
+			if (cfg != null && Mathf.Abs(nd - delayShown) > 0.04f)
+			{
+				cfg.ShuffleDelay = Mathf.Round(nd * 10f) / 10f;
+				_saveAt = Time.realtimeSinceStartup + 0.6f;   // saved when the slider has stopped moving
+				_pushed.Clear();
+			}
 			y += lh + 4f * s;
 
 			// ---- test buttons (act on the selected Person)
@@ -800,6 +824,40 @@ namespace ZeroT.OrgasmSuite
 				SetMessage(what + " fired on " + _uid + ".");
 			}
 			catch (Exception e) { SetMessage(what + " failed: " + e.Message); Logger.LogWarning("Orgasm Suite: " + what + ": " + e.Message); }
+		}
+
+		// small square switches: green on the Lite side, blue on the BodyLanguage side
+		private static Texture2D texFrame, texOff, texLite, texFull;
+		private static GUIStyle clickStyle;
+		private static readonly Color LiteColor = new Color(0.20f, 0.85f, 0.35f, 1f);
+		private static readonly Color FullColor = new Color(0.25f, 0.55f, 1.00f, 1f);
+
+		private static Texture2D MakeTex(Color c)
+		{
+			Texture2D t = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+			t.SetPixel(0, 0, c);
+			t.Apply();
+			t.hideFlags = HideFlags.HideAndDontSave;
+			return t;
+		}
+
+		private static bool BoxToggle(Rect r, string label, bool on, bool lite, float s)
+		{
+			if (texFrame == null)
+			{
+				texFrame = MakeTex(new Color(0.02f, 0.02f, 0.02f, 1f));
+				texOff = MakeTex(new Color(0.20f, 0.20f, 0.22f, 1f));
+				texLite = MakeTex(LiteColor);
+				texFull = MakeTex(FullColor);
+				clickStyle = new GUIStyle();
+			}
+			GUI.Box(r, "");
+			float b = 14f * s;
+			Rect box = new Rect(r.x + 6f * s, r.y + (r.height - b) / 2f, b, b);
+			GUI.DrawTexture(box, texFrame);
+			GUI.DrawTexture(new Rect(box.x + 2f * s, box.y + 2f * s, box.width - 4f * s, box.height - 4f * s), on ? (lite ? texLite : texFull) : texOff);
+			GUI.Label(new Rect(box.xMax + 6f * s, r.y, r.width - b - 14f * s, r.height), label);
+			return GUI.Button(r, "", clickStyle);
 		}
 
 		private static string Box(bool on) { return on ? "[x] " : "[ ] "; }

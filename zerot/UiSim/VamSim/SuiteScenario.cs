@@ -387,6 +387,18 @@ public static class SuiteScenario
 		h.Check(Has(core, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "one Person wants it again: ZajeShuffle is back (session wide)");
 		SetCfg(h, "Man", "Shuffle", true);
 
+		// the shuffle can wait: ShuffleDelay seconds after the orgasm
+		SetCfg(h, "Woman", "ShuffleDelay", 3f);
+		St(h, 3f);
+		h.Check(Math.Abs(fbS.GetFloatJSONParam("ZajeShuffle delay (sec)").val - 3f) < 0.01f, "the delay set in the window reaches FluidBridge");
+		int sh0 = uia.buttonList.Sum(b => b.Invoked);
+		press("Bridge", "Test Orgasm Fluids", "Test fluids"); St(h, 1.2f);
+		h.Check(uia.buttonList.Sum(b => b.Invoked) == sh0, "with a 3 s delay the shuffle has not run 1.2 s after the orgasm");
+		St(h, 3f);
+		h.Check(uia.buttonList.Sum(b => b.Invoked) == sh0 + 1, "...and runs once, after the delay");
+		SetCfg(h, "Woman", "ShuffleDelay", 0f);
+		St(h, 14f);   // let the fluids / tremble of that test finish
+
 		// ---- 9. Suite OFF removes only the suite's own scripts
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 9 errors=" + Sim.Errors.Count);
 		SetCfg(h, "Man", "Engine", "Lite");
