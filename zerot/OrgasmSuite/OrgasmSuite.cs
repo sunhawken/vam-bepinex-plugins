@@ -912,19 +912,21 @@ namespace ZeroT.OrgasmSuite
 			bool isLite = cfg == null || cfg.Engine != "BodyLanguage";
 			Color side = isLite ? Fx.Lite : Fx.Full;
 
-			// ---- master
-			float third = (w - 2f * gap) / 3f;
-			if (Fx.Button(new Rect(x, y, third, lh), cfg != null && cfg.On ? "Suite on" : "Suite off", Fx.Amber, cfg != null && cfg.On, s) && cfg != null) { cfg.On = !cfg.On; changed = true; }
-			if (Fx.Button(new Rect(x + third + gap, y, third, lh), "All on", Fx.Amber, false, s)) { foreach (Atom a2 in _people) CfgFor(a2.uid).On = true; changed = true; }
-			if (Fx.Button(new Rect(x + 2f * (third + gap), y, third, lh), "All off", Fx.Amber, false, s)) { foreach (Atom a2 in _people) CfgFor(a2.uid).On = false; changed = true; }
-			y += lh + 10f * s;
-
-			// ---- mode
+			// ---- mode: each engine is its own switch for this Person (click the lit one to turn it off, the other one to change over)
 			Fx.Section(new Rect(x, y, w, 16f * s), "Mode", s);
 			y += 20f * s;
 			float ew = (w - gap) / 2f;
-			if (Fx.Button(new Rect(x, y, ew, lh), "Lite", Fx.Lite, isLite, s) && cfg != null && !isLite) { cfg.Engine = "Lite"; changed = true; }
-			if (Fx.Button(new Rect(x + ew + gap, y, ew, lh), "BodyLanguage", Fx.Full, !isLite, s) && cfg != null && isLite) { cfg.Engine = "BodyLanguage"; changed = true; }
+			bool liteOn = cfg != null && cfg.On && isLite, fullOn = cfg != null && cfg.On && !isLite;
+			if (Fx.Button(new Rect(x, y, ew, lh), liteOn ? "Lite on" : "Lite off", Fx.Lite, liteOn, s, false) && cfg != null)
+			{
+				if (liteOn) cfg.On = false; else { cfg.Engine = "Lite"; cfg.On = true; }
+				changed = true;
+			}
+			if (Fx.Button(new Rect(x + ew + gap, y, ew, lh), fullOn ? "BodyLanguage on" : "BodyLanguage off", Fx.Full, fullOn, s, false) && cfg != null)
+			{
+				if (fullOn) cfg.On = false; else { cfg.Engine = "BodyLanguage"; cfg.On = true; }
+				changed = true;
+			}
 			y += lh + 10f * s;
 
 			// ---- the level: a bar that fills with liquid, driven by the same value as the arousal / stimulation HUD
