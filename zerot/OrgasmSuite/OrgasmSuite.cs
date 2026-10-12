@@ -62,10 +62,11 @@ namespace ZeroT.OrgasmSuite
 		private ConfigEntry<bool> _active, _females, _males, _autoAttach;
 		private ConfigEntry<float> _settle, _quiet;
 		private ConfigEntry<bool> _showWindow, _collapsed, _dpiAware;
+		private ConfigEntry<float> _previewFill;
 		private ConfigEntry<float> _scale, _winX, _winY, _winW, _winH;
 		private ConfigEntry<string> _lastUid;
 
-		private Rect _win = new Rect(60f, 140f, 380f, 480f);
+		private Rect _win = new Rect(60f, 140f, 380f, 545f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
 		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f, CollapsedH = 34f;
@@ -104,8 +105,9 @@ namespace ZeroT.OrgasmSuite
 			_winX = Config.Bind("Window", "X", 60f, "Saved horizontal position.");
 			_winY = Config.Bind("Window", "Y", 140f, "Saved vertical position.");
 			_winW = Config.Bind("Window", "Width", 380f, "Saved width.");
-			_winH = Config.Bind("Window", "Height", 480f, "Saved height.");
+			_winH = Config.Bind("Window", "Height", 545f, "Saved height.");
 			_dpiAware = Config.Bind("Window", "DpiAware", true, "Scale with the monitor's DPI.");
+			_previewFill = Config.Bind("Window", "PreviewFill", -1f, "Show this level (0..1) in the liquid bar instead of the live value (for screenshots). -1 = live.");
 			_lastUid = Config.Bind("State", "LastPerson", "", "Person remembered across sessions.");
 			_win = new Rect(_winX.Value, _winY.Value, Mathf.Clamp(_winW.Value, MinW, MaxW), Mathf.Clamp(_winH.Value, MinH, MaxH));
 			_uid = _lastUid.Value ?? "";
@@ -477,9 +479,34 @@ namespace ZeroT.OrgasmSuite
 				attachedOne = Apply(a, mgr, hud, on && cfg.Hud, ref attachedOne, out s); st.AppendLine(hud.Label + ": " + s);
 				attachedOne = Apply(a, mgr, lite ? FullHud : LiteHud, false, ref attachedOne, out s);
 				_status[a.uid] = st.ToString();
+				_liquid[a.uid] = FindLiquid(a, lite);
 				PushBridgeSettings(a, cfg);
 			}
 			if (attachedOne) _nextScan = Time.realtimeSinceStartup + 0.8f;
+		}
+
+		// what the arousal / stimulation HUD shows: BodyLanguage Lite's "Arousal", BodyLanguage's "Stimulation"
+		private sealed class LiquidSrc { public MVRScript Script; public JSONStorableFloat Param; }
+		private readonly Dictionary<string, LiquidSrc> _liquid = new Dictionary<string, LiquidSrc>();
+
+		private LiquidSrc FindLiquid(Atom a, bool lite)
+		{
+			MVRScript m = Instance(a, lite ? Lite : Full);
+			if (m == null) return null;
+			JSONStorableFloat f = m.GetFloatJSONParam(lite ? "Arousal" : "Stimulation");
+			if (f == null) return null;
+			LiquidSrc l = new LiquidSrc();
+			l.Script = m; l.Param = f;
+			return l;
+		}
+
+		// 0..1, or -1 when the engine is not running on that Person
+		public float LiquidValue(string uid)
+		{
+			LiquidSrc l;
+			if (string.IsNullOrEmpty(uid) || !_liquid.TryGetValue(uid, out l) || l == null || l.Script == null || l.Param == null) return -1f;
+			float span = l.Param.max - l.Param.min;
+			return span > 0.0001f ? Mathf.Clamp01((l.Param.val - l.Param.min) / span) : Mathf.Clamp01(l.Param.val);
 		}
 
 		// ZajeShuffle is one script for the whole session: it stays while any managed Person still wants a shuffle on orgasm
@@ -749,6 +776,15 @@ namespace ZeroT.OrgasmSuite
 			if (Fx.Button(new Rect(x, y, ew, lh), "Lite", Fx.Lite, isLite, s) && cfg != null && !isLite) { cfg.Engine = "Lite"; changed = true; }
 			if (Fx.Button(new Rect(x + ew + gap, y, ew, lh), "BodyLanguage", Fx.Full, !isLite, s) && cfg != null && isLite) { cfg.Engine = "BodyLanguage"; changed = true; }
 			y += lh + 10f * s;
+
+			// ---- the level: a bar that fills with liquid, driven by the same value as the arousal / stimulation HUD
+			Fx.Section(new Rect(x, y, w, 16f * s), isLite ? "Arousal" : "Stimulation", s);
+			y += 20f * s;
+			float lv = _previewFill.Value >= 0f ? _previewFill.Value : LiquidValue(_uid);
+			float pw = 54f * s;
+			Fx.Liquid(new Rect(x, y, w - pw - gap, 26f * s), Mathf.Max(0f, lv), side, s, 7100);
+			Fx.Text(new Rect(x + w - pw, y, pw, 26f * s), lv < 0f ? "-- %" : Mathf.RoundToInt(lv * 100f) + " %", small, TextAnchor.MiddleRight, Fx.Ink, false);
+			y += 26f * s + 10f * s;
 
 			// ---- what happens during an orgasm: one switch per module, in the colour of the side
 			float hw = (w - gap) / 2f;

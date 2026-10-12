@@ -216,6 +216,67 @@ namespace ZeroT.OrgasmSuite
 			Corners(r, Dim, 5f * s, 1f);
 		}
 
+
+		private static readonly Dictionary<int, float> shown = new Dictionary<int, float>();
+
+		// a bar that fills with liquid: the level eases to the real value, the leading edge ripples, bubbles rise inside, a bright skin rides the surface.
+		// v is 0..1 (the same number the arousal / stimulation HUD shows); full level pulses amber.
+		internal static void Liquid(Rect r, float v, Color accent, float s, int id)
+		{
+			float now = Time.realtimeSinceStartup;
+			float cur;
+			if (!shown.TryGetValue(id, out cur)) cur = v;
+			cur += (v - cur) * 0.12f;                 // eases, so a jump reads as the liquid rising
+			if (Mathf.Abs(v - cur) < 0.002f) cur = v;
+			shown[id] = cur;
+
+			Fill(r, new Color(0.03f, 0.045f, 0.07f, 1f));
+			float pad = 3f * s;
+			Rect tank = new Rect(r.x + pad, r.y + pad, r.width - 2f * pad, r.height - 2f * pad);
+			float full = Mathf.Clamp01(cur);
+			bool nearFull = full > 0.94f;
+			float pulse = nearFull ? 0.5f + 0.5f * Mathf.Sin(now * 7f) : 0f;
+			Color deep = Color.Lerp(new Color(accent.r * 0.45f, accent.g * 0.45f, accent.b * 0.45f, 1f), new Color(Amber.r * 0.6f, Amber.g * 0.6f, Amber.b * 0.6f, 1f), pulse);
+			Color skin = Color.Lerp(new Color(Mathf.Min(1f, accent.r + 0.25f), Mathf.Min(1f, accent.g + 0.25f), Mathf.Min(1f, accent.b + 0.25f), 1f), Amber, pulse);
+			Color mid = Color.Lerp(accent, Amber, pulse);
+
+			float rowH = Mathf.Max(2f, Mathf.Round(2f * s));
+			int rows = Mathf.Max(1, Mathf.FloorToInt(tank.height / rowH));
+			float edgeBase = tank.width * full;
+			for (int i = 0; i < rows; i++)
+			{
+				float y = tank.y + i * rowH;
+				// the leading edge is a wave that travels up the bar; it dies out when the bar is empty or full
+				float amp = Mathf.Min(edgeBase, tank.width - edgeBase, 7f * s) * 0.5f + (full > 0.001f && full < 0.999f ? 1.2f * s : 0f);
+				float w = edgeBase + amp * Mathf.Sin(i * 0.9f - now * 3.2f) + 0.6f * amp * Mathf.Sin(i * 0.35f + now * 1.7f);
+				w = Mathf.Clamp(w, 0f, tank.width);
+				if (full <= 0.001f) w = 0f;
+				if (w <= 0f) continue;
+				// a vertical shade: lighter in the middle rows
+				float depth = 1f - Mathf.Abs((i + 0.5f) / rows - 0.5f) * 2f;
+				Color body = Color.Lerp(deep, mid, 0.45f + 0.5f * depth);
+				Fill(new Rect(tank.x, y, w, rowH), body);
+				float skinW = Mathf.Min(w, 4f * s);
+				Fill(new Rect(tank.x + w - skinW, y, skinW, rowH), skin);
+			}
+			// bubbles rising inside the liquid
+			for (int b = 0; b < 7; b++)
+			{
+				float fx = (b * 0.137f + 0.09f) % 1f;
+				float bx = tank.x + fx * Mathf.Max(0f, edgeBase - 6f * s) + 2f * s;
+				float speed = 0.22f + (b % 3) * 0.09f;
+				float t01 = (now * speed + b * 0.31f) % 1f;
+				float by = tank.yMax - t01 * tank.height;
+				float size = (2f + (b % 3)) * s;
+				if (bx + size < tank.x + edgeBase - 5f * s && edgeBase > 10f * s)
+					Fill(new Rect(bx, by, size, size), new Color(1f, 1f, 1f, 0.45f * (1f - t01)));
+			}
+			// gauge ticks at 25 / 50 / 75 %
+			for (int k = 1; k <= 3; k++) VLine(tank.x + tank.width * k * 0.25f, r.yMax - 2f * s - 3f * s, 3f * s, Dim, 1f);
+			Outline(r, Dim, 1f);
+			Corners(r, Ink, 5f * s, 2f);
+		}
+
 		// the window itself: ground, double frame, bracket corners, node dots on the top and bottom edge
 		internal static void Window(Rect r, float s, bool collapsed)
 		{

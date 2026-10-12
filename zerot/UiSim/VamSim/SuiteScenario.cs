@@ -288,6 +288,14 @@ public static class SuiteScenario
 		int shuffles0 = uia.buttonList.Sum(b => b.Invoked);
 		var liteW = Script(woman, "BodyLanguage_Lite");
 		h.Check(liteW.GetFloatJSONParam("Arousal") != null, "BodyLanguage Lite exposes Arousal");
+		// the liquid bar shows the value the arousal HUD shows
+		var lvT = h.Plugin.GetType().GetMethod("LiquidValue");
+		liteW.GetFloatJSONParam("Arousal").val = 0.40f;
+		St(h, 2f);
+		float lvNow = (float)lvT.Invoke(h.Plugin, new object[] { "Woman" });
+		var arP = liteW.GetFloatJSONParam("Arousal");
+		h.Check(Math.Abs(lvNow - Math.Max(0f, Math.Min(1f, (arP.val - arP.min) / (arP.max - arP.min)))) < 0.001f && lvNow > 0.3f, "the liquid level is the Lite arousal (" + lvNow.ToString("0.00") + ")");
+		h.Check((float)lvT.Invoke(h.Plugin, new object[] { "NoSuchPerson" }) < 0f, "...and shows nothing for a Person without the engine");
 		h.Check(Orgasm(h, woman), "FluidBridge saw Woman's orgasm exactly once (BodyLanguage Lite)");
 		bool trembling = trW.GetBoolJSONParam("Active").val;
 		h.Check(trembling, "AutoTremble on Woman started with the orgasm");
