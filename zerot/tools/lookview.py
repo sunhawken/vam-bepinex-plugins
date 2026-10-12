@@ -38,28 +38,61 @@ SKIP = {'Cornea', 'EyeReflection', 'Tear', 'Lacrimals'}
 
 
 # ---------------------------------------------------------------- base mesh
+DAZ_MESH_ID = 219940491292851741        # DAZMesh "GenesisFemale" in the a_per bundle: base vertices, UV vertices, seam map
+BUNDLE_PER = os.path.join(VAM, 'VaM_Data', 'StreamingAssets', 'a_per')
+MANAGED = os.path.join(VAM, 'VaM_Data', 'Managed')
+
+
+def build_cache():
+    import UnityPy
+    from UnityPy.helpers.MeshHelper import MeshHandler
+    from UnityPy.helpers.TypeTreeGenerator import TypeTreeGenerator
+    from scipy.spatial import cKDTree
+    UnityPy.config.FALLBACK_UNITY_VERSION = '2018.1.0f2'
+    print('reading the base mesh from VaM (once) ...')
+    env = UnityPy.load(BUNDLE)
+    mesh = None
+    for o in env.objects:
+        if o.type.name == 'Mesh' and o.path_id == MESH_ID:
+            mesh = o.read()
+    if mesh is None:
+        sys.exit('Genesis2Female mesh not found in ' + BUNDLE)
+    h = MeshHandler(mesh)
+    h.process()
+    tris = [np.array(t, dtype=np.int32).reshape(-1, 3) for t in h.get_triangles()]
+    uv = np.array(h.m_UV0, dtype=np.float32)
+    # DAZ side: base vertex ids (what the morph files address) and the UV-split copies of them
+    env2 = UnityPy.load(BUNDLE_PER)
+    gen = TypeTreeGenerator('2018.1.0f2')
+    for f in ('Assembly-CSharp.dll', 'UnityEngine.dll', 'mscorlib.dll'):
+        gen.load_dll(open(os.path.join(MANAGED, f), 'rb').read())
+    env2.typetree_generator = gen
+    dz = None
+    for o in env2.objects:
+        if o.path_id == DAZ_MESH_ID:
+            dz = o.read_typetree()
+    if dz is None:
+        sys.exit('DAZMesh GenesisFemale not found in ' + BUNDLE_PER)
+    nbase = int(dz['_numBaseVertices'])
+    uvv = np.array([[p['x'], p['y'], p['z']] for p in dz['_UVVertices']], dtype=np.float32)
+    ouv = np.array([[p['x'], p['y']] for p in dz['_OrigUV']], dtype=np.float32)
+    base_of_uv = np.arange(len(uvv), dtype=np.int32)
+    for m in dz['_baseVerticesToUVVertices']:
+        base_of_uv[m['tovert']] = m['fromvert']
+    # every vertex of the Unity mesh is one UV vertex of the DAZ mesh: same UV coordinates
+    dist, ix = cKDTree(ouv).query(uv)
+    if dist.max() > 1e-5:
+        sys.exit('UV match failed (%g)' % dist.max())
+    os.makedirs(os.path.dirname(CACHE), exist_ok=True)
+    np.savez_compressed(CACHE, verts=uvv[ix], baseid=base_of_uv[ix], nbase=np.int32(nbase), uv=uv, **{'t%d' % i: t for i, t in enumerate(tris)})
+
+
 def load_base():
-    if not os.path.exists(CACHE):
-        import UnityPy
-        from UnityPy.helpers.MeshHelper import MeshHandler
-        UnityPy.config.FALLBACK_UNITY_VERSION = '2018.1.0f2'
-        print('reading the base mesh from VaM (once) ...')
-        env = UnityPy.load(BUNDLE)
-        mesh = None
-        for o in env.objects:
-            if o.type.name == 'Mesh' and o.path_id == MESH_ID:
-                mesh = o.read()
-        if mesh is None:
-            sys.exit('Genesis2Female mesh not found in ' + BUNDLE)
-        h = MeshHandler(mesh)
-        h.process()
-        tris = [np.array(t, dtype=np.int32).reshape(-1, 3) for t in h.get_triangles()]
-        os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-        np.savez_compressed(CACHE, verts=np.array(h.m_Vertices, dtype=np.float32), uv=np.array(h.m_UV0, dtype=np.float32),
-                            **{'t%d' % i: t for i, t in enumerate(tris)})
+    if not os.path.exists(CACHE) or 'baseid' not in np.load(CACHE).files:
+        build_cache()
     d = np.load(CACHE)
     tris = [d['t%d' % i] for i in range(len(MATS))]
-    return d['verts'].copy(), d['uv'], tris
+    return d['verts'].copy(), d['uv'], tris, d['baseid'], int(d['nbase'])
 
 
 # ---------------------------------------------------------------- packages
@@ -124,18 +157,7 @@ class Source:
 
 
 # ---------------------------------------------------------------- morphs
-def seam_groups(v):
-    """vertices at the same position are copies of one DAZ vertex (UV seams); DAZ ids follow the order of first appearance"""
-    key = np.round(v * 1e5).astype(np.int64)
-    _, first, inv = np.unique(key, axis=0, return_index=True, return_inverse=True)
-    order = np.argsort(first)               # unique-group numbers in order of first appearance
-    rank = np.empty_like(order)
-    rank[order] = np.arange(len(order))
-    group_of = rank[inv]                    # for every vertex: its DAZ id
-    first_idx = first[order]                # vertex index of the first copy of DAZ id k
-    # delta lands on the first copy, then spreads to every copy through group_of
-    return first_idx, first_idx[group_of]
-
+# ---------------------------------------------------------------- morphs
 def read_vmb(b):
     n = len(b)
     if (n - 4) % 16 == 0 and struct.unpack('<i', b[:4])[0] == (n - 4) // 16:
@@ -144,8 +166,7 @@ def read_vmb(b):
     return arr['i'].astype(np.int64), arr['d']
 
 
-def apply_morphs(verts, person, src, report):
-    groups_first, group_of = seam_groups(verts)
+def apply_morphs(verts, person, src, report, baseid, nbase):
     geo = [s for s in person['storables'] if s['id'] == 'geometry'][0]
     for m in geo.get('morphs', []):
         val = float(m.get('value', 0))
@@ -165,12 +186,11 @@ def apply_morphs(verts, person, src, report):
             report['missing'].append((m.get('name', uid), val))
             continue
         idx, d = read_vmb(vmb)
-        # morph ids are DAZ vertex ids; the mesh splits vertices at UV seams, so each id moves every copy of that vertex
-        ok = idx < len(groups_first)
-        sel = idx[ok]
-        delta = np.zeros_like(verts)
-        np.add.at(delta, groups_first[sel], d[ok])
-        verts += (delta[group_of] * val)
+        # morph ids are DAZ base vertex ids; every UV-split copy of a vertex moves with it. Ids past the body (graft vertices) are not drawn.
+        ok = idx < nbase
+        delta = np.zeros((nbase, 3), dtype=np.float32)
+        np.add.at(delta, idx[ok], d[ok])
+        verts += delta[baseid] * val
         report['applied'].append((m.get('name', uid), val, int(ok.sum())))
     return verts
 
@@ -318,7 +338,7 @@ def main():
     ap.add_argument('--views', default='front,three,side')
     ap.add_argument('--size', default='480x900')
     ap.add_argument('--list', action='store_true')
-    ap.add_argument('--morphs', action='store_true', help='EXPERIMENTAL: apply the look .vmb morphs. The vertex-id mapping is not solved, so the shape comes out torn.')
+    ap.add_argument('--no-morphs', action='store_true', help='show the default body without the look morphs')
     a = ap.parse_args()
     j, var, name = load_scene(a.source)
     ps = persons(j)
@@ -328,10 +348,10 @@ def main():
     person = [p for p in ps if p['id'] == a.atom][0] if a.atom else ps[0]
     W, H = [int(x) for x in a.size.split('x')]
     src = Source(var)
-    verts, uv, tris = load_base()
+    verts, uv, tris, baseid, nbase = load_base()
     report = {'applied': [], 'builtin': [], 'missing': [], 'otherMesh': []}
-    if a.morphs:
-        verts = apply_morphs(verts, person, src, report)
+    if not a.no_morphs:
+        verts = apply_morphs(verts, person, src, report, baseid, nbase)
     else:
         report['note'] = True
     tex = {}
@@ -357,7 +377,7 @@ def main():
     sheet.save(out)
     print('wrote', out)
     if report.get('note'):
-        print("NOTE: this is VaM's default female body with the look's skin textures, NOT her shape (morphs are off, see --morphs).")
+        print("NOTE: this is VaM's default female body with the look's skin textures, NOT her shape (--no-morphs).")
     else:
         print('morphs applied: %d (%s)' % (len(report['applied']), ', '.join('%s %.2f' % (n, v) for n, v, _ in report['applied'][:8])))
     for k, lbl in (('builtin', "VaM built-in morphs (not decoded, left out)"), ('missing', 'morph files not found'), ('otherMesh', 'morphs for the genitalia mesh (not drawn)')):
