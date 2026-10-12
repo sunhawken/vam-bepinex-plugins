@@ -277,6 +277,7 @@ internal static class Program
 		{ "UnityEngine.JsonUtility", new HashSet<string> { "FromJson", "ToJson" } },
 		{ "MVR.FileManagementSecure.FileManagerSecure", new HashSet<string> { "FileExists", "DirectoryExists", "GetFiles", "GetDirectories", "ReadAllText", "CreateDirectory", "NormalizePath" } },
 		{ "MVR.FileManagement.FileManager", new HashSet<string> { "GetPackageUids", "get_lastPackageRefreshTime" } },
+		{ "UnityEngine.RectTransformUtility", new HashSet<string> { "RectangleContainsScreenPoint" } },
 		{ "MVRPluginManager", new HashSet<string> { "CreatePlugin", "RemovePluginWithUID", "RemoveAllPlugins", "ReloadPluginWithUID" } },
 	};
 

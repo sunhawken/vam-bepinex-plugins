@@ -443,3 +443,19 @@ namespace UnityEngine.Events
 	}
 }
 
+namespace UnityEngine
+{
+	public sealed partial class RectTransformUtility
+	{
+		// screen point inside a RectTransform of a ScreenSpaceOverlay canvas: the canvas' world rect scaled by its scale factor
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+		public static bool RectangleContainsScreenPoint(RectTransform rect, Vector2 screenPoint, Camera cam)
+		{
+			if (rect == null) return false;
+			float sc = 1f;
+			for (Transform t = rect; t != null; t = t.parent) { var cv = t.gameObject.GetComponent<UnityEngine.Canvas>(); if (cv != null && t.parent == null) sc = cv.scaleFactor; }
+			Rect w = rect.WorldRect();
+			return screenPoint.x >= w.x * sc && screenPoint.x <= (w.x + w.width) * sc && screenPoint.y >= w.y * sc && screenPoint.y <= (w.y + w.height) * sc;
+		}
+	}
+}

@@ -317,6 +317,10 @@ public partial class SuperController : MonoBehaviour
 	public static List<string> Messages = new List<string>();
 	public static List<string> Errors = new List<string>();
 	public Atom selectedAtom;
+	// VaM's "the mouse is over the UI" flag and the method that sets it (private there too)
+	private bool GUIhitMouse;
+	public bool SimGuiHitMouse { get { return GUIhitMouse; } }
+	private void ProcessUI() { GUIhitMouse = false; }
 	public static readonly Dictionary<string, string> SimSaved = new Dictionary<string, string>();   // what SaveJSON wrote / what LoadJSON reads
 	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 	public void SaveJSON(SimpleJSON.JSONClass jc, string saveName) { SimSaved[saveName] = jc == null ? "" : jc.ToString(); }

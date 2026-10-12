@@ -98,6 +98,7 @@ Headless BepInEx plugins written from a deep read of the original `.var` scripts
 | `AutoFlutterHipStandalone` | 14mhz AutoFlutterHip | Hip/leg morphs by body angle + 8-tab technic player, female persons. |
 | `ShakeItStandalone` | CheesyFX ShakeIt + FlexIt + WorkOut | Jiggle, flex and sweat for female persons, defaults from `Preset_Butt.vap`. |
 | `ToggleHUD` (v5 script) | zerot.ToggleHUD | Adds a High Physics toggle mirroring VaM's High Quality Physics setting. |
+| `HudClickShield` | (new) | A click on a HUD no longer also reaches the scene behind it: IMGUI plugin windows and the screen-pinned Arousal / Stimulation / Toggle HUD canvases tell VaM `GUIhitMouse` is set. Config in the `Shield` section. |
 | `OrgasmSuite` | SexyFluids + BodyLanguage / Lite + HUDs + FluidBridge + AutoTremble + ZajeShuffle | One plugin that attaches the original scripts to every Person; window switches Lite / BodyLanguage and turns the parts on/off. Scripts are packed from your own `.var` files at build time (not in git). See `zerot/OrgasmSuite/README.md`. |
 
 Tools: `zerot/tools/vamdev.py` (build / test / ship / pack), `zerot/tools/lookview.py` (software render of a person look from a `.var` or scene: body, morphs, skin, clothing, hair; rest pose, built-in morphs not decoded) with `vabparse.py` (reader for VaM `.vab` clothing/hair stores).

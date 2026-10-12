@@ -1601,7 +1601,6 @@ public enum ColorSpace : int {
   Linear = 1,
 }
 public sealed partial class RectTransformUtility {
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool ScreenPointToLocalPointInRectangle(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam, out global::UnityEngine.Vector2 localPoint) { localPoint = default; return default; }
   public RectTransformUtility() {}
 }
