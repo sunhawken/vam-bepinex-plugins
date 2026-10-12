@@ -260,6 +260,7 @@ internal static class Program
 		{ "MVRScript", new HashSet<string> { "LoadJSON", "SaveJSON", "Init", "InitUI", "ForceAwake", "CreateSlider", "CreateToggle", "CreateButton", "CreateTextField", "CreatePopup", "CreateScrollablePopup", "CreateFilterablePopup", "CreateSpacer",
 			"GetContainingAtom", "RemoveSlider", "RemoveToggle", "RemoveButton", "RemoveTextField", "RemovePopup", "RemoveColorPicker", "RemoveSpacer", "enabledJSON", "pluginLabelJSON", "manager" } },
 		{ "DAZCharacterSelector", new HashSet<string> { "GetClothingItem" } },
+		{ "SuperController", new HashSet<string> { "Error", "Message", "CheckMessageAndErrorQueue", "ShowMainHUDAuto" } },
 		{ "UnityEngine.Mesh", new HashSet<string> { ".ctor", "get_vertices", "set_vertices", "SetIndices", "Clear", "RecalculateBounds" } },
 		{ "UnityEngine.Material", new HashSet<string> { ".ctor", "get_color", "set_color", "SetFloat", "GetFloat", "get_shader", "set_shader", "get_renderQueue", "set_renderQueue", "HasProperty", "SetTexture", "GetTexture" } },
 		{ "Trigger", new HashSet<string> { "handler", "discreteActionsStart", "discreteActionsEnd", "transitionActions", "_transitionInterpValue", "active", "get_active", "set_active", "HasActions", "RestoreFromJSON", "GetJSON", "Update", "Remove" } },

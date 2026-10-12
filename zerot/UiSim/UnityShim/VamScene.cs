@@ -358,6 +358,54 @@ public partial class SuperController : MonoBehaviour
 	public void RemoveCanvas(Canvas c) { }
 	public static void LogMessage(string msg) { Messages.Add(msg); }
 	public static void LogError(string err) { Errors.Add(err); }
+	// VaM's error / message pop-up path (same logic as the real SuperController.Error / Message / CheckMessageAndErrorQueue)
+	public Transform errorSplashTransform, msgSplashTransform, errorLogPanel;
+	protected float errorSplashTimeRemaining, msgSplashTimeRemaining, errorSplashTime = 5f, msgSplashTime = 5f;
+	protected bool hasPendingErrorSplash, _mainHUDVisible, worldUIActivated, _openMainHUDOnError = true;
+	public int errorCount, msgCount, SimHudOpened;
+	public string SimErrorLog = "", SimMsgLog = "";
+	public void ShowMainHUDAuto() { _mainHUDVisible = true; SimHudOpened++; }
+	public bool SimMainHudVisible { get { return _mainHUDVisible; } set { _mainHUDVisible = value; } }
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public void Error(string err, bool logToFile = true, bool splash = true)
+	{
+		errorCount++;
+		if (splash)
+		{
+			if (!worldUIActivated && !_mainHUDVisible && _openMainHUDOnError) ShowMainHUDAuto();
+			errorSplashTimeRemaining = errorSplashTime;
+		}
+		SimErrorLog = SimErrorLog + " !> " + err;
+	}
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	public void Message(string msg, bool logToFile = true, bool splash = true)
+	{
+		msgCount++;
+		if (splash) msgSplashTimeRemaining = msgSplashTime;
+		SimMsgLog = SimMsgLog + " " + msg;
+	}
+	[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+	protected void CheckMessageAndErrorQueue()
+	{
+		if (!worldUIActivated)
+		{
+			if (hasPendingErrorSplash) { if (!_mainHUDVisible) ShowMainHUDAuto(); hasPendingErrorSplash = false; }
+			if (errorSplashTimeRemaining > 0f)
+			{
+				errorSplashTimeRemaining -= Time.unscaledDeltaTime;
+				if (errorSplashTimeRemaining <= 0f) { if (errorSplashTransform != null) errorSplashTransform.gameObject.SetActive(false); }
+				else if (errorSplashTransform != null) errorSplashTransform.gameObject.SetActive(true);
+			}
+			else
+			{
+				if (!(msgSplashTimeRemaining > 0f)) return;
+				msgSplashTimeRemaining -= Time.unscaledDeltaTime;
+				if (msgSplashTimeRemaining <= 0f) { if (msgSplashTransform != null) msgSplashTransform.gameObject.SetActive(false); }
+				else if (msgSplashTransform != null) msgSplashTransform.gameObject.SetActive(true);
+			}
+		}
+		else if (errorSplashTimeRemaining > 0f) hasPendingErrorSplash = true;
+	}
 	public void AddAtom(Atom a) { atoms.Add(a); onAtomAddedHandlers?.Invoke(a); onAtomUIDsChangedHandlers?.Invoke(GetAtomUIDs()); }
 	public void RemoveAtom(Atom a) { SimAddLog.Add("remove " + a.uid); atoms.Remove(a); a.destroyed = true; onAtomRemovedHandlers?.Invoke(a); }
 	// Scene load: atoms are replaced; plugins see isLoading = true meanwhile, then the scene-loaded event.
