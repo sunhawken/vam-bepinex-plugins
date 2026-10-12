@@ -585,6 +585,59 @@ namespace CheesyFX
 	}
 }
 
+public static class SuiteInputScenario
+{
+	// the skin's hand-written input: a click is press + release inside one rectangle (no IMGUI control per button), the segmented bar drags, a disabled GUI ignores it
+	[Scenario("orgasmsuite_input", "ZeroT.OrgasmSuite")]
+	public static void Input(Harness h)
+	{
+		var asm = h.Asm;
+		var fx = asm.GetType("ZeroT.OrgasmSuite.Fx");
+		h.Check(fx != null, "the skin class is there");
+		if (fx == null) return;
+		const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+		var window = fx.GetMethod("Window", All); var hit = fx.GetMethod("Hit", All); var bar = fx.GetMethod("Bar", All);
+		var panel = new Rect(0, 0, 400, 300);
+		var btn = new Rect(20, 20, 100, 24);
+		Func<EventType, Vector2, int, Event> ev = (t, pos, button) => { var e = new Event { type = t, mousePosition = pos, button = button }; Event.current = e; window.Invoke(null, new object[] { panel, 1f, false }); return e; };
+		Func<bool> click = () => (bool)hit.Invoke(null, new object[] { btn });
+
+		var inside = new Vector2(60, 30); var outside = new Vector2(300, 200);
+		var e1 = ev(EventType.MouseDown, inside, 0);
+		h.Check(!click() && e1.type == EventType.Used, "press on a button: no click yet, the press is taken");
+		var e2 = ev(EventType.MouseUp, inside, 0);
+		h.Check(click() && e2.type == EventType.Used, "release inside the same button: a click");
+		ev(EventType.MouseUp, inside, 0);
+		h.Check(!click(), "a second release does not click again");
+		ev(EventType.MouseDown, inside, 0); click();
+		ev(EventType.MouseUp, outside, 0);
+		h.Check(!click(), "press on a button, release elsewhere: no click");
+		ev(EventType.MouseDown, outside, 0);
+		h.Check(!click(), "a press outside the button is ignored");
+		ev(EventType.MouseDown, inside, 1);
+		h.Check(!click(), "the right button is ignored");
+		ev(EventType.MouseDown, inside, 0); click();
+		UnityEngine.GUI.enabled = false;
+		ev(EventType.MouseUp, inside, 0);
+		h.Check(!click(), "a disabled GUI does not click");
+		UnityEngine.GUI.enabled = true;
+		ev(EventType.MouseUp, inside, 0); click();
+
+		// the segmented bar: press sets the value from the mouse x, drag follows, release ends it
+		var br = new Rect(20, 100, 240, 18);
+		Func<EventType, float, float> drag = (t, x) => { ev(t, new Vector2(x, 108), 0); return (float)bar.Invoke(null, new object[] { br, 0.5f, Color.green, 1f, 9901 }); };
+		float vL = drag(EventType.MouseDown, 24f);
+		float vM = drag(EventType.MouseDrag, 140f);
+		float vR = drag(EventType.MouseDrag, 400f);
+		drag(EventType.MouseUp, 140f);
+		float after = drag(EventType.MouseDrag, 100f);
+		h.Check(vL >= 0f && vL < 0.05f, "bar: press at the left end = about 0 (" + vL.ToString("0.00") + ")");
+		h.Check(vM > 0.4f && vM < 0.6f, "bar: drag to the middle = about 0.5 (" + vM.ToString("0.00") + ")");
+		h.Check(vR > 0.99f, "bar: dragged past the right end = 1");
+		h.Check(after < 0f, "bar: after the release a drag changes nothing");
+	}
+}
+
 public static class SuiteHudScenario
 {
 	// the real ArousalHUD (BodyLanguage Lite) and the real StimulationHUD, rendered by the simulator's uGUI drawer into UiSim/out/hud/*.png

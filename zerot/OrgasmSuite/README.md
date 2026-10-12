@@ -33,3 +33,13 @@ Nothing is attached until the scene has settled: `SettleSeconds` (15) after VaM 
 `vamdev.py suitetargets` builds the assemblies and copies them into `UiSim/in/suite`; the `orgasmsuite` scenario runs the host against the REAL Lite, ArousalHUD, FluidBridge, AutoTremble and ZajeShuffle scripts (attach, engine switch, parts on/off, orgasm -> tremble + shuffle, scene reload, external scripts). `orgasmsuite_hud` renders the real HUD scripts to `UiSim/out/hud` (copies in `preview/`).
 
 Not covered: SexyFluids (needs the Person's skinned mesh and the shader bundle) and BodyLanguage (full) are attached/detached for real but their own Init/frames cannot run in the simulator. Nothing here has been run in VaM itself.
+
+## Frame cost
+
+Every IMGUI call is paid for on every frame, so the window is built to issue few of them (the full window: 225 draw commands -> 86, three collapsed rows: 126 -> 70, a collapsed single bar: 37 -> 15):
+
+- frames, corner brackets and the amber `[ ]` buttons are ONE 9-sliced style draw each (a tiny hollow texture with a border) instead of 4 / 8 / 6 solid fills; the segmented bar is two tiled texture draws; the section rule with its end dots is one 3-sliced draw
+- buttons and toggles are hit-tested by hand on mouse events (press + release inside one rectangle), no IMGUI control per button
+- layout / key / move events return before any drawing code runs, the event type is read once per pass, text styles and captions are cached, the status text is rebuilt twice a second, the package list is scanned every 10 s instead of on every event
+- the reconcile scan backs off to every 3 s once the scene is quiet; a UI change or an attach asks for the next scan itself
+- AutoTremble, ZajeShuffle and FluidBridge cost nothing while idle; the BodyLanguage / Lite engines are the originals and cost what they cost

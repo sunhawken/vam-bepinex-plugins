@@ -404,7 +404,7 @@ namespace ZeroT.OrgasmSuite
 			float now = Time.realtimeSinceStartup;
 			if (now < _loadedAt + _settle.Value) { _waitNote = "Waiting for the scene to settle (" + Mathf.CeilToInt(_loadedAt + _settle.Value - now) + " s)..."; return; }
 			if (now < _nextScan) return;
-			_nextScan = now + 1.5f;
+			_nextScan = now + 3f;   // nothing changes between scans once the scene is quiet: a UI change or an attach asks for the next one itself
 			try
 			{
 				// the scene is still restoring while atoms or their plugin slots keep changing: touching a Person then crashed VaM
@@ -812,6 +812,9 @@ namespace ZeroT.OrgasmSuite
 		private void OnGUI()
 		{
 			if (_showWindow == null || !_showWindow.Value) return;
+			// the window uses explicit rectangles only (no IMGUI layout), so the Layout pass and key / move events have nothing to draw or answer
+			EventType et = Event.current.type;
+			if (et != EventType.Repaint && et != EventType.MouseDown && et != EventType.MouseUp && et != EventType.MouseDrag) return;
 			if (_ext == null) _ext = new ZeroT.UiKit.RlImguiExternal(this, "Window", "Orgasm Suite");
 			if (_ext.Run(DrawExternal)) return;
 			float scale = DpiScale() * Mathf.Clamp(_scale.Value, 0.3f, 2.5f);
@@ -825,6 +828,17 @@ namespace ZeroT.OrgasmSuite
 			Rect panel = new Rect(_win.x, _win.y, w, h);
 			Fx.Window(panel, scale, collapsed);
 			DrawWindow(panel, scale, collapsed);
+		}
+
+		private static readonly string[] PctText = BuildPct();
+		private static string[] BuildPct() { string[] a = new string[101]; for (int i = 0; i <= 100; i++) a[i] = i + " %"; return a; }
+		private static string Pct(float v) { return PctText[Mathf.Clamp(Mathf.RoundToInt(v * 100f), 0, 100)]; }
+		private float _delayShownLast = -1f;
+		private string _delayShownText = "0.0 S";
+		private string DelayText(float v)
+		{
+			if (v != _delayShownLast) { _delayShownLast = v; _delayShownText = v.ToString("0.0") + " S"; }
+			return _delayShownText;
 		}
 
 		private static string Fit(string s, int n) { return s.Length <= n ? s : s.Substring(0, n - 1) + "~"; }
@@ -855,16 +869,14 @@ namespace ZeroT.OrgasmSuite
 					Color sc = r.Lite ? Fx.Lite : Fx.Full;
 					Fx.Text(new Rect(panel.x + pad, ry, nameW, rh), Fit(r.Name, 9).ToUpperInvariant(), Mathf.Max(8, Mathf.RoundToInt(10f * s)), TextAnchor.MiddleLeft, sc, false);
 					Fx.Liquid(new Rect(panel.x + pad + nameW, ry, panel.width - 2f * pad - nameW - cpw - gap, rh), Mathf.Max(0f, cv), sc, s, 7200 + ri);
-					Fx.Text(new Rect(panel.xMax - pad - cpw, ry, cpw, rh), cv < 0f ? "-- %" : Mathf.RoundToInt(cv * 100f) + " %", Mathf.Max(8, Mathf.RoundToInt(10f * s)), TextAnchor.MiddleRight, Fx.Ink, false);
+					Fx.Text(new Rect(panel.xMax - pad - cpw, ry, cpw, rh), cv < 0f ? "-- %" : Pct(cv), Mathf.Max(8, Mathf.RoundToInt(10f * s)), TextAnchor.MiddleRight, Fx.Ink, false);
 					ry += 24f * s;
 				}
 				return;
 			}
 			// the rule under the title: hairline, node dots at both ends, a brighter stretch in the middle
 			float ty = panel.y + 34f * s;
-			Fx.HLine(panel.x + pad, ty, panel.width - 2f * pad, Fx.Faint, 1f);
-			Fx.HLine(panel.x + panel.width / 2f - 30f * s, ty, 60f * s, Fx.Dim, 1f);
-			Fx.Dot(panel.x + pad, ty, 4f * s, Fx.Ink); Fx.Dot(panel.xMax - pad, ty, 4f * s, Fx.Ink);
+			Fx.TitleRule(panel.x + pad, ty, panel.width - 2f * pad, s);
 
 			float x = panel.x + pad, w = panel.width - 2f * pad, y = panel.y + 44f * s;
 			int small = Mathf.Max(8, Mathf.RoundToInt(10f * s));
@@ -942,7 +954,7 @@ namespace ZeroT.OrgasmSuite
 			float lv = _previewFill.Value >= 0f ? _previewFill.Value : LiquidValue(_uid);
 			float pw = 54f * s;
 			Fx.Liquid(new Rect(x, y, w - pw - gap, 26f * s), Mathf.Max(0f, lv), side, s, 7100);
-			Fx.Text(new Rect(x + w - pw, y, pw, 26f * s), lv < 0f ? "-- %" : Mathf.RoundToInt(lv * 100f) + " %", small, TextAnchor.MiddleRight, Fx.Ink, false);
+			Fx.Text(new Rect(x + w - pw, y, pw, 26f * s), lv < 0f ? "-- %" : Pct(lv), small, TextAnchor.MiddleRight, Fx.Ink, false);
 			y += 26f * s + 10f * s;
 
 			// ---- where touch arousal may come from
@@ -975,7 +987,7 @@ namespace ZeroT.OrgasmSuite
 			float delayShown = cfg != null ? cfg.ShuffleDelay : 0f;
 			float vw = 54f * s;
 			float nv = Fx.Bar(new Rect(x, y, w - vw - gap, 18f * s), delayShown / 30f, side, s, 7001);
-			Fx.Text(new Rect(x + w - vw, y, vw, 18f * s), delayShown.ToString("0.0") + " S", small, TextAnchor.MiddleRight, Fx.Ink, false);
+			Fx.Text(new Rect(x + w - vw, y, vw, 18f * s), DelayText(delayShown), small, TextAnchor.MiddleRight, Fx.Ink, false);
 			if (cfg != null && nv >= 0f && Mathf.Abs(nv * 30f - delayShown) > 0.04f)
 			{
 				cfg.ShuffleDelay = Mathf.Round(nv * 300f) / 10f;
@@ -1001,6 +1013,27 @@ namespace ZeroT.OrgasmSuite
 			// ---- status
 			float footer = 34f * s;
 			float sh = Mathf.Max(40f * s, panel.yMax - y - footer - 8f * s);
+			string text = StatusText(cfg, isLite);
+			Rect view = new Rect(x, y, w, sh);
+			Fx.Frame(view, s);
+			Fx.Text(new Rect(view.x + 8f * s, view.y + 4f * s, view.width - 16f * s, 14f * s), Fx.Spaced("Status"), Mathf.Max(8, Mathf.RoundToInt(9f * s)), TextAnchor.UpperLeft, Fx.Dim, false);
+			Fx.Text(new Rect(view.x + 8f * s, view.y + 18f * s, view.width - 16f * s, view.height - 22f * s), text.Length == 0 ? "Waiting for a Person atom..." : text.TrimEnd(), small, TextAnchor.UpperLeft, new Color(0.72f, 0.77f, 0.85f, 1f), false);
+			y += sh + 6f * s;
+
+			string msg = Time.realtimeSinceStartup < _messageUntil ? _message : "";
+			Fx.Text(new Rect(x, y, w - 14f * s, 20f * s), msg.Length > 0 ? msg : (_waitNote.Length > 0 ? _waitNote : "Scripts: " + _installNote), small, TextAnchor.UpperLeft, msg.Length > 0 ? Fx.Amber : Fx.Dim, false);
+		}
+
+		private string _statusText = "";
+		private string _statusFor = "";
+		private float _statusAt = -100f;
+
+		private string StatusText(PersonCfg cfg, bool isLite)
+		{
+			float now = Time.realtimeSinceStartup;
+			string key = _uid + "|" + isLite + "|" + (cfg == null);
+			if (now - _statusAt < 0.5f && key == _statusFor) return _statusText;
+			_statusAt = now; _statusFor = key;
 			string text = "";
 			if (!string.IsNullOrEmpty(_uid))
 			{
@@ -1010,14 +1043,8 @@ namespace ZeroT.OrgasmSuite
 			string zs;
 			if (_status.TryGetValue("Zaje", out zs)) text += "ZajeShuffle (CoreControl): " + zs + "\n";
 			if (!isLite && cfg != null && !BodyLanguageResourcesPresent()) text += "BodyLanguage needs the CheesyFX.BodyLanguage_Resources package.\n";
-			Rect view = new Rect(x, y, w, sh);
-			Fx.Frame(view, s);
-			Fx.Text(new Rect(view.x + 8f * s, view.y + 4f * s, view.width - 16f * s, 14f * s), Fx.Spaced("Status"), Mathf.Max(8, Mathf.RoundToInt(9f * s)), TextAnchor.UpperLeft, Fx.Dim, false);
-			Fx.Text(new Rect(view.x + 8f * s, view.y + 18f * s, view.width - 16f * s, view.height - 22f * s), text.Length == 0 ? "Waiting for a Person atom..." : text.TrimEnd(), small, TextAnchor.UpperLeft, new Color(0.72f, 0.77f, 0.85f, 1f), false);
-			y += sh + 6f * s;
-
-			string msg = Time.realtimeSinceStartup < _messageUntil ? _message : "";
-			Fx.Text(new Rect(x, y, w - 14f * s, 20f * s), msg.Length > 0 ? msg : (_waitNote.Length > 0 ? _waitNote : "Scripts: " + _installNote), small, TextAnchor.UpperLeft, msg.Length > 0 ? Fx.Amber : Fx.Dim, false);
+			_statusText = text;
+			return text;
 		}
 
 		// press a script's own action on the selected Person (the engine's orgasm, FluidBridge's test)

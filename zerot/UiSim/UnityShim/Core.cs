@@ -368,11 +368,13 @@ namespace UnityEngine
 	public partial class Texture : Object { }
 	public partial class Texture2D : Texture
 	{
-		public Texture2D(int w, int h) { }
-		public Texture2D(int w, int h, TextureFormat f, bool mip) { }
-		public Color Pixel0 = new Color(1, 1, 1, 1);
+		public Color[] Px = new Color[] { new Color(1, 1, 1, 1) };
+		public Texture2D(int w, int h) { Init(w, h); }
+		public Texture2D(int w, int h, TextureFormat f, bool mip) { Init(w, h); }
+		private void Init(int w, int h) { width = w; height = h; Px = new Color[Math.Max(1, w * h)]; for (int i = 0; i < Px.Length; i++) Px[i] = new Color(1, 1, 1, 1); }
+		public Color Pixel0 { get { return Px[0]; } set { Px[0] = value; } }
 		public static Texture2D blackTexture { get; } = new Texture2D(1, 1);
-		public void SetPixel(int x, int y, Color c) { Pixel0 = c; }
+		public void SetPixel(int x, int y, Color c) { if (x >= 0 && y >= 0 && x < width && y < height) Px[y * width + x] = c; else Px[0] = c; }
 		public void Apply() { }
 		public void Apply(bool a, bool b) { }
 	}

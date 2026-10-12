@@ -35,6 +35,7 @@ namespace ZeroT.HudClickShield
 		private static List<Rect> cur = new List<Rect>(64), prev = new List<Rect>(64);
 		private static int recordFrame = -1;
 		private static int lastDrawFrame = -100;
+		private static int frameNow = -1, scrW = 1920, scrH = 1080;   // refreshed once per frame in Update (reading them per draw call was most of the hook's cost)
 		private static int overFrame = -1;
 		private static bool overResult;
 		private static Vector3 lastMouse;
@@ -55,13 +56,14 @@ namespace ZeroT.HudClickShield
 			try
 			{
 				statDraw++;
+				// the cheap tests first: this runs for every IMGUI draw call of every plugin, and each Unity property read below is a native call
+				if (position.width < 2f || position.height < 2f) return;
 				Event e = Event.current;
 				if (e == null || e.type != EventType.Repaint) return;
 				statRepaint++;
-				if (position.width < 2f || position.height < 2f) return;
 				// a full-screen draw is a backdrop, not a HUD: never let it swallow every click
-				if (position.width >= Screen.width * 0.9f && position.height >= Screen.height * 0.9f) return;
-				int f = Time.frameCount;
+				if (position.width >= scrW * 0.9f && position.height >= scrH * 0.9f) return;
+				int f = frameNow;
 				if (f != recordFrame)
 				{
 					List<Rect> t = prev; prev = cur; cur = t;
@@ -197,6 +199,7 @@ namespace ZeroT.HudClickShield
 		// one line every 10 s while anything changed: draw hooks called / Repaint seen / rectangles recorded / VaM's ProcessUI ran / mouse found over a HUD / clicks forced to the HUD
 		private void Update()
 		{
+			frameNow = Time.frameCount; scrW = Screen.width; scrH = Screen.height;
 			if (Time.realtimeSinceStartup < nextStat) return;
 			nextStat = Time.realtimeSinceStartup + 10f;
 			string s = "draw hooks " + statDraw + ", repaints " + statRepaint + ", rects recorded " + statRecorded + " (now " + RectCount + "), ProcessUI " + statProcessUi

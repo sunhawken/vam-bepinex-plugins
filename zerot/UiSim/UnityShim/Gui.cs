@@ -18,6 +18,7 @@ namespace UnityEngine
 		public float padL, padR, padT, padB;
 		public UnityEngine.Color color = UnityEngine.Color.white;
 		public bool on;
+		public UnityEngine.Texture2D tex; public UnityEngine.RectOffset border; public UnityEngine.Rect tc;
 	}
 
 	public partial class Issue
@@ -189,6 +190,7 @@ namespace UnityEngine
 			if (a.Width <= 0 || a.Height <= 0) return;
 			text = text ?? "";
 			string kind = s.kind;
+			if (s.normal.background != null) Cmds.Add(new DrawCmd { kind = "nine", r = Screen_(a), clip = Screen_(Clip), tex = s.normal.background, border = s.border });
 			var cmd = new DrawCmd { kind = "box", r = Screen_(a), clip = Screen_(Clip), styleKind = kind, on = on };
 			if (kind != "label" && kind != "none" && kind != "toggle") Cmds.Add(cmd);
 			float sc = Matrix.sx;
@@ -229,6 +231,53 @@ namespace UnityEngine
 			if (what != null) Issues.Add(new Issue { where = WindowLabel, what = what, text = text, screen = Screen_(a) });
 		}
 
+		private static SDColor Sd(UnityEngine.Color c) { return SDColor.FromArgb((int)(c.a * 255 + 0.5f), (int)(c.r * 255 + 0.5f), (int)(c.g * 255 + 0.5f), (int)(c.b * 255 + 0.5f)); }
+
+		// a 9-sliced style background: corners 1:1, edges and centre stretched (point sampled, as the Point filter does)
+		private static void DrawNine(System.Drawing.Graphics g, DrawCmd c)
+		{
+			var tx = c.tex; if (tx == null) return;
+			int W = tx.width, H = tx.height, L = c.border.left, R = c.border.right, T = c.border.top, B = c.border.bottom;
+			float dx0 = c.r.X, dy0 = c.r.Y, dw = c.r.Width, dh = c.r.Height;
+			float[] sx = { 0, L, W - R, W }, sy = { 0, T, H - B, H };
+			float[] dx = { 0, L, dw - R, dw }, dy = { 0, T, dh - B, dh };
+			// the texture row 0 is the BOTTOM in Unity; the sim's textures are written top-down by the same SetPixel calls, so a symmetric texture reads the same either way
+			for (int py = 0; py < 3; py++)
+				for (int px = 0; px < 3; px++)
+				{
+					float sw = sx[px + 1] - sx[px], sh = sy[py + 1] - sy[py];
+					float ow = dx[px + 1] - dx[px], oh = dy[py + 1] - dy[py];
+					if (sw <= 0 || sh <= 0 || ow <= 0 || oh <= 0) continue;
+					float cw = ow / sw, ch = oh / sh;
+					for (int iy = 0; iy < (int)sh; iy++)
+						for (int ix = 0; ix < (int)sw; ix++)
+						{
+							var col = tx.Px[(int)(sy[py] + iy) * W + (int)(sx[px] + ix)];
+							if (col.a <= 0.003f) continue;
+							using (var br = new SolidBrush(Sd(col)))
+								g.FillRectangle(br, dx0 + dx[px] + ix * cw, dy0 + dy[py] + iy * ch, cw + 0.01f, ch + 0.01f);
+						}
+				}
+		}
+
+		// DrawTextureWithTexCoords with a repeating texture: texCoords.width / height = how many times the picture repeats across the rect
+		private static void DrawTile(System.Drawing.Graphics g, DrawCmd c)
+		{
+			var tx = c.tex; if (tx == null) return;
+			int W = tx.width, H = tx.height;
+			float repX = Math.Max(0.0001f, c.tc.width), repY = Math.Max(0.0001f, c.tc.height);
+			float cw = c.r.Width / (repX * W), ch = c.r.Height / (repY * H);
+			int nx = (int)Math.Ceiling(repX * W - 0.001f), ny = (int)Math.Ceiling(repY * H - 0.001f);
+			for (int iy = 0; iy < ny; iy++)
+				for (int ix = 0; ix < nx; ix++)
+				{
+					var col = tx.Px[(iy % H) * W + (ix % W)];
+					if (col.a <= 0.003f) continue;
+					using (var br = new SolidBrush(Sd(col)))
+						g.FillRectangle(br, c.r.X + ix * cw, c.r.Y + iy * ch, Math.Min(cw, c.r.Right - (c.r.X + ix * cw)) + 0.01f, Math.Min(ch, c.r.Bottom - (c.r.Y + iy * ch)) + 0.01f);
+				}
+		}
+
 		// --------------------------------------------------------------------------- rendering
 		public static void Render(Bitmap bmp)
 		{
@@ -254,6 +303,12 @@ namespace UnityEngine
 								using (var p = new Pen(edge)) g.DrawRectangle(p, c.r.X, c.r.Y, c.r.Width - 1, c.r.Height - 1);
 								break;
 							}
+						case "nine":
+							DrawNine(g, c);
+							break;
+						case "tile":
+							DrawTile(g, c);
+							break;
 						case "fill":
 							using (var b = new SolidBrush(SDColor.FromArgb((int)(c.color.a * 255), (int)(c.color.r * 255), (int)(c.color.g * 255), (int)(c.color.b * 255)))) g.FillRectangle(b, c.r);
 							break;
@@ -364,6 +419,13 @@ namespace UnityEngine
 			if (a.Width <= 0 || a.Height <= 0) return;
 			var col = (t as Texture2D)?.Pixel0 ?? Color.white;
 			Gui.Cmds.Add(new DrawCmd { kind = "fill", r = Gui.Screen_(a), clip = Gui.Screen_(Gui.Clip), color = col });
+		}
+		public static void DrawTextureWithTexCoords(Rect r, Texture t, Rect texCoords)
+		{
+			if (!Gui.Repaint) return;
+			var a = Gui.Abs(r);
+			if (a.Width <= 0 || a.Height <= 0) return;
+			Gui.Cmds.Add(new DrawCmd { kind = "tile", r = Gui.Screen_(a), clip = Gui.Screen_(Gui.Clip), tex = t as Texture2D, tc = texCoords });
 		}
 		public static void SetNextControlName(string n) { }
 		public static string GetNameOfFocusedControl() => "";
