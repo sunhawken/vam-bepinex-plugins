@@ -28,6 +28,12 @@ namespace ZeroT.AppearanceLoaderHelper
 	//     the full time. Optional cap on that time during a load (default: off; the setting is restored afterwards).
 	//  5. After a skin preset is sent the loader waits for the loading screen to go away for up to 300 s. Now 120 s by default.
 	//
+	//  Switched-off packages
+	//  A preset's .json names the packages it needs ("Creator.Package.5:/Custom/..."). When the .var is not installed but the package is
+	//  there as an archive that is switched off (*.DISABLED), VPB can bring it in on demand: its hooks on VaM's file manager register the
+	//  archive the moment a path inside it is asked for. The fast lookup above answered "not installed" before VaM was asked, so VPB never
+	//  got the chance. Now a version that is not installed but that VPB knows as a .DISABLED package is let through to VaM (and VPB).
+	//
 	//  Safety
 	//  6. Any error in the middle of a load (a person that changed under it, a half-loaded character...) killed the load
 	//     coroutine for good. The clothing sim had been switched off at the start and was never switched back on, and the "waiting
@@ -42,6 +48,7 @@ namespace ZeroT.AppearanceLoaderHelper
 		internal static ConfigEntry<float> CfgMaxItemWait;
 		internal static ConfigEntry<float> CfgTextureTimeout;
 		internal static ConfigEntry<bool> CfgRecover;
+		internal static ConfigEntry<bool> CfgDisabled;
 		internal static BepInEx.Logging.ManualLogSource Log;
 
 		private Harmony harmony;
@@ -57,6 +64,7 @@ namespace ZeroT.AppearanceLoaderHelper
 			CfgMorphWait = Config.Bind<float>("Speed", "MorphWaitSeconds", 0.5f, "The two pauses while morphs are applied (AppearanceLoader uses 1). 0 - 1.");
 			CfgMaxItemWait = Config.Bind<float>("Speed", "MaxItemWaitSeconds", 0f, "Upper limit, for the length of a load, for the 'Select Wait Time' setting (how long each hair / clothing item may take to appear; a missing item waits the whole time). 0 = leave the setting alone. Your setting is put back afterwards.");
 			CfgTextureTimeout = Config.Bind<float>("Speed", "TextureLoadTimeoutSeconds", 120f, "How long to wait for a skin preset to finish loading (AppearanceLoader uses 300).");
+			CfgDisabled = Config.Bind<bool>("Speed", "UseDisabledPackages", true, "A package the preset needs that is not installed as a .var but exists as a switched-off archive (*.DISABLED / *.var.disabled) is used when VPB is loaded (VPB registers it on demand). Off: only installed packages count.");
 			CfgRecover = Config.Bind<bool>("Safety", "RecoverFromFailedLoad", true, "If a load fails half way: put the clothing sim back, close the item menu and say what happened.");
 			harmony = new Harmony("com.zerot.appearanceloader.helper");
 			AppDomain.CurrentDomain.AssemblyLoad += OnAssemblyLoad;
@@ -210,6 +218,53 @@ namespace ZeroT.AppearanceLoaderHelper
 		private static DateTime indexStamp;
 		private static bool indexBroken;
 		public static int ShortcutHits;
+		public static int DisabledHits;
+
+		// VPB's own list of the packages that exist on disk only as .DISABLED archives (internal static bool VamOnDemandLoader.IsKnownDisabledPackageUid(uid)):
+		// an in-memory hash lookup. Found by name, so this plugin works without VPB (then nothing is let through) and without a reference to it.
+		private static Func<string, bool> vpbKnowsDisabled;
+		private static float nextVpbProbe;
+		private static readonly HashSet<string> disabledLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+		private static bool VpbKnowsDisabled(string uid)
+		{
+			if (vpbKnowsDisabled == null)
+			{
+				if (Time.unscaledTime < nextVpbProbe)
+				{
+					return false;
+				}
+				nextVpbProbe = Time.unscaledTime + 5f;
+				try
+				{
+					foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+					{
+						Type type = a.GetType("VPB.VamOnDemandLoader", false);
+						MethodInfo m = type == null ? null : type.GetMethod("IsKnownDisabledPackageUid", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, new Type[] { typeof(string) }, null);
+						if (m != null)
+						{
+							vpbKnowsDisabled = (Func<string, bool>)Delegate.CreateDelegate(typeof(Func<string, bool>), m);
+							break;
+						}
+					}
+				}
+				catch
+				{
+				}
+				if (vpbKnowsDisabled == null)
+				{
+					return false;
+				}
+			}
+			try
+			{
+				return vpbKnowsDisabled(uid);
+			}
+			catch
+			{
+				return false;
+			}
+		}
 
 		public static void ScopePrefix() { scopeDepth++; }
 
@@ -297,6 +352,16 @@ namespace ZeroT.AppearanceLoaderHelper
 			if (versions.TryGetValue(head.Substring(0, dot), out set) && set.Contains(v))
 			{
 				return true;   // installed: the real file system answers
+			}
+			// not installed as a .var: maybe it is a switched-off archive that VPB brings in when VaM is asked for a path inside it
+			if (AppearanceLoaderHelperPlugin.CfgDisabled.Value && VpbKnowsDisabled(head))
+			{
+				DisabledHits++;
+				if (disabledLogged.Add(head))
+				{
+					AppearanceLoaderHelperPlugin.Log.LogInfo("Package " + head + " is not installed as a .var but exists switched off (.DISABLED): asking VaM / VPB for it.");
+				}
+				return true;
 			}
 			__result = false;
 			ShortcutHits++;

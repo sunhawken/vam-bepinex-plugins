@@ -478,6 +478,26 @@ public static class HelperScenarios
 		string p7 = (string)call1(l1, "checkPath", "Pack.Tex.3:/Textures/a.png");
 		h.Check(p7 == "Pack.Tex.7:/Textures/a.png", "a newly installed newer version is picked up after a package refresh");
 
+		// a package that is only there as a switched-off archive (.DISABLED): VPB registers it when VaM is asked for a path inside it (simulated by the file
+		// being answerable), but only if the fast lookup lets the question through
+		MVR.FileManagementSecure.FileManagerSecure.SimAddFile("Dis.Pack.7:/Textures/d.png");
+		VPB.VamOnDemandLoader.Disabled.Clear();
+		string dis0 = (string)call1(l1, "checkPath", "Dis.Pack.7:/Textures/d.png");
+		h.Check(dis0 == "", "a .DISABLED package VPB does not know of is still answered 'not installed' without asking VaM");
+		VPB.VamOnDemandLoader.Disabled.Add("Dis.Pack.7");
+		resetCounters();
+		string dis1 = (string)call1(l1, "checkPath", "Dis.Pack.7:/Textures/d.png");
+		h.Check(dis1 == "Dis.Pack.7:/Textures/d.png", "a .DISABLED package VPB knows is let through to VaM / VPB and found (" + dis1 + ")");
+		resetCounters();
+		string dis2 = (string)call1(l1, "checkVarDir", "Dis.Pack.latest:/Textures/");
+		int disDirCalls = MVR.FileManagementSecure.FileManagerSecure.DirExistsCalls;
+		h.Check(dis2 == "Dis.Pack.7:/Textures/" && disDirCalls <= 6, "'.latest' of a package that only exists switched off resolves to its version (" + dis2 + "), still with a handful of questions (" + disDirCalls + ")");
+		h.Check(h.LogHas("exists switched off (.DISABLED)") && (int)hooks.GetField("DisabledHits").GetValue(null) >= 2, "...and the log says a switched-off package was asked for");
+		h.Set("Speed", "UseDisabledPackages", "false");
+		string dis3 = (string)call1(l1, "checkPath", "Dis.Pack.7:/Textures/d.png");
+		h.Check(dis3 == "", "UseDisabledPackages = false: switched-off packages do not count");
+		h.Set("Speed", "UseDisabledPackages", "true");
+
 		// missing-texture search: one listing, same files
 		((JSONStorableBool)Field(al, "_searchMissingTextures_Bool").GetValue(l1)).val = true;
 		resetCounters();
