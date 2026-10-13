@@ -174,6 +174,7 @@ namespace ZeroT.HudDock
 				if (t.Fake) { t.FakeActive = v; return; }
 				if (t.ActiveEntry != null) t.ActiveEntry.Value = v;
 				else if (t.Owner != null) t.Owner.enabled = v;
+				Logger.LogInfo("HUD Dock: " + t.Label + " switched " + (v ? "on" : "off") + (t.ActiveEntry != null ? " (its own " + t.ActiveEntry.Definition.Section + "." + t.ActiveEntry.Definition.Key + ")" : " (plugin component)") + ", now reads " + (t.IsActive ? "on" : "off"));
 			}
 			catch (Exception ex) { Logger.LogWarning("HUD Dock: could not switch " + t.Label + " on / off: " + ex.Message); }
 		}

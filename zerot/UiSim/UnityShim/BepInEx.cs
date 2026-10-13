@@ -59,7 +59,8 @@ namespace BepInEx.Logging
 
 namespace BepInEx.Configuration
 {
-	public abstract class ConfigEntryBase { public ConfigFile ConfigFile { get; set; } public string Section, Key; public abstract void SetFromString(string s); public abstract object BoxedValue { get; } }
+	public class ConfigDefinition { public string Section { get; private set; } public string Key { get; private set; } public ConfigDefinition(string section, string key) { Section = section; Key = key; } }
+	public abstract class ConfigEntryBase { public ConfigFile ConfigFile { get; set; } public string Section, Key; public ConfigDefinition Definition { get { return new ConfigDefinition(Section, Key); } } public abstract void SetFromString(string s); public abstract object BoxedValue { get; } }
 
 	public class ConfigEntry<T> : ConfigEntryBase
 	{
