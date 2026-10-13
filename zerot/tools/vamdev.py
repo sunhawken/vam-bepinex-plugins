@@ -60,6 +60,7 @@ P = {
     'orgasmsuite': ('OrgasmSuite/ZeroT.OrgasmSuite.csproj', 'ZeroT.OrgasmSuite.dll', None),
     'hudclickshield': ('HudClickShield/ZeroT.HudClickShield.csproj', 'ZeroT.HudClickShield.dll', None),
     'huddock': ('HudDock/ZeroT.HudDock.csproj', 'ZeroT.HudDock.dll', None),
+    'forcerodsync': ('ForceRodSync/ZeroT.ForceRodSync.csproj', 'ZeroT.ForceRodSync.dll', None),
     'errorsilencer': ('ErrorSilencer/ZeroT.ErrorSilencer.csproj', 'ZeroT.ErrorSilencer.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
