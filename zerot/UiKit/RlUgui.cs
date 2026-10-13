@@ -139,6 +139,22 @@ namespace ZeroT.UiKit
 			Collapsed = savedCollapsed.Value;
 			Active = savedActive.Value;
 			show.SettingChanged += OnShowChanged;
+			savedActive.SettingChanged += OnActiveSettingChanged;
+		}
+
+		// General.Active changed from outside (the HUD Dock, the config manager): same effect as the window's own On / Off button
+		private void OnActiveSettingChanged(object sender, EventArgs e)
+		{
+			if (savedActive.Value == Active)
+			{
+				return;
+			}
+			Active = savedActive.Value;
+			if (OnActiveChanged != null)
+			{
+				OnActiveChanged(Active);
+			}
+			Apply();
 		}
 
 		internal bool Visible
@@ -149,6 +165,7 @@ namespace ZeroT.UiKit
 		internal void Dispose()
 		{
 			show.SettingChanged -= OnShowChanged;
+			savedActive.SettingChanged -= OnActiveSettingChanged;
 			if (ext != null)
 			{
 				ext.Close();

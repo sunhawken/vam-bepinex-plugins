@@ -31,6 +31,7 @@ namespace ZeroT.PpUiSkin
 				return;
 			}
 			Hooks.ActiveCfg = Config.Bind<bool>("General", "Active", true, "Turn ParticlePinnacle off completely (disables its scripts).");
+			Hooks.ActiveCfg.SettingChanged += delegate { if (hostInstance != null) { Hooks.ApplyActive(hostInstance, Hooks.ActiveCfg.Value); } };   // the window's own button, the HUD Dock and the config manager
 			new Harmony("zerot.particlepinnacle.uiskin").Patch(onGui, new HarmonyMethod(typeof(Hooks).GetMethod("OnGuiPrefix")), null, null, null);
 			Logger.LogInfo("ParticlePinnacle window re-skinned.");
 		}
@@ -171,9 +172,8 @@ namespace ZeroT.PpUiSkin
 			}
 			if ((b & 16) != 0)
 			{
-				ActiveCfg.Value = !ActiveCfg.Value;
+				ActiveCfg.Value = !ActiveCfg.Value;   // its SettingChanged applies it to the host
 				ActiveCfg.ConfigFile.Save();
-				ApplyActive(host, ActiveCfg.Value);
 				return;
 			}
 			if ((b & 4) != 0)

@@ -448,6 +448,18 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		_vulvaSpring = ((BaseUnityPlugin)this).Config.Bind<float>("Global", "VulvaFirmnessSpring", 8000f, "Range: 0 to 20000.");
 		_vulvaDamper = ((BaseUnityPlugin)this).Config.Bind<float>("Global", "VulvaFirmnessDamper", 200f, "Range: 0 to 1000.");
 		_active = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn the plugin off completely (restores the original joint settings and stops scanning).");
+		_active.SettingChanged += delegate
+		{
+			// the window's own button, the HUD Dock and the config manager all end up here
+			if (_active.Value)
+			{
+				_scanTimer = 3f;
+			}
+			else
+			{
+				RestoreAll();
+			}
+		};
 		_visible = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Visible", true, "Show the desktop window (no hotkey).");
 		_collapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember whether the desktop window is collapsed to its title bar.");
 		_windowX = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "WindowX", 30f, "Last desktop window position X.");
@@ -935,14 +947,6 @@ public sealed class AnusPhysicsControlPlugin : BaseUnityPlugin
 		if ((rlButtons & 16) != 0)
 		{
 			_active.Value = !_active.Value;
-			if (_active.Value)
-			{
-				_scanTimer = 3f;
-			}
-			else
-			{
-				RestoreAll();
-			}
 		}
 		if ((rlButtons & 4) != 0)
 		{

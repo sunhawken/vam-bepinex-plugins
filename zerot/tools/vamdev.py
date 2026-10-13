@@ -60,6 +60,7 @@ P = {
     'orgasmsuite': ('OrgasmSuite/ZeroT.OrgasmSuite.csproj', 'ZeroT.OrgasmSuite.dll', None),
     'hudclickshield': ('HudClickShield/ZeroT.HudClickShield.csproj', 'ZeroT.HudClickShield.dll', None),
     'huddock': ('HudDock/ZeroT.HudDock.csproj', 'ZeroT.HudDock.dll', None),
+    'detachedui': ('DetachedUIPanel/DetachedUIPanel.csproj', 'DetachedUIPanelStandalone.dll', None),
     'forcerodsync': ('ForceRodSync/ZeroT.ForceRodSync.csproj', 'ZeroT.ForceRodSync.dll', None),
     'errorsilencer': ('ErrorSilencer/ZeroT.ErrorSilencer.csproj', 'ZeroT.ErrorSilencer.dll', None),
 }

@@ -18,7 +18,10 @@ public static class HudDockRealScenario
 	public static void Real(Harness h)
 	{
 		BepInEx.Bootstrap.Chainloader.PluginInfos.Clear();
+		Screen.width = 1920; Screen.height = 1080; Screen.dpi = 96f;
 		string art = Path.GetFullPath(Path.Combine(Harness.CoresDir, "..", "..", "..", "..", "artifacts", "Release"));
+		string over = Environment.GetEnvironmentVariable("HUDDOCK_REAL_DIR");
+		if (!string.IsNullOrEmpty(over)) art = over;   // e.g. the plugins folder of a VaM install: the builds that are live
 		var want = new HashSet<string>
 		{
 			"com.zerot.sceneperformance.standalone", "bplus.smartwardrobe.standalone", "charlestone.anusphysicscontrol.standalone", "hasno.counterthrust.standalone",
@@ -125,6 +128,70 @@ public static class HudDockRealScenario
 		Console.WriteLine("  info    drawn captions: ON/OFF " + cap0["ON"] + "/" + cap0["OFF"] + " -> (Anus Physics off) " + cap1["ON"] + "/" + cap1["OFF"] + " -> (on again) " + cap2["ON"] + "/" + cap2["OFF"]);
 		h.Check(cap1["OFF"] == cap0["OFF"] + 1 && cap1["ON"] == cap0["ON"] - 1 && cap2["ON"] == cap0["ON"], "the drawn caption of that row changes ON -> OFF -> ON on the next repaint");
 
+
+		// ---- the plugins' OWN windows: flip from the dock, repaint the plugin, and its drawn window must change (its own On / Off caption follows)
+		h.Set("Window", "Show", "false");   // the dock's own captions out of the picture: only the plugins' windows are compared
+		foreach (var o in targets) if ((bool)prop(o, "Found")) dt.GetMethod("SetVisible", All).Invoke(dock, new object[] { o, true });   // every plugin window up
+		h.Step(0.5f);
+		int uguiTexts = 0;
+		{
+			int ta = 0, cv = 0;
+			foreach (var go in UnityEngine.Sim.AllObjects.ToArray()) { if (go == null) continue; if (go.GetComponent<UnityEngine.UI.Text>() != null) { uguiTexts++; if (go.activeInHierarchy) ta++; } if (go.GetComponent<Canvas>() != null) cv++; }
+			Console.WriteLine("  info    uGUI: " + uguiTexts + " Text (" + ta + " active), " + cv + " canvases, objects " + UnityEngine.Sim.AllObjects.Count + ", errors " + UnityEngine.Sim.Errors.Count);
+		}
+		var beginFrame = guiT.GetMethod("BeginFrame");
+		Func<BaseUnityPlugin, List<string>> drawn = pl =>
+		{
+			var m = pl.GetType().GetMethod("OnGUI", All);
+			if (m == null) return new List<string>();
+			foreach (var pass in new[] { EventType.Layout, EventType.Repaint })
+			{
+				Event.current = new Event { type = pass, mousePosition = new Vector2(-1000f, -1000f) };
+				beginFrame.Invoke(null, new object[] { pass });
+				try { m.Invoke(pl, null); } catch (Exception) { }
+			}
+			var res = new List<string>();
+			foreach (var c in (IEnumerable)guiT.GetField("Cmds").GetValue(null)) { var ct = c.GetType(); res.Add((string)ct.GetField("text").GetValue(c) + "|" + ct.GetField("on").GetValue(c) + "|" + ct.GetField("color").GetValue(c)); }
+			return res;
+		};
+		// every "On" / "Off" caption on screen: the IMGUI windows (drawn here one by one) and the uGUI windows (Text components)
+		Func<int[]> captionsNow = () =>
+		{
+			int on = 0, off = 0;
+			foreach (var pl in loaded.Values)
+				foreach (var s in drawn(pl)) { string tx = s.Split('|')[0]; if (tx == "On") on++; else if (tx == "Off") off++; }
+			foreach (var go in UnityEngine.Sim.AllObjects.ToArray())
+			{
+				if (go == null) continue;
+				var tx = go.GetComponent<UnityEngine.UI.Text>();
+				if (tx == null || !go.activeInHierarchy) continue;
+				if (tx.text == "On") on++; else if (tx.text == "Off") off++;
+			}
+			return new[] { on, off };
+		};
+		h.Step(0.5f);
+		if (uguiTexts == 0) Console.WriteLine("  info    the uGUI windows were not built in this run (state left by earlier scenarios of a --all run): the caption check is skipped here, run  vamsim ZeroT.HudDock.dll huddock_real  on its own for it");
+		foreach (var o in targets)
+		{
+			string label = (string)fld(o, "Label");
+			if (uguiTexts == 0) break;
+			if (!(bool)prop(o, "Found") || !(bool)prop(o, "CanActive")) continue;
+			if (label == "Orgasm Suite" || label == "VPB Random Look") { Console.WriteLine("  info    " + label + ": its window has no On / Off caption (nothing to compare)"); continue; }
+			if (label == "SmartWardrobe" || label == "Penetration Counter") { Console.WriteLine("  info    " + label + ": its core assembly cannot be loaded in the simulator, so its window is not built here (not tested)"); continue; }
+			bool wasOn = (bool)prop(o, "IsActive");
+			var c0 = captionsNow();
+			dt.GetMethod("SetActive", All).Invoke(dock, new object[] { o, !wasOn });
+			h.Step(0.4f);   // a plugin that polls its setting in Update
+			var c1 = captionsNow();
+			dt.GetMethod("SetActive", All).Invoke(dock, new object[] { o, wasOn });
+			h.Step(0.4f);
+			var c2 = captionsNow();
+			int dOn = c1[0] - c0[0], dOff = c1[1] - c0[1];
+			bool follows = wasOn ? (dOff == 1 && dOn == -1) : (dOn == 1 && dOff == -1);
+			bool back = c2[0] == c0[0] && c2[1] == c0[1];
+			if (c0[0] + c0[1] == 0) { Console.WriteLine("  info    " + label + ": no On / Off caption found in the simulator"); continue; }
+			h.Check(follows && back, label + ": the plugin's own On / Off caption follows the dock (On/Off captions on screen " + c0[0] + "/" + c0[1] + " -> " + c1[0] + "/" + c1[1] + " -> " + c2[0] + "/" + c2[1] + ")");
+		}
 		// the real plugins whose sister assemblies VaM loads from embedded resources cannot run fully here: those errors are the simulator's, not the dock's
 		int sim = UnityEngine.Sim.Errors.RemoveAll(e => e.Contains("FileNotFoundException") && e.Contains("Could not load file or assembly"));
 		Console.WriteLine("  info    " + sim + " simulator-only load errors set aside (sister assemblies of SmartWardrobe, PPA, Penetration Counter, VPB Random Look)");

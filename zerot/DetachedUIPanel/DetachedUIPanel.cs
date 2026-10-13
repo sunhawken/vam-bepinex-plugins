@@ -121,6 +121,17 @@ namespace DetachedUIPanelStandalone
 		{
 			showWindow = Config.Bind<bool>("Window", "Show", true, "Show the in-game Detached UI Panel window.");
 			savedActive = Config.Bind<bool>("General", "Active", true, "Turn the panel off completely: restores any detached UI and stops all work.");
+			savedActive.SettingChanged += delegate
+			{
+				// the window's own button, the HUD Dock and the config manager all end up here
+				if (!savedActive.Value)
+				{
+					selectionToken++;
+					Restore();
+					HidePopup();
+				}
+				ApplyGeometry();
+			};
 			savedCollapsed = Config.Bind<bool>("Window", "Collapsed", false, "Collapse the window to its title bar.");
 			savedScale = Config.Bind<float>("Window", "Scale", 1f, "Extra scale multiplier applied on top of DPI (S- / S+).");
 			savedX = Config.Bind<float>("Window", "X", 40f, "Saved horizontal position.");
@@ -429,14 +440,7 @@ namespace DetachedUIPanelStandalone
 
 			Button power = HeaderButton("Power", "On", delegate
 			{
-				savedActive.Value = !savedActive.Value;
-				if (!savedActive.Value)
-				{
-					selectionToken++;
-					Restore();
-					HidePopup();
-				}
-				ApplyGeometry();
+				savedActive.Value = !savedActive.Value;   // OnActiveSettingChanged does the rest
 				Config.Save();
 			});
 			powerLabel = power.GetComponentInChildren<Text>();

@@ -121,6 +121,7 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 	private void BindConfig()
 	{
 		cfgActive = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn PenetrationCounter off completely: removes the counter scripts from every Person and stops scanning.");
+		cfgActive.SettingChanged += delegate { ApplyActiveEffects(cfgActive.Value); };   // the window's own button, the HUD Dock and the config manager
 		cfgShowOnStart = ((BaseUnityPlugin)this).Config.Bind<bool>("Desktop GUI", "ShowOnStart", true, "Show the desktop-style overlay when VaM starts.");
 		cfgCollapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Desktop GUI", "Collapsed", false, "Remember whether the desktop window is collapsed to its title bar.");
 		cfgWindowX = ((BaseUnityPlugin)this).Config.Bind<float>("Desktop GUI", "WindowX", 40f, "Saved GUI X position in pixels.");
@@ -1065,6 +1066,11 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 	private void SetActive(bool on)
 	{
 		cfgActive.Value = on;
+		((BaseUnityPlugin)this).Config.Save();
+	}
+
+	private void ApplyActiveEffects(bool on)
+	{
 		if (on)
 		{
 			nextReconcileAt = 0f;
@@ -1078,7 +1084,6 @@ public sealed class PenetrationCounterBepInExLoader : BaseUnityPlugin
 			counters.Clear();
 			cachedCountersUntil = 0f;
 		}
-		((BaseUnityPlugin)this).Config.Save();
 	}
 
 	private void DestroyCounter(CounterHost host)

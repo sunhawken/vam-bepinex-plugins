@@ -93,6 +93,7 @@ public sealed class FluidBridgeHelperPlugin : BaseUnityPlugin
 	{
 		_rlShow = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Show", true, "Show the in-game window.");
 		_rlActive = Config.Bind<bool>("General", "Active", true, "Turn the helper off completely (no scanning or VAR assistance).");
+		_rlActive.SettingChanged += delegate { if (_rlActive.Value) { _nextScan = 0f; } };
 		_collapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember the collapsed state.");
 		_autoDpi = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "AutoDPI", true, "Scale the overlay using Screen.dpi.");
 		_uiScale = ((BaseUnityPlugin)this).Config.Bind<float>("Window", "UIScale", 1f, "Additional UI scale multiplier (0.65 to 2.5).");

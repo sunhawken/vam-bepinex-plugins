@@ -187,6 +187,7 @@ public sealed class GarmentsStandalone : BaseUnityPlugin
 	private void Awake()
 	{
 		cfgActive = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn Garments off completely: no scanning, no auto bot, controls hidden.");
+		cfgActive.SettingChanged += delegate { nextPeopleScan = 0f; };
 		cfgShow = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Show", true, "Show the in-game Garments window.");
 		cfgCollapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember collapsed state.");
 		cfgAutoDpi = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "AutoDPI", true, "Scale from display DPI.");

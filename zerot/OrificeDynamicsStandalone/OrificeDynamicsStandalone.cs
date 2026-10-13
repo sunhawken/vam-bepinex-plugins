@@ -92,6 +92,7 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 	private void Awake()
 	{
 		_active = ((BaseUnityPlugin)this).Config.Bind<bool>("General", "Active", true, "Turn Orifice Dynamics off completely: stops scanning/attaching and disables the attached scripts.");
+		_active.SettingChanged += delegate { ApplyActiveEffects(_active.Value); };   // the window's own button, the HUD Dock and the config manager
 		_show = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Show", true, "Show the in-game Orifice Dynamics window.");
 		_collapsed = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "Collapsed", false, "Remember the collapsed state.");
 		_autoDpi = ((BaseUnityPlugin)this).Config.Bind<bool>("Window", "AutoDPI", true, "Scale using the display DPI when available.");
@@ -625,6 +626,11 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 	private void SetActive(bool on)
 	{
 		_active.Value = on;
+		((BaseUnityPlugin)this).Config.Save();
+	}
+
+	private void ApplyActiveEffects(bool on)
+	{
 		foreach (KeyValuePair<string, MVRScript> instance in _instances)
 		{
 			if ((Object)(object)instance.Value != (Object)null)
@@ -636,7 +642,6 @@ public sealed class OrificeDynamicsStandalone : BaseUnityPlugin
 		{
 			_nextScan = 0f;
 		}
-		((BaseUnityPlugin)this).Config.Save();
 	}
 
 	private void SetScale(float value)
