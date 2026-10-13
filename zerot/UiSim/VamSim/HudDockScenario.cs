@@ -129,6 +129,16 @@ public static class HudDockScenario
 		((ConfigEntry<bool>)BepInEx.Bootstrap.Chainloader.PluginInfos["zerot.xrayslapstandalone"].Instance.Config.Find("General", "Active")).Value = false;   // switched off in the plugin's own config
 		h.Check(!isActive("XRay + Slap"), "a plugin that is switched off in its own config shows as off (read live)");
 
+		// the Orgasm Suite row: its ON / OFF is Suite.Active (off removes the suite from the Persons)
+		var suite = Fake("com.zerot.orgasmsuite", "Window", "Show", "Window", "Collapsed", true, false, null);
+		suite.Config.Bind("Suite", "Active", true);
+		resolve();
+		h.Check(canActive("Orgasm Suite") && isActive("Orgasm Suite"), "Orgasm Suite: its Suite.Active switch is found (on)");
+		setAct("Orgasm Suite", false);
+		h.Check(!((ConfigEntry<bool>)suite.Config.Find("Suite", "Active")).Value && !isActive("Orgasm Suite") && suite.enabled, "...the dock's OFF sets Suite.Active and leaves the component alone");
+		setAct("Orgasm Suite", true);
+		h.Check(((ConfigEntry<bool>)suite.Config.Find("Suite", "Active")).Value, "...and ON again");
+
 		// a plugin that loads later is picked up
 		var late = Fake("zerot.fluidbridge.helper", "Window", "Show", "Window", "Collapsed", true, false);
 		resolve();

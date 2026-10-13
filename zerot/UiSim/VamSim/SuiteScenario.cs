@@ -589,12 +589,20 @@ public static class SuiteScenario
 
 		// ---- 12. the master switch / auto attach off
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 12 errors=" + Sim.Errors.Count);
+		// the master switch (the HUD Dock's ON / OFF button) really switches the suite off - every suite script leaves the Persons and CoreControl - and back on
+		woman2 = h.Sc.GetAtomByUid("Woman"); man2 = h.Sc.GetAtomByUid("Man");   // the scene was reloaded in 11b: these are the live atoms
+		var coreAtom = h.Sc.GetAtomByUid("CoreControl");
 		h.Set("Suite", "Active", "false");
-		int before = SlotUrls(woman2).Count;
+		St(h, 40f);
+		h.Check(SlotUrls(woman2).Count == 0 && SlotUrls(man2).Count == 0 && SlotUrls(coreAtom).Count == 0, "Active=false: every suite script is removed from the Persons and CoreControl");
 		SetCfg(h, "Woman", "Engine", "Lite");
 		St(h, 8f);
-		h.Check(SlotUrls(woman2).Count == before, "Active=false: the suite changes nothing");
+		h.Check(SlotUrls(woman2).Count == 0, "...and nothing is attached while it is off");
 		h.Set("Suite", "Active", "true");
+		St(h, 45f);
+		h.Check(Has(woman2, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll") && Has(woman2, "FluidBridge/ZeroT.OrgasmSuite.FluidBridge.dll") && Has(man2, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll"), "Active=true: back as each Person's saved choices say (Woman on Lite)");
+		h.Check(Has(coreAtom, "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "...ZajeShuffle too");
+		int before = SlotUrls(woman2).Count;
 		h.Set("Suite", "AutoAttach", "false");
 		SetCfg(h, "Woman", "Engine", "BodyLanguage");
 		St(h, 8f);

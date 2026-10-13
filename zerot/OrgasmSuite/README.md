@@ -24,6 +24,10 @@ Why assemblies and not loose `.cslist` source: the first build attached loose sc
 
 Patches: SexyFluids' shader bundle gets a fixed file name; FluidBridge gets the orgasm hooks, per-Person settings files and a gender check; AutoTremble gets "Target Self" and the default-preset load.
 
+## Switching the whole suite off
+
+`Suite.Active` (the HUD Dock's ON / OFF button for the Orgasm Suite) is a real off switch: with it off every suite script is removed from the Persons and from CoreControl (one per scan, like attaching) and nothing is attached; each Person's choices are kept and come back when it is switched on again. The window shows **Switched off: turn on** while it is off.
+
 ## Auto-add on scene load
 
 The window has an **Auto-add on scene load** switch (config `Suite.AutoAddOnLoad`, default off). Off: when a scene loads (and for Persons added later) nothing is attached; the window shows **Add to this person** for the selected Person, and touching any of its switches adds it too. Turning the switch on brings every waiting Person in. A Person's saved choices (`people.tsv`) are kept either way.

@@ -52,7 +52,8 @@ namespace ZeroT.OrgasmSuite
 			public bool On = true;       // the Suite switch: off parks this Person, on brings back exactly what was set
 			public bool ModeOn = true;   // the engine (Lite / BodyLanguage) switch of the Mode row
 			public bool Held;            // runtime only: "auto-add on scene load" is off, so this Person is left alone until the user adds it
-			public bool Active { get { return On && ModeOn && !Held; } }
+			public static bool GlobalOn = true;   // Suite.Active: off removes the suite from every Person (their choices are kept), on brings it back
+			public bool Active { get { return GlobalOn && On && ModeOn && !Held; } }
 			public string Engine = "Lite";   // Lite | BodyLanguage
 			// what happens during an orgasm on this Person (each one is a part of the suite that can be switched off) + the HUD
 			public bool Fluids = true, Tremble = true, Shuffle = false, Wet = true, Wardrobe = true, Hud = true;
@@ -98,7 +99,9 @@ namespace ZeroT.OrgasmSuite
 
 		private void Awake()
 		{
-			_active = Config.Bind("Suite", "Active", true, "Master switch: when off the suite attaches nothing and leaves everything as it is.");
+			_active = Config.Bind("Suite", "Active", true, "Master switch (the HUD Dock's ON / OFF button): off removes every suite script from the Persons and from CoreControl and attaches nothing; each Person's choices are kept and come back when it is switched on again.");
+			_active.SettingChanged += delegate { PersonCfg.GlobalOn = _active.Value; _nextScan = 0f; _pushed.Clear(); _collisionPushed.Clear(); };
+			PersonCfg.GlobalOn = _active.Value;
 			_females = Config.Bind("Suite", "Females", true, "Manage female Person atoms.");
 			_males = Config.Bind("Suite", "Males", true, "Manage male Person atoms.");
 			_autoAttach = Config.Bind("Suite", "AutoAttach", true, "Attach / detach the scripts by itself. Off: the suite never touches a Person (use it only to switch the choices on and off in the window).");
@@ -400,7 +403,8 @@ namespace ZeroT.OrgasmSuite
 		private void Update()
 		{
 			if (_saveAt > 0f && Time.realtimeSinceStartup >= _saveAt) { _saveAt = 0f; SavePeople(); }
-			if (_active == null || !_active.Value) return;
+			if (_active == null) return;
+			PersonCfg.GlobalOn = _active.Value;
 			SuperController sc = SuperController.singleton;
 			if (sc == null) return;
 			if (sc.isLoading) { _wasLoading = true; return; }
@@ -421,7 +425,7 @@ namespace ZeroT.OrgasmSuite
 				int sig = SceneSignature(sc);
 				if (sig != _sig) { _sig = sig; _sigAt = now; }
 				if (now - _sigAt < _quiet.Value) { _waitNote = "Waiting for the scene to settle (atoms / plugins still changing)..."; return; }
-				_waitNote = "";
+				_waitNote = _active.Value ? "" : "The suite is switched off (Suite.Active / HUD Dock): its scripts are removed, your choices are kept.";
 				Reconcile(sc);
 				_sig = SceneSignature(sc);   // what the suite itself just did is not a change by the scene
 			}
@@ -965,7 +969,11 @@ namespace ZeroT.OrgasmSuite
 			Color side = isLite ? Fx.Lite : Fx.Full;
 
 			// ---- master: parks / restores everything on this Person; every other choice below is kept while it is off
-			if (cfg != null && cfg.Held)
+			if (!PersonCfg.GlobalOn)
+			{
+				if (Fx.Button(new Rect(x, y, w, lh), "Switched off: turn on", Fx.Amber, false, s)) { _active.Value = true; Config.Save(); }
+			}
+			else if (cfg != null && cfg.Held)
 			{
 				if (Fx.Button(new Rect(x, y, w, lh), "Add to this person", Fx.Amber, false, s)) Release(_uid, true);
 			}
