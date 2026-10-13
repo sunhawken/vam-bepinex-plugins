@@ -177,6 +177,7 @@ public static class HudDockRealScenario
 			if (uguiTexts == 0) break;
 			if (!(bool)prop(o, "Found") || !(bool)prop(o, "CanActive")) continue;
 			if (label == "Orgasm Suite" || label == "VPB Random Look") { Console.WriteLine("  info    " + label + ": its window has no On / Off caption (nothing to compare)"); continue; }
+			if (label == "FastMode") { Console.WriteLine("  info    FastMode: its Update needs DAZCharacterRun.doUpdate, which the simulator does not have (not tested; it polls the setting in Update)"); continue; }
 			if (label == "SmartWardrobe" || label == "Penetration Counter") { Console.WriteLine("  info    " + label + ": its core assembly cannot be loaded in the simulator, so its window is not built here (not tested)"); continue; }
 			bool wasOn = (bool)prop(o, "IsActive");
 			var c0 = captionsNow();
