@@ -64,8 +64,8 @@ P = {
     'errorsilencer': ('ErrorSilencer/ZeroT.ErrorSilencer.csproj', 'ZeroT.ErrorSilencer.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'errorsilencer', 'hudclickshield', 'huddock', 'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
-HELPERS = {'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper', 'appearanceloaderhelper', 'zajeshufflehelper'}   # Harmony helpers: need the script assemblies from `simtargets`
+HEADLESS = {'forcerodsync', 'errorsilencer', 'hudclickshield', 'huddock', 'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HELPERS = {'forcerodsync', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper', 'appearanceloaderhelper', 'zajeshufflehelper'}   # Harmony helpers: need the script assemblies from `simtargets`
 UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook', 'orgasmsuite', 'huddock'}
 
@@ -237,7 +237,7 @@ def cmd_pack(folder, out):
     print('packed %d files -> %s' % (n, out))
 
 
-def cmd_cslcheck(target, out=None):
+def cmd_cslcheck(target, out=None, only=None):
     work = tempfile.mkdtemp(prefix='cslcheck_')
     if target.lower().endswith('.var'):
         src = os.path.join(work, 'var')
@@ -247,7 +247,7 @@ def cmd_cslcheck(target, out=None):
     cs = []
     for root, _, files in os.walk(src):
         for f in files:
-            if f.lower().endswith('.cslist'):
+            if f.lower().endswith('.cslist') and (only is None or f.lower() == only.lower()):
                 base = root
                 for line in open(os.path.join(root, f), encoding='utf-8-sig').read().splitlines():
                     line = line.strip()
@@ -308,6 +308,8 @@ TARGETS = {
     'ForcePersonCacheScripts': 'JayJayWon.ForcePersonCache.*.var',
     'ClothingBackfaceScripts': 'Nial.?Plugins?_Clothing_backface.*.var',
     'ToggleHUDScripts': 'zerot.ToggleHUD.*.var',
+    'DiviningRodScripts': 'ToumeiHitsuji.DiviningRod.*.var',
+    'ForceForgeScripts': ('ParticlePinnacle.ForceForge.*.var', 'ForceForgeStandalonev8.cslist'),   # one .cslist of a package that holds many
 }
 
 
@@ -326,12 +328,15 @@ def newest_var(pattern):
 def cmd_simtargets():
     ok = True
     for name, pat in TARGETS.items():
+        only = None
+        if isinstance(pat, tuple):
+            pat, only = pat
         v = newest_var(pat)
         if not v:
             print('SKIP %s (no %s in AddonPackages)' % (name, pat))
             continue
         print('== %s <- %s' % (name, os.path.basename(v)))
-        ok = cmd_cslcheck(v, os.path.join(SIM, 'in', 'targets', name + '.dll')) and ok
+        ok = cmd_cslcheck(v, os.path.join(SIM, 'in', 'targets', name + '.dll'), only) and ok
     return ok
 
 

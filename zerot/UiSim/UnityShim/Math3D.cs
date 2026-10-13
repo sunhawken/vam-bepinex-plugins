@@ -18,6 +18,7 @@ namespace UnityEngine
 		public static bool operator !=(Quaternion a, Quaternion b) => !(a == b);
 		public override bool Equals(object o) => o is Quaternion q && this == q;
 		public override int GetHashCode() => x.GetHashCode() ^ (y.GetHashCode() << 2) ^ (z.GetHashCode() >> 2) ^ (w.GetHashCode() >> 1);
+		public static Quaternion Lerp(Quaternion a, Quaternion b, float t) { t = t < 0f ? 0f : t > 1f ? 1f : t; float s = Dot(a, b) < 0f ? -1f : 1f; float x = a.x + (b.x * s - a.x) * t, y = a.y + (b.y * s - a.y) * t, z = a.z + (b.z * s - a.z) * t, w = a.w + (b.w * s - a.w) * t; float m = (float)Math.Sqrt(x * x + y * y + z * z + w * w); return m < 1e-8f ? identity : new Quaternion(x / m, y / m, z / m, w / m); }
 		public static Quaternion Inverse(Quaternion q) => new Quaternion(-q.x, -q.y, -q.z, q.w);
 		public static float Dot(Quaternion a, Quaternion b) => a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 		public static float Angle(Quaternion a, Quaternion b) { float d = Math.Min(Math.Abs(Dot(a, b)), 1f); return (float)(Math.Acos(d) * 2.0 * 57.29578); }
@@ -113,5 +114,19 @@ namespace UnityEngine
 		public static bool operator !=(Vector4 a, Vector4 b) => !(a == b);
 		public override bool Equals(object o) => o is Vector4 v && this == v;
 		public override int GetHashCode() => x.GetHashCode() ^ y.GetHashCode() ^ z.GetHashCode() ^ w.GetHashCode();
+	}
+}
+
+// VaM's own ToList extension (global namespace, so it wins over System.Linq in a script): the generated stub returns an empty list
+public static partial class IEnumerableExtension
+{
+	public static System.Collections.Generic.List<T> ToList<T>(this System.Collections.Generic.IEnumerable<T> collection) { return new System.Collections.Generic.List<T>(collection); }
+}
+
+namespace UnityEngine
+{
+	public partial struct Vector3
+	{
+		public static Vector3 ClampMagnitude(Vector3 v, float max) { float m = v.magnitude; return m > max && m > 0f ? v * (max / m) : v; }
 	}
 }

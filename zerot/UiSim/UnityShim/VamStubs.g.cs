@@ -491,9 +491,6 @@ public partial class DAZPhysicsMesh : global::PhysicsSimulatorJSONStorable {
   public global::System.Collections.Generic.List<global::DAZPhysicsMeshSoftVerticesGroup> softVerticesGroups { get; set; }
   public DAZPhysicsMesh() {}
 }
-public static partial class IEnumerableExtension {
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::System.Collections.Generic.List<T> ToList<T>(global::System.Collections.Generic.IEnumerable<T> collection) { return new global::System.Collections.Generic.List<T>(); }
-}
 public partial class DAZSkinV2 : global::GPUTools.Skinner.Scripts.Providers.PreCalcMeshProvider {
   public DAZSkinV2() {}
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void CopyMaterials() { }
@@ -1097,6 +1094,17 @@ public partial class DAZCharacterTextureControl : global::JSONStorable {
 }
 public partial class AQUAS_Parameters {
   public AQUAS_Parameters() {}
+}
+public partial class ForceProducerV2 : global::JSONStorable {
+  public ForceProducerV2() {}
+public enum AxisName : int {
+  X = 0,
+  Y = 1,
+  Z = 2,
+  NegX = 3,
+  NegY = 4,
+  NegZ = 5,
+}
 }
 public partial class UITabSelector : global::UnityEngine.MonoBehaviour {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetActiveTab(string name) { }
@@ -2699,6 +2707,7 @@ public partial class Camera {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RemoveCommandBuffer(global::UnityEngine.Rendering.CameraEvent evt, global::UnityEngine.Rendering.CommandBuffer buffer) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Render() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Ray ScreenPointToRay(global::UnityEngine.Vector3 pos) { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Vector3 ScreenToWorldPoint(global::UnityEngine.Vector3 position) { return default; }
   public global::UnityEngine.Color backgroundColor { get; set; }
   public bool orthographic { get; set; }
   public global::UnityEngine.RenderTexture targetTexture { get; set; }
@@ -2778,6 +2787,7 @@ public partial class SuperController {
   public bool teleportAllowRotation { get; set; }
   public global::UISideAlign.Side UISide { get; set; }
   public float worldScale { get; set; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetAtomUIDsWithRigidbodies() { return new global::System.Collections.Generic.List<string>(); }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.GameObject GetCachedPrefab(string assetBundleName, string assetName) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetCancel() { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void GetDirectoryPathDialog(global::uFileBrowser.FileBrowserCallback callback, string suggestedFolder = default, global::System.Collections.Generic.List<global::MVR.FileManagementSecure.ShortCut> shortCuts = default, bool fullComputerBrowse = default) { }
@@ -2791,6 +2801,7 @@ public partial class SuperController {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetRightGrab() { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetRightGrabRelease() { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool GetRightSelect() { return default; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetRigidbodyNamesInAtom(string atomUID) { return new global::System.Collections.Generic.List<string>(); }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::SimpleJSON.JSONClass GetSaveJSON(global::Atom specificAtom = default, bool includePhysical = default, bool includeAppearance = default) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::FreeControllerV3 GetSelectedController() { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetVisibleAtomUIDs() { return new global::System.Collections.Generic.List<string>(); }

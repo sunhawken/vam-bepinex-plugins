@@ -298,6 +298,7 @@ namespace UnityEngine
 				transform = tr;
 			}
 			c.OnAttached();
+			if (c is Canvas && !(transform is RectTransform)) AddComponent(typeof(RectTransform));   // a Canvas needs its RectTransform
 			if (c is MonoBehaviour mb) Sim.Lifecycle.Created(mb);
 			return c;
 		}
