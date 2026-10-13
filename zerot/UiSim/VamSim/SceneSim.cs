@@ -70,6 +70,28 @@ public static class SceneSim
 		return indexCache;
 	}
 
+	// packages that exist only as a switched-off archive (Name.N.DISABLED / Name.N.var.disabled): VPB registers them when VaM is asked for a path inside
+	static Dictionary<string, string> offCache;
+	static Dictionary<string, string> SwitchedOffIndex(string vamDir)
+	{
+		if (offCache != null) return offCache;
+		offCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		var on = PackageIndex(vamDir);
+		foreach (var sub in new[] { "AddonPackages", "AllPackages" })
+		{
+			string dir = Path.Combine(vamDir, sub);
+			if (!Directory.Exists(dir)) continue;
+			foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+			{
+				string n = Path.GetFileName(f), low = n.ToLowerInvariant();
+				if (low.EndsWith(".par2")) continue;
+				string uid = low.EndsWith(".var.disabled") ? n.Substring(0, n.Length - 13) : low.EndsWith(".disabled") ? n.Substring(0, n.Length - 9) : null;
+				if (uid != null && !on.ContainsKey(uid) && !offCache.ContainsKey(uid)) offCache[uid] = f;
+			}
+		}
+		return offCache;
+	}
+
 	static void ResolvePackages(string text, string vamDir)
 	{
 		var refs = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
@@ -81,7 +103,8 @@ public static class SceneSim
 		}
 		var idx = PackageIndex(vamDir);
 		Info(refs.Count + " packages referenced, " + idx.Count + " installed");
-		int missingPk = 0, missingFiles = 0, caseBad = 0, filesChecked = 0;
+		int missingPk = 0, missingFiles = 0, caseBad = 0, filesChecked = 0, switchedOff = 0;
+		var off = SwitchedOffIndex(vamDir);
 		foreach (var kv in refs.OrderBy(k => k.Key))
 		{
 			string pkg = kv.Key, file;
@@ -92,10 +115,21 @@ public static class SceneSim
 				int minv = ver.StartsWith("min") ? int.Parse(ver.Substring(3)) : 0;
 				var best = idx.Keys.Where(k => k.StartsWith(stem + ".", StringComparison.OrdinalIgnoreCase) && int.TryParse(k.Substring(stem.Length + 1), out int nv) && nv >= minv)
 					.OrderByDescending(k => int.Parse(k.Substring(stem.Length + 1))).FirstOrDefault();
-				if (best == null) { missingPk++; Bad("package missing: " + pkg); continue; }
-				file = idx[best];
+				if (best != null) file = idx[best];
+				else
+				{
+					var offBest = off.Keys.Where(k => k.StartsWith(stem + ".", StringComparison.OrdinalIgnoreCase) && int.TryParse(k.Substring(stem.Length + 1), out int nv) && nv >= minv)
+						.OrderByDescending(k => int.Parse(k.Substring(stem.Length + 1))).FirstOrDefault();
+					if (offBest == null) { missingPk++; Bad("package missing: " + pkg); continue; }
+					switchedOff++; Info("package switched off (.DISABLED), VPB brings it in on demand: " + pkg + " -> " + offBest);
+					file = off[offBest];
+				}
 			}
-			else if (!idx.TryGetValue(pkg, out file))
+			else if (!idx.TryGetValue(pkg, out file) && off.TryGetValue(pkg, out file))
+			{
+				switchedOff++; Info("package switched off (.DISABLED), VPB brings it in on demand: " + pkg);
+			}
+			else if (file == null)
 			{
 				var newer = idx.Keys.Where(k => k.StartsWith(stem + ".", StringComparison.OrdinalIgnoreCase)).OrderBy(k => k).ToList();
 				missingPk++;
@@ -121,8 +155,9 @@ public static class SceneSim
 			}
 			catch (Exception e) { Bad("cannot read " + Path.GetFileName(file) + ": " + e.Message); }
 		}
-		if (missingPk == 0 && missingFiles == 0 && caseBad == 0) Ok("all " + refs.Count + " packages present, all " + filesChecked + " referenced files exist");
-		else Info("packages missing " + missingPk + ", files missing " + missingFiles + ", case mismatches " + caseBad);
+		string offNote = switchedOff > 0 ? " (" + switchedOff + " of them switched off: .DISABLED, found through VPB)" : "";
+		if (missingPk == 0 && missingFiles == 0 && caseBad == 0) Ok("all " + refs.Count + " packages present" + offNote + ", all " + filesChecked + " referenced files exist");
+		else Info("packages missing " + missingPk + ", files missing " + missingFiles + ", case mismatches " + caseBad + offNote);
 	}
 
 	// ------------------------------------------------------------------ world

@@ -245,10 +245,11 @@ namespace MVR.FileManagementSecure
 		public static void CreateDirectory(string path) { SimDirs.Add(Norm(path)); }
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 		public static string NormalizePath(string path) { return (path ?? "").Replace((char)92, '/'); }
+		public static System.Func<string, bool> SimMissHook;   // asked when a path is not in the simulated file system (VPB registering a switched-off package on demand)
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-		public static bool FileExists(string path, bool onlySystemFiles) { FileExistsCalls++; return SimFiles.Contains(Norm(path)) || SuperController.SimSaved.ContainsKey(Norm(path)); }
+		public static bool FileExists(string path, bool onlySystemFiles) { FileExistsCalls++; return SimFiles.Contains(Norm(path)) || SuperController.SimSaved.ContainsKey(Norm(path)) || (SimMissHook != null && SimMissHook(Norm(path))); }
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-		public static bool DirectoryExists(string path, bool onlySystemDirectories) { DirExistsCalls++; return SimDirs.Contains(Norm(path)); }
+		public static bool DirectoryExists(string path, bool onlySystemDirectories) { DirExistsCalls++; return SimDirs.Contains(Norm(path)) || (SimMissHook != null && SimMissHook(Norm(path))); }
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 		public static string[] GetFiles(string dir, string pattern)
 		{
