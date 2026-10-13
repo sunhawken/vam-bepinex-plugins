@@ -335,7 +335,8 @@ namespace UnityEngine
 		public static readonly System.Collections.Generic.Dictionary<string, Object> SimContents = new System.Collections.Generic.Dictionary<string, Object>();
 		public static int SimLoadFromMemoryCalls;
 		public static bool SimFailLoad;
-		public static AssetBundle LoadFromMemory(byte[] binary) { SimLoadFromMemoryCalls++; return SimFailLoad || binary == null || binary.Length == 0 ? null : new AssetBundle(); }
+		public static byte[] SimLastBytes;
+		public static AssetBundle LoadFromMemory(byte[] binary) { SimLoadFromMemoryCalls++; SimLastBytes = binary; return SimFailLoad || binary == null || binary.Length == 0 ? null : new AssetBundle(); }
 		public T LoadAsset<T>(string name) where T : Object { Object o; return SimContents.TryGetValue(name, out o) && o is T ? (T)o : null; }
 		public T[] LoadAllAssets<T>() where T : Object { var l = new System.Collections.Generic.List<T>(); foreach (var o in SimContents.Values) if (o is T) l.Add((T)o); return l.ToArray(); }
 		public void Unload(bool unloadAllLoadedObjects) { }

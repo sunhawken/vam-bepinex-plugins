@@ -7,6 +7,17 @@ using UnityEngine;
 
 // One scenario per headless plugin: build a fake scene, start the real plugin DLL, step time, assert.
 // Add a method with [Scenario("name", "<plugin dll name without .dll>")] to cover a new plugin.
+// stands in for VPB's package index (an internal static class in the real VPB.dll): the plugin finds it by name through reflection
+namespace VPB
+{
+	internal static class VpbLocalDatabase
+	{
+		public static string Latest, ArchivePath;
+		internal static bool TryResolveLatestUidFromIndex(string packageGroup, out string resolvedUid) { resolvedUid = packageGroup == "Datel.ControllersAppearance" ? Latest : null; return resolvedUid != null; }
+		internal static bool TryResolveIndexedVarPathForUid(string uid, out string varPath) { varPath = uid == Latest ? ArchivePath : null; return varPath != null; }
+	}
+}
+
 public static class Scenarios
 {
 	// Any plugin: one female + one male, ten seconds. Fails on plugin exceptions.
@@ -164,6 +175,27 @@ public static class Scenarios
 		Func<Atom, int> lines = a => a.freeControllers.Count(c => c.followWhenOffRB != null);
 		int nF = lines(f), nM = lines(m), nE = lines(e);
 
+		// icon packages on disk: an old enabled .var, a NEWER one that is switched off (.DISABLED) in a sub folder, and junk next to them
+		string caRoot = Path.Combine(Path.GetTempPath(), "vamsim_ca_" + Environment.ProcessId);
+		if (Directory.Exists(caRoot)) Directory.Delete(caRoot, true);
+		Directory.CreateDirectory(Path.Combine(caRoot, "AddonPackages", "keep")); Directory.CreateDirectory(Path.Combine(caRoot, "AddonPackages", "off", "deeper"));
+		const string CaEntry = "Custom/Scripts/Datel/ControllersAppearance.assetbundle";
+		Action<string, string, byte[]> makeZip = (path, name, bytes) =>
+		{
+			using (var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Create))
+			{
+				var en = zip.CreateEntry("meta.json"); using (var w = new StreamWriter(en.Open())) w.Write("{}");
+				var e2 = zip.CreateEntry(name, name.EndsWith("assetbundle") && bytes.Length > 100 ? System.IO.Compression.CompressionLevel.Optimal : System.IO.Compression.CompressionLevel.NoCompression);
+				using (var s = e2.Open()) s.Write(bytes, 0, bytes.Length);
+			}
+		};
+		Func<byte, int, byte[]> blob = (b, n) => Enumerable.Range(0, n).Select(i => (byte)(b + i % 7)).ToArray();
+		var old4 = blob(1, 300); var new9 = blob(40, 700);
+		makeZip(Path.Combine(caRoot, "AddonPackages", "keep", "Datel.ControllersAppearance.4.var"), CaEntry, old4);
+		makeZip(Path.Combine(caRoot, "AddonPackages", "off", "deeper", "Datel.ControllersAppearance.9.DISABLED"), CaEntry, new9);
+		File.WriteAllText(Path.Combine(caRoot, "AddonPackages", "keep", "Datel.ControllersAppearance.20.var.par2"), "junk");   // not a package
+		BepInEx.Paths.GameRootPath = caRoot;
+
 		h.Start();
 		h.Step(1f);
 		var ctl = f.freeControllers.First(c => c.name == "headControl");
@@ -222,6 +254,26 @@ public static class Scenarios
 		// the embedded icon bundle is the original's
 		var res = h.Asm.GetManifestResourceStream("ControllersAppearance.assetbundle");
 		h.Check(res != null && res.Length > 10000, "icon assetbundle is inside the DLL (" + (res == null ? 0 : res.Length) + " bytes)");
+		// icons from a package, enabled or switched off
+		Func<byte[], byte[], bool> same = (x, y) => x != null && y != null && x.Length == y.Length && x.SequenceEqual(y);
+		h.Check(same(AssetBundle.SimLastBytes, new9), "Source = Auto: the newest Datel.ControllersAppearance package wins, even switched off (.DISABLED, v9 over the enabled v4); " + (AssetBundle.SimLastBytes == null ? 0 : AssetBundle.SimLastBytes.Length) + " bytes");
+		h.Check(h.LogHas("Icon assetbundle read from") && h.LogHas("AddonPackages"), "...found by scanning AddonPackages when VPB is not there, and says so");
+		string idxDir = Path.Combine(caRoot, "elsewhere"); Directory.CreateDirectory(idxDir);
+		var new12 = blob(90, 520);
+		makeZip(Path.Combine(idxDir, "Datel.ControllersAppearance.12.DISABLED"), CaEntry, new12);
+		VPB.VpbLocalDatabase.Latest = "Datel.ControllersAppearance.12"; VPB.VpbLocalDatabase.ArchivePath = Path.Combine(idxDir, "Datel.ControllersAppearance.12.DISABLED");
+		h.Set("Icons", "Source", "Embedded"); h.Step(1.5f);
+		h.Check(AssetBundle.SimLastBytes != null && AssetBundle.SimLastBytes.Length > 10000, "Source = Embedded: the copy inside the DLL again");
+		h.Set("Icons", "Source", "Auto"); h.Step(1.5f);
+		h.Check(same(AssetBundle.SimLastBytes, new12), "VPB's index answers (latest uid, then its file): that archive is read, v12 from outside AddonPackages");
+		VPB.VpbLocalDatabase.Latest = null;
+		h.Set("Icons", "Package", "Nobody.NoSuchPackage"); h.Step(1.5f);
+		h.Check(AssetBundle.SimLastBytes != null && AssetBundle.SimLastBytes.Length > 10000, "no such package: the embedded bundle");
+		makeZip(Path.Combine(caRoot, "AddonPackages", "keep", "Empty.Pack.1.var"), CaEntry, new byte[0]);
+		h.Set("Icons", "Package", "Empty.Pack"); h.Step(1.5f);
+		h.Check(AssetBundle.SimLastBytes != null && AssetBundle.SimLastBytes.Length > 10000 && h.LogHas("could not be opened; using the one inside this DLL"), "a package bundle that will not open: the embedded one, with a log line");
+		h.Set("Icons", "Package", "Datel.ControllersAppearance"); h.Step(1.5f);
+
 
 		// off switch restores VaM's values
 		h.Set("General", "Active", "false"); h.Step(0.6f);
