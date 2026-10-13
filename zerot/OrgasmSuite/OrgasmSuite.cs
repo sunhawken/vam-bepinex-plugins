@@ -51,7 +51,8 @@ namespace ZeroT.OrgasmSuite
 		{
 			public bool On = true;       // the Suite switch: off parks this Person, on brings back exactly what was set
 			public bool ModeOn = true;   // the engine (Lite / BodyLanguage) switch of the Mode row
-			public bool Active { get { return On && ModeOn; } }
+			public bool Held;            // runtime only: "auto-add on scene load" is off, so this Person is left alone until the user adds it
+			public bool Active { get { return On && ModeOn && !Held; } }
 			public string Engine = "Lite";   // Lite | BodyLanguage
 			// what happens during an orgasm on this Person (each one is a part of the suite that can be switched off) + the HUD
 			public bool Fluids = true, Tremble = true, Shuffle = false, Wet = true, Wardrobe = true, Hud = true;
@@ -63,14 +64,14 @@ namespace ZeroT.OrgasmSuite
 		private readonly Dictionary<string, PersonCfg> _cfg = new Dictionary<string, PersonCfg>(StringComparer.Ordinal);
 
 		// ------------------------------------------------------------------ config
-		private ConfigEntry<bool> _active, _females, _males, _autoAttach;
+		private ConfigEntry<bool> _active, _females, _males, _autoAttach, _autoAddOnLoad;
 		private ConfigEntry<float> _settle, _quiet;
 		private ConfigEntry<bool> _showWindow, _collapsed, _dpiAware;
 		private ConfigEntry<float> _previewFill;
 		private ConfigEntry<float> _scale, _winX, _winY, _winW, _winH;
 		private ConfigEntry<string> _lastUid;
 
-		private Rect _win = new Rect(60f, 140f, 380f, 660f);
+		private Rect _win = new Rect(60f, 140f, 380f, 690f);
 		private bool _dragging, _resizing;
 		private Vector2 _dragStartMouse, _dragStartPos, _resizeStartMouse, _resizeStartSize;
 		private const float MinW = 320f, MaxW = 640f, MinH = 260f, MaxH = 760f;
@@ -101,6 +102,7 @@ namespace ZeroT.OrgasmSuite
 			_females = Config.Bind("Suite", "Females", true, "Manage female Person atoms.");
 			_males = Config.Bind("Suite", "Males", true, "Manage male Person atoms.");
 			_autoAttach = Config.Bind("Suite", "AutoAttach", true, "Attach / detach the scripts by itself. Off: the suite never touches a Person (use it only to switch the choices on and off in the window).");
+			_autoAddOnLoad = Config.Bind("Suite", "AutoAddOnLoad", false, "Add the suite to the Persons of a scene by itself when it loads (and to Persons added later). Off: nothing is attached until you press 'Add to this Person' in the window.");
 			_settle = Config.Bind("Suite", "SettleSeconds", 15f, "After a scene load finishes, wait at least this long before attaching anything: VaM keeps restoring the scene's own plugins for a while after it says loading is done, and a script added in the middle of that crashed VaM.");
 			_quiet = Config.Bind("Suite", "QuietSeconds", 6f, "...and until nothing about the atoms or their plugin slots has changed for this long (changes the suite itself makes do not count).");
 			_showWindow = Config.Bind("Window", "Show", true, "Show the in-game Orgasm Suite window.");
@@ -109,7 +111,7 @@ namespace ZeroT.OrgasmSuite
 			_winX = Config.Bind("Window", "X", 60f, "Saved horizontal position.");
 			_winY = Config.Bind("Window", "Y", 140f, "Saved vertical position.");
 			_winW = Config.Bind("Window", "Width", 380f, "Saved width.");
-			_winH = Config.Bind("Window", "Height", 660f, "Saved height.");
+			_winH = Config.Bind("Window", "Height", 690f, "Saved height.");
 			_dpiAware = Config.Bind("Window", "DpiAware", true, "Scale with the monitor's DPI.");
 			_previewPeople = Config.Bind("Window", "PreviewPeople", "", "For screenshots: fake rows for the collapsed bar, 'Name:level:L,Name:level:B' (level 0..1, L = Lite, B = BodyLanguage). Empty = live.");
 			_previewFill = Config.Bind("Window", "PreviewFill", -1f, "Show this level (0..1) in the liquid bar instead of the live value (for screenshots). -1 = live.");
@@ -273,6 +275,7 @@ namespace ZeroT.OrgasmSuite
 				c = new PersonCfg();
 				// every HUD pins itself to the same spot on the desktop: only the first Person starts with one
 				foreach (PersonCfg o in _cfg.Values) if (o.Active && o.Hud) { c.Hud = false; break; }
+				c.Held = _autoAddOnLoad != null && !_autoAddOnLoad.Value;
 				_cfg[uid] = c;
 			}
 			return c;
@@ -402,7 +405,11 @@ namespace ZeroT.OrgasmSuite
 			if (sc == null) return;
 			if (sc.isLoading) { _wasLoading = true; return; }
 			TrackBodyLanguageOrgasm();
-			if (_wasLoading) { _wasLoading = false; _loadedAt = Time.realtimeSinceStartup; _attachedAt.Clear(); _pushed.Clear(); }
+			if (_wasLoading)
+			{
+				_wasLoading = false; _loadedAt = Time.realtimeSinceStartup; _attachedAt.Clear(); _pushed.Clear();
+				if (!_autoAddOnLoad.Value) foreach (PersonCfg hc in _cfg.Values) hc.Held = true;   // a new scene: every Person waits until it is added by hand
+			}
 			if (!_autoAttach.Value) { _waitNote = "Auto attach is off."; return; }
 			float now = Time.realtimeSinceStartup;
 			if (now < _loadedAt + _settle.Value) { _waitNote = "Waiting for the scene to settle (" + Mathf.CeilToInt(_loadedAt + _settle.Value - now) + " s)..."; return; }
@@ -472,6 +479,7 @@ namespace ZeroT.OrgasmSuite
 			{
 				Atom a = _people[i];
 				PersonCfg cfg = CfgFor(a.uid);
+				if (cfg.Held) { _status[a.uid] = "Not added: 'Auto-add on scene load' is off. Press 'Add to this Person' to add the suite here."; continue; }
 				MVRPluginManager mgr = FindManager(a);
 				if (mgr == null) { _status[a.uid] = "VaM's plugin manager is not ready on " + a.uid; continue; }
 				bool lite = cfg.Engine != "BodyLanguage";
@@ -588,6 +596,24 @@ namespace ZeroT.OrgasmSuite
 		}
 
 		private void SetStatus(string key, string text) { _status[key] = text; }
+
+		// the user adds the suite to a held Person (or touches one of its switches): from now on it is managed like any other
+		private void Release(string uid, bool turnOn)
+		{
+			PersonCfg c = CfgFor(uid);
+			c.Held = false;
+			if (turnOn) { c.On = true; c.ModeOn = true; }
+			SavePeople();
+			_nextScan = 0f; _pushed.Clear(); _collisionPushed.Clear();
+		}
+
+		private void SetAutoAddOnLoad(bool v)
+		{
+			_autoAddOnLoad.Value = v;
+			if (v) foreach (PersonCfg c in _cfg.Values) c.Held = false;   // switching it on brings every waiting Person in
+			_nextScan = 0f; _pushed.Clear(); _collisionPushed.Clear();
+			Config.Save();
+		}
 
 		// where touch arousal may come from: Lite gets its two switches, BodyLanguage a filter in its touch code
 		private readonly Dictionary<string, string> _collisionPushed = new Dictionary<string, string>();
@@ -939,8 +965,15 @@ namespace ZeroT.OrgasmSuite
 			Color side = isLite ? Fx.Lite : Fx.Full;
 
 			// ---- master: parks / restores everything on this Person; every other choice below is kept while it is off
-			if (Fx.Button(new Rect(x, y, w, lh), cfg != null && cfg.On ? "Suite on" : "Suite off", Fx.Amber, cfg != null && cfg.On, s) && cfg != null) { cfg.On = !cfg.On; changed = true; }
-			y += lh + 10f * s;
+			if (cfg != null && cfg.Held)
+			{
+				if (Fx.Button(new Rect(x, y, w, lh), "Add to this person", Fx.Amber, false, s)) Release(_uid, true);
+			}
+			else if (Fx.Button(new Rect(x, y, w, lh), cfg != null && cfg.On ? "Suite on" : "Suite off", Fx.Amber, cfg != null && cfg.On, s) && cfg != null) { cfg.On = !cfg.On; changed = true; }
+			y += lh;
+			// ---- auto-add on scene load: off = nothing is attached to a Person until it is added here
+			if (Fx.Toggle(new Rect(x, y, w, lh), "Auto-add on scene load", _autoAddOnLoad.Value, Fx.Amber, s, false)) SetAutoAddOnLoad(!_autoAddOnLoad.Value);
+			y += lh + 8f * s;
 
 			// ---- mode: each engine is its own switch for this Person (click the lit one to turn it off, the other one to change over)
 			Fx.Section(new Rect(x, y, w, 16f * s), "Mode", s);
@@ -1037,6 +1070,7 @@ namespace ZeroT.OrgasmSuite
 			GUI.enabled = enabled;
 			y += 24f * s + 10f * s;
 
+			if (changed && cfg != null && cfg.Held) cfg.Held = false;   // touching a switch of a waiting Person adds it
 			if (changed) { SavePeople(); _nextScan = 0f; _pushed.Clear(); _collisionPushed.Clear(); }
 
 			// ---- status

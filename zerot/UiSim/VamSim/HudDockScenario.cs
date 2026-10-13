@@ -14,12 +14,13 @@ public static class HudDockScenario
 {
 	private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
-	private static FakeWindowPlugin Fake(string guid, string showSection, string showKey, string collapseSection, string collapseKey, bool show, bool collapsed)
+	private static FakeWindowPlugin Fake(string guid, string showSection, string showKey, string collapseSection, string collapseKey, bool show, bool collapsed, string activeKey = "Active", bool active = true)
 	{
 		var go = new GameObject(guid);
 		var p = go.AddComponent<FakeWindowPlugin>();
 		if (showSection != null) p.Config.Bind(showSection, showKey, show);
 		if (collapseSection != null) p.Config.Bind(collapseSection, collapseKey, collapsed);
+		if (activeKey != null) p.Config.Bind("General", activeKey, active);
 		BepInEx.Bootstrap.Chainloader.PluginInfos[guid] = new BepInEx.PluginInfo { Instance = p };
 		return p;
 	}
@@ -98,6 +99,35 @@ public static class HudDockScenario
 		setVis("XRay + Slap", false); setVis("Deeper Plugin", false);
 		h.Check(!visible("XRay + Slap") && !visible("Deeper Plugin"), "both can be hidden");
 		setVis("XRay + Slap", true); setVis("Deeper Plugin", true);
+
+		// the plugin's own on / off: General.Active, General.Enabled, another plugin's switch, or the component itself
+		var ctp = Fake("hasno.counterthrust.standalone", "GUI", "VisibleLowImpact", "GUI", "Collapsed", true, false, "Enabled", true);
+		var thigh = Fake("com.particlepinnacle.thighcompressorandvibrations", "Touch Filters", "ShowControlWindow", "Touch Filters", "ControlWindowCollapsed", true, false, null);
+		var skin = Fake("zerot.particlepinnacle.uiskin", null, null, null, null, false, false, "Active", true);
+		var vpb = Fake("com.zerot.vpbrandomlook", "Window", "Show", "Window", "Collapsed", true, false, null);
+		resolve();
+		Func<string, bool> canActive = l => (bool)prop(find(l), "CanActive");
+		Func<string, bool> isActive = l => (bool)prop(find(l), "IsActive");
+		Action<string, bool> setAct = (l, v) => dt.GetMethod("SetActive", All).Invoke(dock, new object[] { find(l), v });
+		Func<BaseUnityPlugin, string, bool> entry = (pl, k) => ((ConfigEntry<bool>)pl.Config.Find("General", k)).Value;
+		h.Check(canActive("FastMode") && isActive("FastMode"), "FastMode: its General.Active switch is found (on)");
+		setAct("FastMode", false);
+		h.Check(!entry(fast, "Active") && !isActive("FastMode") && fast.enabled, "...switching it off sets General.Active and leaves the component alone");
+		setAct("FastMode", true);
+		h.Check(entry(fast, "Active") && isActive("FastMode"), "...and on again");
+		setAct("CounterThrust", false);
+		h.Check(!entry(ctp, "Enabled") && !isActive("CounterThrust"), "CounterThrust: General.Enabled is its switch");
+		setAct("CounterThrust", true);
+		setAct("Thigh Compressor", false);
+		h.Check(!entry(skin, "Active") && !isActive("Thigh Compressor") && thigh.enabled, "Thigh Compressor: its on / off lives in the ParticlePinnacle UI Skin plugin");
+		setAct("Thigh Compressor", true);
+		h.Check(canActive("VPB Random Look") && isActive("VPB Random Look"), "a plugin without a switch can still be turned on / off");
+		setAct("VPB Random Look", false);
+		h.Check(!vpb.enabled && !isActive("VPB Random Look"), "...as a component (its Update / OnGUI stop)");
+		setAct("VPB Random Look", true);
+		h.Check(vpb.enabled, "...and back");
+		((ConfigEntry<bool>)BepInEx.Bootstrap.Chainloader.PluginInfos["zerot.xrayslapstandalone"].Instance.Config.Find("General", "Active")).Value = false;   // switched off in the plugin's own config
+		h.Check(!isActive("XRay + Slap"), "a plugin that is switched off in its own config shows as off (read live)");
 
 		// a plugin that loads later is picked up
 		var late = Fake("zerot.fluidbridge.helper", "Window", "Show", "Window", "Collapsed", true, false);

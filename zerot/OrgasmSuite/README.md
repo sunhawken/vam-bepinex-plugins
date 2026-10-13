@@ -24,6 +24,10 @@ Why assemblies and not loose `.cslist` source: the first build attached loose sc
 
 Patches: SexyFluids' shader bundle gets a fixed file name; FluidBridge gets the orgasm hooks, per-Person settings files and a gender check; AutoTremble gets "Target Self" and the default-preset load.
 
+## Auto-add on scene load
+
+The window has an **Auto-add on scene load** switch (config `Suite.AutoAddOnLoad`, default off). Off: when a scene loads (and for Persons added later) nothing is attached; the window shows **Add to this person** for the selected Person, and touching any of its switches adds it too. Turning the switch on brings every waiting Person in. A Person's saved choices (`people.tsv`) are kept either way.
+
 ## Safety while a scene loads
 
 Nothing is attached until the scene has settled: `SettleSeconds` (15) after VaM says loading is done AND `QuietSeconds` (6) with no change to atoms, plugin slots or registered storables (the suite's own changes do not count). Each attach is logged *before* the call ("attaching X to Y...") so a crash log names the culprit. `AutoAttach=false` (config `Suite`) makes the suite never touch a Person.

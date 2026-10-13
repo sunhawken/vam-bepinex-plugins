@@ -22,7 +22,11 @@ namespace ZeroT.HudDock
 		private sealed class Target
 		{
 			public string Label, Guid, ShowSection, ShowKey, CollapseSection, CollapseKey, Field;
-			public ConfigEntry<bool> Show, Collapse;
+			// the plugin's own on / off switch (General.Active / General.Enabled): 'Turn the plugin off completely'. A plugin without one is switched as a
+			// Unity component instead (its Update / OnGUI stop), and ActiveGuid points at another plugin that owns the switch (Thigh Compressor -> its UI skin)
+			public string ActiveGuid, ActiveSection = "General", ActiveKey = "Active";
+			public ConfigEntry<bool> Show, Collapse, ActiveEntry;
+			public bool FakeActive = true;
 			public BaseUnityPlugin Owner;
 			public FieldInfo VisibleField;
 			public float NextResolve;
@@ -30,6 +34,16 @@ namespace ZeroT.HudDock
 
 			public bool Found { get { return Fake || Show != null || VisibleField != null; } }
 			public bool CanCollapse { get { return Fake || Collapse != null; } }
+			public bool CanActive { get { return Fake || ActiveEntry != null || Owner != null; } }
+			public bool IsActive
+			{
+				get
+				{
+					if (Fake) return FakeActive;
+					if (ActiveEntry != null) return ActiveEntry.Value;
+					return Owner != null && Owner.enabled;
+				}
+			}
 			public bool Visible
 			{
 				get
@@ -52,16 +66,19 @@ namespace ZeroT.HudDock
 
 		private readonly List<Target> _targets = new List<Target>();
 
+		private static Target Native(Target t, string key) { t.ActiveKey = key; return t; }
+		private static Target Native(Target t, string guid, string section, string key) { t.ActiveGuid = guid; t.ActiveSection = section; t.ActiveKey = key; return t; }
+
 		private void BuildTargets()
 		{
 			_targets.Clear();
 			_targets.Add(T("Scene Performance", "com.zerot.sceneperformance.standalone", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("SmartWardrobe", "bplus.smartwardrobe.standalone", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("Anus Physics", "charlestone.anusphysicscontrol.standalone", "Window", "Visible", "Window", "Collapsed"));
-			_targets.Add(T("CounterThrust", "hasno.counterthrust.standalone", "GUI", "VisibleLowImpact", "GUI", "Collapsed"));
-			_targets.Add(T("Penis Path Alignment", "helicalpink.penispalignment.standalone", "GUI", "Visible", "GUI", "Collapsed"));
+			_targets.Add(Native(T("CounterThrust", "hasno.counterthrust.standalone", "GUI", "VisibleLowImpact", "GUI", "Collapsed"), "Enabled"));
+			_targets.Add(Native(T("Penis Path Alignment", "helicalpink.penispalignment.standalone", "GUI", "Visible", "GUI", "Collapsed"), "Enabled"));
 			_targets.Add(T("Move Controls", "ky1001.movecontrolstobody.standalone", "Window", "Show", "Window", "Collapsed"));
-			_targets.Add(T("Thigh Compressor", "com.particlepinnacle.thighcompressorandvibrations", "Touch Filters", "ShowControlWindow", "Touch Filters", "ControlWindowCollapsed"));
+			_targets.Add(Native(T("Thigh Compressor", "com.particlepinnacle.thighcompressorandvibrations", "Touch Filters", "ShowControlWindow", "Touch Filters", "ControlWindowCollapsed"), "zerot.particlepinnacle.uiskin", "General", "Active"));
 			Target pc = T("Penetration Counter", "com.14mhz.penetrationcounter.bepinex", "Desktop GUI", "ShowOnStart", "Desktop GUI", "Collapsed");
 			pc.Field = "guiVisible";   // its window is a private flag (F-key toggled); ShowOnStart only decides the state at startup
 			_targets.Add(pc);
@@ -74,7 +91,7 @@ namespace ZeroT.HudDock
 			_targets.Add(T("XRay + Slap", "zerot.xrayslapstandalone", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("Deeper Plugin", "com.zerot.deeperplugin.standalone", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("Detached UI Panel", "zero.vam.detached-ui-panel", "Window", "Show", "Window", "Collapsed"));
-			_targets.Add(T("Orgasm Suite", "com.zerot.orgasmsuite", "Window", "Show", "Window", "Collapsed"));
+			_targets.Add(Native(T("Orgasm Suite", "com.zerot.orgasmsuite", "Window", "Show", "Window", "Collapsed"), "com.zerot.orgasmsuite", "Suite", "Active"));
 			_targets.Add(T("VPB Random Look", "com.zerot.vpbrandomlook", "Window", "Show", "Window", "Collapsed"));
 			// more of your own: 'Label|plugin guid|show section|show key|collapsed section|collapsed key' separated by ;
 			string extra = _extra == null ? "" : _extra.Value;
@@ -96,7 +113,7 @@ namespace ZeroT.HudDock
 					string[] f = parts[i].Split(':');
 					if (f.Length < 2 || f[0].Trim().Length == 0) continue;
 					Target t = T(f[0].Trim(), "", "", "", "", "");
-					t.Fake = true; t.FakeVisible = f[1].Trim() == "1"; t.FakeCollapsed = f.Length > 2 && f[2].Trim() == "1";
+					t.Fake = true; t.FakeVisible = f[1].Trim() == "1"; t.FakeCollapsed = f.Length > 2 && f[2].Trim() == "1"; t.FakeActive = f.Length <= 3 || f[3].Trim() == "1";
 					_targets.Add(t);
 				}
 			}
@@ -105,7 +122,7 @@ namespace ZeroT.HudDock
 		// find the other plugin and its config entries (it may load after this one, so unfound rows are retried)
 		private void Resolve(Target t)
 		{
-			if (t.Fake || t.Found && (t.Collapse != null || t.CollapseKey.Length == 0)) return;
+			if (t.Fake || t.Found && (t.Collapse != null || t.CollapseKey.Length == 0) && t.ActiveEntry != null) return;
 			float now = Time.realtimeSinceStartup;
 			if (now < t.NextResolve) return;
 			t.NextResolve = now + 3f;
@@ -122,6 +139,14 @@ namespace ZeroT.HudDock
 					if (t.VisibleField == null && cfg.TryGetEntry<bool>(t.ShowSection, t.ShowKey, out e)) t.Show = e;
 				}
 				if (t.Collapse == null && t.CollapseKey.Length > 0 && cfg.TryGetEntry<bool>(t.CollapseSection, t.CollapseKey, out e)) t.Collapse = e;
+				if (t.ActiveEntry == null)
+				{
+					BaseUnityPlugin owner = t.Owner;
+					PluginInfo ainfo;
+					if (!string.IsNullOrEmpty(t.ActiveGuid) && Chainloader.PluginInfos.TryGetValue(t.ActiveGuid, out ainfo) && ainfo != null && ainfo.Instance != null) owner = ainfo.Instance;
+					else if (!string.IsNullOrEmpty(t.ActiveGuid) && t.ActiveGuid != t.Guid) owner = null;
+					if (owner != null && owner.Config.TryGetEntry<bool>(t.ActiveSection, t.ActiveKey, out e)) t.ActiveEntry = e;
+				}
 			}
 			catch (Exception ex) { Logger.LogWarning("HUD Dock: " + t.Label + ": " + ex.Message); }
 		}
@@ -140,6 +165,17 @@ namespace ZeroT.HudDock
 				else if (t.Show != null) t.Show.Value = v;
 			}
 			catch (Exception ex) { Logger.LogWarning("HUD Dock: could not switch " + t.Label + ": " + ex.Message); }
+		}
+
+		private void SetActive(Target t, bool v)
+		{
+			try
+			{
+				if (t.Fake) { t.FakeActive = v; return; }
+				if (t.ActiveEntry != null) t.ActiveEntry.Value = v;
+				else if (t.Owner != null) t.Owner.enabled = v;
+			}
+			catch (Exception ex) { Logger.LogWarning("HUD Dock: could not switch " + t.Label + " on / off: " + ex.Message); }
 		}
 
 		private void SetCollapsed(Target t, bool v)
@@ -374,13 +410,22 @@ namespace ZeroT.HudDock
 					Fx.Text(new Rect(x + w - barW - 44f * s, ry, 42f * s, rh), "N/A", small, TextAnchor.MiddleRight, Fx.Faint, false);
 					continue;
 				}
-				float tw = w - barW - (t.CanCollapse ? cw + gap : 0f);
+				float aw = t.CanActive ? 34f * s : 0f;
+				float tw = w - barW - (t.CanCollapse ? cw + gap : 0f) - (aw > 0f ? aw + gap : 0f);
 				if (Fx.Toggle(new Rect(x, ry, tw, rh), t.Label, vis, Fx.Lite, s, false)) { SetVisible(t, !vis); if (!vis) { _hidden = false; _hiddenCfg.Value = false; } }
+				float cx = x + tw + gap;
+				if (aw > 0f)
+				{
+					// the plugin's own on / off ("Active" / "Enabled"): lit = running
+					bool on = t.IsActive;
+					if (Fx.Button(new Rect(cx, ry + 2f * s, aw, rh - 4f * s), on ? "On" : "Off", Fx.Lite, on, s, false)) SetActive(t, !on);
+					cx += aw + gap;
+				}
 				if (t.CanCollapse)
 				{
 					bool was = GUI.enabled;
 					GUI.enabled = was && vis;
-					if (Fx.Mini(new Rect(x + tw + gap, ry + 3f * s, cw, rh - 6f * s), t.Collapsed ? "+" : "-", s)) SetCollapsed(t, !t.Collapsed);
+					if (Fx.Mini(new Rect(cx, ry + 3f * s, cw, rh - 6f * s), t.Collapsed ? "+" : "-", s)) SetCollapsed(t, !t.Collapsed);
 					GUI.enabled = was;
 				}
 			}

@@ -220,6 +220,7 @@ public static class SuiteScenario
 		var woman = Person(h, "Woman", false);
 		var man = Person(h, "Man", true);
 		// the real defaults (15 s settle, 6 s quiet) would only slow the test down; the gating itself is exercised below
+		BepInEx.Configuration.ConfigFile.Overrides["Suite.AutoAddOnLoad"] = "true";   // the default is off; the rest of the run is about the suite doing its work
 		BepInEx.Configuration.ConfigFile.Overrides["Suite.SettleSeconds"] = "1";
 		BepInEx.Configuration.ConfigFile.Overrides["Suite.QuietSeconds"] = "1";
 		h.Start();
@@ -566,6 +567,25 @@ public static class SuiteScenario
 		h.Check(Has(h.Sc.GetAtomByUid("CoreControl"), "ZajeShuffle/ZeroT.OrgasmSuite.ZajeShuffle.dll"), "...and ZajeShuffle on the new CoreControl");
 		string people = File.ReadAllText(Path.Combine(game, "Saves", "PluginData", "ZeroT", "OrgasmSuite", "people.tsv"));
 		h.Check(people.Contains("Woman\t1\tBodyLanguage") && people.Contains("Man\t1\tLite"), "people.tsv holds the choices");
+
+		// ---- 11b. "Auto-add on scene load" off: a loaded scene is left alone until a Person is added by hand
+		h.Set("Suite", "AutoAddOnLoad", "false");
+		h.Load(() =>
+		{
+			Core(h);
+			Person(h, "Woman", false);
+			Person(h, "Man", true);
+		});
+		St(h, 30f);
+		var womanH = h.Sc.GetAtomByUid("Woman"); var manH = h.Sc.GetAtomByUid("Man");
+		h.Check(SlotUrls(womanH).Count == 0 && SlotUrls(manH).Count == 0 && SlotUrls(h.Sc.GetAtomByUid("CoreControl")).Count == 0, "auto-add off: after a scene load nothing is attached to anybody");
+		h.Plugin.GetType().GetMethod("Release", All).Invoke(h.Plugin, new object[] { "Woman", true });
+		St(h, 20f);
+		h.Check(Has(womanH, "FluidBridge/ZeroT.OrgasmSuite.FluidBridge.dll") && SlotUrls(manH).Count == 0, "'Add to this Person' adds the suite to Woman only, Man stays untouched");
+		h.Set("Suite", "AutoAddOnLoad", "true");
+		h.Plugin.GetType().GetMethod("SetAutoAddOnLoad", All).Invoke(h.Plugin, new object[] { true });
+		St(h, 24f);
+		h.Check(Has(manH, "BodyLanguage_Lite/ZeroT.OrgasmSuite.BodyLanguageLite.dll"), "switching auto-add on brings the waiting Person in");
 
 		// ---- 12. the master switch / auto attach off
 		if (Environment.GetEnvironmentVariable("SUITE_DEBUG") != null) Console.WriteLine("  DEBUG stage 12 errors=" + Sim.Errors.Count);
