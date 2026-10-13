@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Reflection;
-using System.Text;
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
@@ -21,11 +19,6 @@ namespace ZeroT.ControllersAppearanceStandalone
 	//  - the lines are drawn from three batched meshes (one per colour) instead of one mesh and one draw call per line, and the
 	//    list of controllers is not rebuilt every frame
 	// If Datel's own plugin is loaded in the session this one steps aside (two of them would draw every line twice).
-	//
-	// Icons: the assetbundle inside this DLL is the fallback. With Icons.Source = Auto the plugin first looks for the newest Datel.ControllersAppearance
-	// package and reads the bundle out of it - an enabled .var, or an archive that is switched off (.DISABLED / .var.disabled): a disabled package is
-	// still a zip, so its bytes are read directly, nothing is registered or enabled. When VPB is loaded its package index finds the archive (it knows
-	// every .DISABLED one); without VPB the AddonPackages folders are scanned for it.
 	[BepInPlugin("com.zerot.controllersappearance", "ControllersAppearance Standalone", "1.0.0")]
 	public sealed class ControllersAppearanceStandalone : BaseUnityPlugin
 	{
@@ -34,7 +27,6 @@ namespace ZeroT.ControllersAppearanceStandalone
 		private ConfigEntry<bool> cfgActive;
 		private ConfigEntry<float> cfgIconScale, cfgCubeScale, cfgSelectedScale;
 		private ConfigEntry<bool> cfgIcons;
-		private ConfigEntry<string> cfgIconSource, cfgIconPackage, cfgIconEntry;
 		private ConfigEntry<bool> cfgLines, cfgByGender;
 		private ConfigEntry<float> cfgAlpha;
 		private ConfigEntry<string> cfgFemale, cfgMale, cfgOther;
@@ -88,9 +80,6 @@ namespace ZeroT.ControllersAppearanceStandalone
 			cfgCubeScale = Config.Bind<float>("Scale", "CubeScale", 0.6f, "Controllers without an icon, like a person's spine or elbow (0.1 - 2).");
 			cfgSelectedScale = Config.Bind<float>("Scale", "SelectedScale", 0.5f, "The white/blue mesh of the selected controller (0.1 - 2).");
 			cfgIcons = Config.Bind<bool>("Icons", "UseCustomIcons", true, "Replace the controller meshes with the plugin's icons.");
-			cfgIconSource = Config.Bind<string>("Icons", "Source", "Auto", "Where the icon assetbundle comes from. Auto: the newest package of 'Package' below (enabled .var, or switched off: .DISABLED / .var.disabled; found through VPB's index when VPB is loaded, else by scanning AddonPackages), the copy inside this DLL when there is none. Embedded: always the copy inside this DLL.");
-			cfgIconPackage = Config.Bind<string>("Icons", "Package", "Datel.ControllersAppearance", "Package group (Creator.Package) that carries the icon assetbundle.");
-			cfgIconEntry = Config.Bind<string>("Icons", "BundleEntry", "Custom/Scripts/Datel/ControllersAppearance.assetbundle", "Path of the assetbundle inside that package.");
 			cfgLines = Config.Bind<bool>("Lines", "Enabled", true, "Draw a line from each controller to the rigidbody it belongs to.");
 			cfgAlpha = Config.Bind<float>("Lines", "Alpha", 0.7f, "Line opacity, 0 - 1. 0 skips drawing.");
 			cfgByGender = Config.Bind<bool>("Lines", "ColorByGender", true, "Female persons pink, male persons blue. Off: every line uses OtherColor.");
@@ -109,17 +98,6 @@ namespace ZeroT.ControllersAppearanceStandalone
 			}
 			else if (c == cfgIcons)
 			{
-				dirtyIcons = true;
-			}
-			else if (c == cfgIconSource || c == cfgIconPackage || c == cfgIconEntry)
-			{
-				// another source: drop the loaded bundle, Update loads it again
-				if (bundle != null)
-				{
-					bundle.Unload(false);
-					bundle = null;
-				}
-				icons = null;
 				dirtyIcons = true;
 			}
 			else if (c == cfgFemale || c == cfgMale || c == cfgOther || c == cfgAlpha || c == cfgByGender)
@@ -370,46 +348,25 @@ namespace ZeroT.ControllersAppearanceStandalone
 			icons = new Dictionary<string, Mesh>();
 			try
 			{
-				bool embeddedOnly = string.Equals(cfgIconSource.Value, "Embedded", StringComparison.OrdinalIgnoreCase);
-				if (!embeddedOnly)
+				using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("ControllersAppearance.assetbundle"))
 				{
-					string source;
-					byte[] fromPackage = PackageIcons.Read(cfgIconPackage.Value, cfgIconEntry.Value, out source);
-					if (fromPackage != null)
+					if (s == null)
 					{
-						bundle = AssetBundle.LoadFromMemory(fromPackage);
-						if (bundle == null)
-						{
-							Logger.LogWarning("The icon assetbundle in " + source + " could not be opened; using the one inside this DLL.");
-						}
-						else
-						{
-							Logger.LogInfo("Icon assetbundle read from " + source);
-						}
+						Logger.LogWarning("Icon assetbundle is missing from the DLL; custom icons are off.");
+						return;
 					}
-				}
-				if (bundle == null)
-				{
-					using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("ControllersAppearance.assetbundle"))
+					byte[] data = new byte[s.Length];
+					int read = 0;
+					while (read < data.Length)
 					{
-						if (s == null)
+						int n = s.Read(data, read, data.Length - read);
+						if (n <= 0)
 						{
-							Logger.LogWarning("Icon assetbundle is missing from the DLL; custom icons are off.");
-							return;
+							break;
 						}
-						byte[] data = new byte[s.Length];
-						int read = 0;
-						while (read < data.Length)
-						{
-							int n = s.Read(data, read, data.Length - read);
-							if (n <= 0)
-							{
-								break;
-							}
-							read += n;
-						}
-						bundle = AssetBundle.LoadFromMemory(data);
+						read += n;
 					}
+					bundle = AssetBundle.LoadFromMemory(data);
 				}
 				if (bundle == null)
 				{
@@ -426,303 +383,6 @@ namespace ZeroT.ControllersAppearanceStandalone
 			catch (Exception e)
 			{
 				Logger.LogWarning("Loading icons failed: " + e.Message);
-			}
-		}
-
-		// ------------------------------------------------------------------ the icon bundle out of a package (enabled or switched off)
-		private static class PackageIcons
-		{
-			private static readonly string[] Extensions = { ".var", ".DISABLED", ".var.disabled", ".disabled" };
-
-			// the bytes of 'entry' from the newest 'group' package, or null; 'source' names where they came from
-			internal static byte[] Read(string group, string entry, out string source)
-			{
-				source = null;
-				if (string.IsNullOrEmpty(group) || string.IsNullOrEmpty(entry))
-				{
-					return null;
-				}
-				try
-				{
-					string archive = FromVpbIndex(group);
-					string how = "VPB's index";
-					if (archive == null)
-					{
-						archive = FromScan(group);
-						how = "AddonPackages";
-					}
-					if (archive == null)
-					{
-						return null;
-					}
-					byte[] data = ReadZipEntry(archive, entry);
-					if (data == null)
-					{
-						return null;
-					}
-					source = archive + " (" + how + ")";
-					return data;
-				}
-				catch
-				{
-					return null;
-				}
-			}
-
-			private static Type VpbDatabase()
-			{
-				foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
-				{
-					try
-					{
-						Type t = a.GetType("VPB.VpbLocalDatabase", false);
-						if (t != null)
-						{
-							return t;
-						}
-					}
-					catch
-					{
-					}
-				}
-				return null;
-			}
-
-			private static string Rooted(string path)
-			{
-				if (string.IsNullOrEmpty(path))
-				{
-					return null;
-				}
-				string full = Path.IsPathRooted(path) ? path : Path.Combine(Paths.GameRootPath, path);
-				return File.Exists(full) ? full : null;
-			}
-
-			// VPB keeps a database of every package on disk (.var and .DISABLED); ask it for the latest uid of the group, then for that uid's file
-			private static string FromVpbIndex(string group)
-			{
-				try
-				{
-					Type db = VpbDatabase();
-					if (db == null)
-					{
-						return null;
-					}
-					BindingFlags all = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-					MethodInfo latest = db.GetMethod("TryResolveLatestUidFromIndex", all);
-					MethodInfo path = db.GetMethod("TryResolveIndexedVarPathForUid", all);
-					if (latest == null || path == null)
-					{
-						return null;
-					}
-					object[] a = new object[] { group, null };
-					if (!(bool)latest.Invoke(null, a) || string.IsNullOrEmpty(a[1] as string))
-					{
-						return null;
-					}
-					object[] b = new object[] { (string)a[1], null };
-					if (!(bool)path.Invoke(null, b))
-					{
-						return null;
-					}
-					return Rooted(b[1] as string);
-				}
-				catch
-				{
-					return null;
-				}
-			}
-
-			// no VPB (or its index is not ready): the package files by name, newest version wins, an enabled .var before a switched-off one
-			private static string FromScan(string group)
-			{
-				string best = null;
-				int bestVersion = -1;
-				bool bestEnabled = false;
-				string[] roots = { "AddonPackages", "AllPackages" };
-				for (int r = 0; r < roots.Length; r++)
-				{
-					string dir = Path.Combine(Paths.GameRootPath, roots[r]);
-					if (!Directory.Exists(dir))
-					{
-						continue;
-					}
-					string[] files;
-					try
-					{
-						files = Directory.GetFiles(dir, group + ".*", SearchOption.AllDirectories);
-					}
-					catch
-					{
-						continue;
-					}
-					for (int i = 0; i < files.Length; i++)
-					{
-						string name = Path.GetFileName(files[i]);
-						string rest = name.Substring(group.Length + 1);
-						int dot = rest.IndexOf('.');
-						int version;
-						if (dot <= 0 || !int.TryParse(rest.Substring(0, dot), out version))
-						{
-							continue;
-						}
-						string ext = rest.Substring(dot);
-						bool known = false, enabled = false;
-						for (int e = 0; e < Extensions.Length; e++)
-						{
-							if (string.Equals(ext, Extensions[e], StringComparison.OrdinalIgnoreCase))
-							{
-								known = true;
-								enabled = e == 0;
-							}
-						}
-						if (!known)
-						{
-							continue;
-						}
-						if (version > bestVersion || version == bestVersion && enabled && !bestEnabled)
-						{
-							best = files[i];
-							bestVersion = version;
-							bestEnabled = enabled;
-						}
-					}
-				}
-				return best;
-			}
-
-			private static uint U16(byte[] b, int o) { return (uint)(b[o] | b[o + 1] << 8); }
-			private static uint U32(byte[] b, int o) { return (uint)(b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24); }
-
-			private static byte[] ReadExactly(Stream s, long offset, int count)
-			{
-				s.Seek(offset, SeekOrigin.Begin);
-				byte[] buf = new byte[count];
-				int got = 0;
-				while (got < count)
-				{
-					int n = s.Read(buf, got, count - got);
-					if (n <= 0)
-					{
-						return null;
-					}
-					got += n;
-				}
-				return buf;
-			}
-
-			// one entry of a plain (non ZIP64) zip: end record -> central directory -> local header -> stored / deflated bytes
-			internal static byte[] ReadZipEntry(string archive, string entry)
-			{
-				using (FileStream fs = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-				{
-					long length = fs.Length;
-					int tail = (int)Math.Min(length, 65557L);
-					byte[] end = ReadExactly(fs, length - tail, tail);
-					if (end == null)
-					{
-						return null;
-					}
-					int eocd = -1;
-					for (int i = tail - 22; i >= 0; i--)
-					{
-						if (end[i] == 0x50 && end[i + 1] == 0x4b && end[i + 2] == 5 && end[i + 3] == 6)
-						{
-							eocd = i;
-							break;
-						}
-					}
-					if (eocd < 0)
-					{
-						return null;
-					}
-					uint count = U16(end, eocd + 10), cdSize = U32(end, eocd + 12), cdOffset = U32(end, eocd + 16);
-					if (count == 0xFFFF || cdSize == 0xFFFFFFFF || cdOffset == 0xFFFFFFFF)
-					{
-						return null;   // a ZIP64 end record: not worth a second reader for a 60 KB icon bundle (the per-entry ZIP64 fields, which VaM packages do carry, are handled below)
-					}
-					byte[] cd = ReadExactly(fs, cdOffset, (int)cdSize);
-					if (cd == null)
-					{
-						return null;
-					}
-					string want = entry.Replace('\\', '/');
-					int p = 0;
-					for (uint n = 0; n < count && p + 46 <= cd.Length; n++)
-					{
-						if (U32(cd, p) != 0x02014b50)
-						{
-							return null;
-						}
-						uint method = U16(cd, p + 10);
-						long csize = U32(cd, p + 20), usize = U32(cd, p + 24), local = U32(cd, p + 42);
-						int nameLen = (int)U16(cd, p + 28), extraLen = (int)U16(cd, p + 30), cmtLen = (int)U16(cd, p + 32);
-						string name = Encoding.UTF8.GetString(cd, p + 46, nameLen).Replace('\\', '/');
-						int extraAt = p + 46 + nameLen;
-						p += 46 + nameLen + extraLen + cmtLen;
-						if (!string.Equals(name, want, StringComparison.OrdinalIgnoreCase))
-						{
-							continue;
-						}
-						// VaM's packages carry a ZIP64 extra field on every entry (even tiny ones): the real sizes / offset sit there when the plain field says 0xFFFFFFFF
-						if (usize == 0xFFFFFFFFL || csize == 0xFFFFFFFFL || local == 0xFFFFFFFFL)
-						{
-							int e = extraAt, eEnd = extraAt + extraLen;
-							while (e + 4 <= eEnd)
-							{
-								int id = (int)U16(cd, e), size = (int)U16(cd, e + 2);
-								if (id == 1)
-								{
-									int q = e + 4;
-									if (usize == 0xFFFFFFFFL && q + 8 <= eEnd) { usize = BitConverter.ToInt64(cd, q); q += 8; }
-									if (csize == 0xFFFFFFFFL && q + 8 <= eEnd) { csize = BitConverter.ToInt64(cd, q); q += 8; }
-									if (local == 0xFFFFFFFFL && q + 8 <= eEnd) { local = BitConverter.ToInt64(cd, q); q += 8; }
-									break;
-								}
-								e += 4 + size;
-							}
-						}
-						if (csize < 0 || csize > 64 * 1024 * 1024 || usize < 0 || usize > 256 * 1024 * 1024 || local < 0)
-						{
-							return null;   // not an icon bundle sized thing
-						}
-						byte[] lh = ReadExactly(fs, local, 30);
-						if (lh == null || U32(lh, 0) != 0x04034b50)
-						{
-							return null;
-						}
-						long dataAt = local + 30 + U16(lh, 26) + U16(lh, 28);
-						byte[] packed = ReadExactly(fs, dataAt, (int)csize);
-						if (packed == null)
-						{
-							return null;
-						}
-						if (method == 0)
-						{
-							return packed;
-						}
-						if (method != 8)
-						{
-							return null;
-						}
-						byte[] data = new byte[(int)usize];
-						using (DeflateStream ds = new DeflateStream(new MemoryStream(packed), CompressionMode.Decompress))
-						{
-							int got = 0;
-							while (got < data.Length)
-							{
-								int r = ds.Read(data, got, data.Length - got);
-								if (r <= 0)
-								{
-									break;
-								}
-								got += r;
-							}
-							return got == data.Length ? data : null;
-						}
-					}
-				}
-				return null;
 			}
 		}
 
