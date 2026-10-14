@@ -1304,10 +1304,6 @@ public partial class GenerateDAZClothingSelectorUI : global::GenerateDAZDynamicS
 public partial class GenerateDAZHairSelectorUI : global::GenerateDAZDynamicSelectorUI {
   public GenerateDAZHairSelectorUI() {}
 }
-public partial class DAZCharacterRun : global::PhysicsSimulator {
-  public global::DAZMergedSkinV2 skin;
-  public DAZCharacterRun() {}
-}
 public partial class SliderControl : global::UnityEngine.MonoBehaviour {
   public bool clamp;
   public float defaultValue;
@@ -3138,7 +3134,6 @@ public partial class JSONStorableAction {
   public global::JSONStorable storable;
 }
 public partial class JSONStorableStringChooser {
-  public global::System.Collections.Generic.List<string> displayChoices { get; set; }
   public global::UIPopup popup { get; set; }
   public global::UIPopup popupAlt { get; set; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void RegisterPopup(global::UIPopup p, bool isAlt = default) { }
@@ -3160,6 +3155,9 @@ public abstract partial class JSONStorableParam {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
   public string altName;
   public global::JSONStorable.Type type;
+}
+public partial class DAZCharacterRun {
+  public global::DAZMergedSkinV2 skin;
 }
 namespace SimpleJSON {
 public abstract partial class JSONNode {

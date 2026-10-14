@@ -95,6 +95,7 @@ namespace UnityEngine
 	{
 		public float sx, sy, tx, ty;   // enough for 2D scale+translate (what IMGUI plugins use)
 		public static Matrix4x4 identity => new Matrix4x4 { sx = 1, sy = 1 };
+		public Matrix4x4 inverse => new Matrix4x4 { sx = sx == 0f ? 0f : 1f / sx, sy = sy == 0f ? 0f : 1f / sy, tx = sx == 0f ? 0f : -tx / sx, ty = sy == 0f ? 0f : -ty / sy };
 		public static Matrix4x4 Scale(Vector3 v) => new Matrix4x4 { sx = v.x, sy = v.y };
 		public static Matrix4x4 TRS(Vector3 t, Quaternion r, Vector3 s) => new Matrix4x4 { sx = s.x, sy = s.y, tx = t.x, ty = t.y };
 		public static Matrix4x4 operator *(Matrix4x4 a, Matrix4x4 b) => new Matrix4x4 { sx = a.sx * b.sx, sy = a.sy * b.sy, tx = a.sx * b.tx + a.tx, ty = a.sy * b.ty + a.ty };
@@ -372,6 +373,7 @@ namespace UnityEngine
 		public Color[] Px = new Color[] { new Color(1, 1, 1, 1) };
 		public Texture2D(int w, int h) { Init(w, h); }
 		public Texture2D(int w, int h, TextureFormat f, bool mip) { Init(w, h); }
+		public Texture2D(int w, int h, TextureFormat f, bool mip, bool linear) { Init(w, h); }
 		private void Init(int w, int h) { width = w; height = h; Px = new Color[Math.Max(1, w * h)]; for (int i = 0; i < Px.Length; i++) Px[i] = new Color(1, 1, 1, 1); }
 		public Color Pixel0 { get { return Px[0]; } set { Px[0] = value; } }
 		public static Texture2D blackTexture { get; } = new Texture2D(1, 1);

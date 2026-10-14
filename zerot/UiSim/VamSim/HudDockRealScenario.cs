@@ -33,6 +33,15 @@ public static class HudDockRealScenario
 		var loaded = new Dictionary<string, BaseUnityPlugin>();
 		var all = Directory.GetFiles(art, "*.dll").Where(d => !Path.GetFileName(d).StartsWith("Mono.") && !Path.GetFileName(d).Contains("HudDock")).ToArray();
 		foreach (var dll in all) { try { Program.Retarget(dll, h.Work); } catch (Exception) { } }   // sister assemblies (cores) resolve from the work folder
+		// the core / library assemblies the host plugins load next to themselves in a real install (VaM's folders, when this machine has them)
+		string vamRoot = Environment.GetEnvironmentVariable("VAM_DIR") ?? "T:/New folder";
+		foreach (var core in new[] { "BepInEx/plugins/New folder/Bplus.SmartWardrobeCore91.dll", "BepInEx/plugins/New folder/PenetrationCounter.dll", "BepInEx/plugins/HelicalPink.PenisPathAlignmentStandalone.dll",
+			"BepInEx/plugins/VPB.dll", "VaM_Data/Managed/ICSharpCode.SharpZipLib.dll" })
+		{
+			string cp = Path.Combine(vamRoot, core);
+			if (!File.Exists(cp) || File.Exists(Path.Combine(h.Work, Path.GetFileName(cp)))) continue;
+			try { Program.Retarget(cp, h.Work); } catch (Exception) { }
+		}
 		foreach (var dll in all)
 		{
 			if (Path.GetFileName(dll).Contains("HudDock") || Path.GetFileName(dll).StartsWith("Mono.")) continue;
@@ -177,8 +186,6 @@ public static class HudDockRealScenario
 			if (uguiTexts == 0) break;
 			if (!(bool)prop(o, "Found") || !(bool)prop(o, "CanActive")) continue;
 			if (label == "Orgasm Suite" || label == "VPB Random Look") { Console.WriteLine("  info    " + label + ": its window has no On / Off caption (nothing to compare)"); continue; }
-			if (label == "FastMode") { Console.WriteLine("  info    FastMode: its Update needs DAZCharacterRun.doUpdate, which the simulator does not have (not tested; it polls the setting in Update)"); continue; }
-			if (label == "SmartWardrobe" || label == "Penetration Counter") { Console.WriteLine("  info    " + label + ": its core assembly cannot be loaded in the simulator, so its window is not built here (not tested)"); continue; }
 			bool wasOn = (bool)prop(o, "IsActive");
 			var c0 = captionsNow();
 			dt.GetMethod("SetActive", All).Invoke(dock, new object[] { o, !wasOn });
@@ -193,8 +200,6 @@ public static class HudDockRealScenario
 			if (c0[0] + c0[1] == 0) { Console.WriteLine("  info    " + label + ": no On / Off caption found in the simulator"); continue; }
 			h.Check(follows && back, label + ": the plugin's own On / Off caption follows the dock (On/Off captions on screen " + c0[0] + "/" + c0[1] + " -> " + c1[0] + "/" + c1[1] + " -> " + c2[0] + "/" + c2[1] + ")");
 		}
-		// the real plugins whose sister assemblies VaM loads from embedded resources cannot run fully here: those errors are the simulator's, not the dock's
-		int sim = UnityEngine.Sim.Errors.RemoveAll(e => e.Contains("FileNotFoundException") && e.Contains("Could not load file or assembly"));
-		Console.WriteLine("  info    " + sim + " simulator-only load errors set aside (sister assemblies of SmartWardrobe, PPA, Penetration Counter, VPB Random Look)");
+		h.Check(UnityEngine.Sim.Errors.Count == 0, "the real plugins ran without a single error in the simulator (" + UnityEngine.Sim.Errors.Count + ")");
 	}
 }

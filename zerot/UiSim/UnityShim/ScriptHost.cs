@@ -460,3 +460,33 @@ namespace UnityEngine
 		}
 	}
 }
+
+namespace UnityEngine
+{
+	// a MeshFilter starts out with a Mesh (the stub's property is null: SexyFluids' renderer sets mesh.bounds straight away)
+	public sealed partial class MeshFilter
+	{
+		internal override void OnAttached() { if (mesh == null) mesh = new Mesh(); }
+	}
+}
+
+public static partial class SimWorld
+{
+	// the storables every VaM Person carries that BodyLanguage reads on Init
+	static partial void AddScriptStorables(Atom atom, GameObject go)
+	{
+		Action<string, JSONStorable> reg = (n, s) => { s.storeId = n; s.containingAtom = atom; atom.storables[n] = s; };
+		var aud = Child(go, "HeadAudioSource"); aud.AddComponent<UnityEngine.AudioSource>(); reg("HeadAudioSource", aud.AddComponent<AudioSourceControl>());
+		reg("EyelidControl", Child(go, "EyelidControl").AddComponent<DAZMeshEyelidControl>());
+		var jaw = Child(go, "JawControl").AddComponent<AdjustJoints>(); jaw.RegisterBool(new JSONStorableBool("driveXRotationFromAudioSource", false)); reg("JawControl", jaw);
+		var autoExp = Child(go, "AutoExpressions").AddComponent<SetDAZMorphControl>(); autoExp.enabledJSON = new JSONStorableBool("enabled", true); reg("AutoExpressions", autoExp);
+		reg("AutoJawMouthMorph", Child(go, "AutoJawMouthMorph").AddComponent<SetDAZMorphControl>());
+		reg("SpeechBubble", Child(go, "SpeechBubble").AddComponent<SpeechBubbleControl>());
+		reg("ThoughtBubble", Child(go, "ThoughtBubble").AddComponent<SpeechBubbleControl>());
+		reg("RightHandControl", Child(go, "RightHandControl").AddComponent<HandControl>());
+		reg("LeftHandControl", Child(go, "LeftHandControl").AddComponent<HandControl>());
+		reg("RightHandFingerControl", Child(go, "RightHandFingerControl").AddComponent<MeshVR.Hands.HandOutput>());
+		reg("LeftHandFingerControl", Child(go, "LeftHandFingerControl").AddComponent<MeshVR.Hands.HandOutput>());
+		reg("Eyes", Child(go, "Eyes").AddComponent<EyesControl>());
+	}
+}

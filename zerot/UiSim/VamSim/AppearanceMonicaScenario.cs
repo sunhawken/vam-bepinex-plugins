@@ -80,6 +80,7 @@ public static class AppearanceMonicaScenario
 		// VaM's view: installed .var packages are registered and their files answerable; a switched-off package answers only through VPB
 		MVR.FileManagementSecure.FileManagerSecure.SimReset();
 		MVR.FileManagement.FileManager.SimPackageUids.Clear();
+		MVR.FileManagement.FileManager.SimPackageUids.Add("Sim.Installed.1");   // the helper's package index is never empty on a real install, even when none of this scene's packages is installed
 		var offUids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		var asked = new List<string>();   // every uid:/entry the scene names that is really in its archive
 		foreach (var kv in archive)

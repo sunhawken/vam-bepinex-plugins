@@ -93,6 +93,7 @@ internal static class Program
 	private static int runCounter;
 	private static int Main(string[] args)
 	{
+		NreProbe.InstallFromEnvironment();
 		var scenarios = typeof(Program).Assembly.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
 			.Select(m => new { m, a = m.GetCustomAttribute<ScenarioAttribute>() }).Where(x => x.a != null).ToList();
 		if (args.Length == 0 || args[0] == "--list")

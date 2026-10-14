@@ -134,3 +134,6 @@ namespace UnityEngine
 		public void Normalize() { var n = normalized; x = n.x; y = n.y; z = n.z; }
 	}
 }
+
+// the one DAZCharacterRun member FastMode drives (the generated stub leaves it out)
+public partial class DAZCharacterRun : UnityEngine.MonoBehaviour { public bool doUpdate = true; }

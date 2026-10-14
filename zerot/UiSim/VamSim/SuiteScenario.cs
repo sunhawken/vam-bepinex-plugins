@@ -141,7 +141,7 @@ public static class SuiteScenario
 				catch (Exception ex)
 				{
 					string msg = type + " on " + mgr.containingAtom.uid + " Init: " + SceneHost.Where(ex);
-					if (SimLimited(set)) { simNotes.Add(msg); script.enabled = false; }   // frames of a half-initialised script would only repeat the same gap
+					if (SimLimited(set)) { simNotes.Add(msg); script.enabled = false; Sim.Routines.RemoveAll(r => r.it != null && r.it.GetType().Assembly == t.Assembly); }   // and the coroutines its half-built objects started (they were started on the SuperController)   // frames of a half-initialised script would only repeat the same gap
 					else loadErrors.Add(msg);
 				}
 				return script.gameObject;
@@ -616,7 +616,7 @@ public static class SuiteScenario
 		foreach (var e in limited) Sim.Errors.Remove(e);
 		foreach (var n in simNotes.Distinct().Take(6)) Console.WriteLine("  note   sim cannot run: " + n);
 		foreach (var n in limited.Select(x => x.Length > 160 ? x.Substring(0, 160) : x).Distinct().Take(6)) Console.WriteLine("  note   sim cannot run: " + n);
-		Console.WriteLine("  note   (SexyFluids and BodyLanguage were attached and detached for real; their own rendering / voice / pose code is not exercised by the simulator)");
+		Console.WriteLine("  note   (SexyFluids and BodyLanguage were attached and detached for real. Their Init gets as far as VaM's own UI prefabs (SexyFluids tabs) and BodyLanguage's expression data files; those need VaM's asset bundles, so their rendering / voice / pose code is not exercised by the simulator)");
 	}
 }
 

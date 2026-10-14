@@ -176,6 +176,9 @@ public partial class JSONStorableStringChooser : JSONStorableParam
 	public JSONStorableStringChooser(string paramName, List<string> options, string startingValue, string label) : this(paramName, options, startingValue, label, (SetStringCallback)null) { }
 	public JSONStorableStringChooser(string paramName, List<string> options, string startingValue, string label, SetStringCallback callback)
 	{ name = paramName; choices = options ?? new List<string>(); _val = startingValue; defaultVal = startingValue; this.label = label; setCallbackFunction = callback; }
+	public List<string> displayChoices { get; set; } = new List<string>();
+	public JSONStorableStringChooser(string paramName, List<string> options, List<string> displayOptions, string startingValue, string label, SetStringCallback callback)
+	{ name = paramName; choices = options ?? new List<string>(); displayChoices = displayOptions ?? new List<string>(); _val = startingValue; defaultVal = startingValue; this.label = label; setCallbackFunction = callback; }
 	public JSONStorableStringChooser(string paramName, List<string> options, string startingValue, string label, SetJSONStringCallback callback)
 	{ name = paramName; choices = options ?? new List<string>(); _val = startingValue; defaultVal = startingValue; this.label = label; setJSONCallbackFunction = callback; }
 	public string val
@@ -471,7 +474,7 @@ public partial class CollisionTrigger : MonoBehaviour { }
 
 // ---------------------------------------------------------------- scene building for scenarios
 
-public static class SimWorld
+public static partial class SimWorld
 {
 	public static readonly string[] Bodies =
 	{
@@ -502,7 +505,9 @@ public static class SimWorld
 		return sc;
 	}
 
-	private static GameObject Child(GameObject parent, string name)
+	// implemented in ScriptHost.cs (it needs the generated stub types, which do not exist in the first build pass)
+	static partial void AddScriptStorables(Atom atom, GameObject go);
+	internal static GameObject Child(GameObject parent, string name)
 	{
 		var go = new GameObject(name);
 		go.transform.SetParent(parent.transform, false);
@@ -545,6 +550,10 @@ public static class SimWorld
 			fc.followWhenOffRB.mass = kv.Value;
 			fc.storeId = kv.Key; atom.storables[kv.Key] = fc;   // VaM registers every controller as a storable under its own name
 			fc.RegisterFloat(new JSONStorableFloat("mass", kv.Value, (v) => { fc.followWhenOffRB.mass = v; }, 0.001f, 20f, false));
+			// the hold (spring / damper) parameters every VaM controller carries; ForceForge ramps the damper while it thrusts
+			foreach (var hp in new[] { "holdPositionSpring", "holdPositionDamper", "holdPositionMaxForce", "holdRotationSpring", "holdRotationDamper", "holdRotationMaxForce" })
+				fc.RegisterFloat(new JSONStorableFloat(hp, hp.EndsWith("Spring") ? 2000f : hp.EndsWith("Damper") ? 250f : 1000f, 0f, 100000f, false));
+
 			controllers.Add(fc);
 		}
 		atom.freeControllers = controllers.ToArray();
@@ -571,6 +580,14 @@ public static class SimWorld
 		foreach (var m in GenitalMorphs) AddMorph(geo, m, -1f, 3f);
 		for (int i = 0; i < extraMorphs; i++) AddMorph(geo, "Morph" + i, 0f, 1f);
 		atom.storables["geometry"] = geo;
+		// the "PhysicsModel" storable (SexyFluids looks for the Gen1 object below it)
+		var pmGo = Child(go, "PhysicsModel");
+		var pm = pmGo.AddComponent<JSONStorable>(); pm.storeId = "PhysicsModel"; pm.containingAtom = atom;
+		Child(pmGo, "Gen1");
+		atom.storables["PhysicsModel"] = pm;
+		AddScriptStorables(atom, go);   // the storables BodyLanguage reads on Init (ScriptHost.cs: they need the generated stub types)
+
+
 		// labia trigger
 		var trig = Child(go, "LabiaTrigger");
 		trig.AddComponent<CollisionTrigger>();
