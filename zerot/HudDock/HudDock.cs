@@ -378,6 +378,15 @@ namespace ZeroT.HudDock
 			float half = (w - gap) / 2f;
 			if (Fx.Button(new Rect(x, y, half, lh), _hidden ? "Show again" : "Hide all", Fx.Amber, _hidden, s)) { if (_hidden) ShowAgain(); else HideAll(); }
 			if (Fx.Button(new Rect(x + half + gap, y, half, lh), "All on", Fx.Lite, false, s)) AllOn();
+			y += lh + gap;
+
+			// ---- VPB's Close All / Create Gallery (same calls VPB Random Look makes); greyed out while VPB is not loaded
+			bool vpbUp = VpbUp();
+			bool wasEnabled = GUI.enabled;
+			GUI.enabled = wasEnabled && vpbUp;
+			if (Fx.Button(new Rect(x, y, half, lh), "Close All", Fx.Lite, false, s, false)) VpbCall("VPB.Gallery", "CloseAll", "Close All");
+			if (Fx.Button(new Rect(x + half + gap, y, half, lh), "Create Gallery", Fx.Lite, false, s, false)) VpbCall("VPB.VamHookPlugin", "OpenCreateGallery", "Create Gallery");
+			GUI.enabled = wasEnabled;
 			y += lh + 10f * s;
 
 			Fx.Section(new Rect(x, y, w, 16f * s), Caption(shown, found), s);
@@ -442,6 +451,48 @@ namespace ZeroT.HudDock
 			// ---- footer
 			if (_hotkeyText == null || _hotkeyFor != _hotkey.Value) { _hotkeyFor = _hotkey.Value; _hotkeyText = _hotkeyFor == KeyCode.None ? "" : _hotkeyFor + " shows / hides this window"; }
 			Fx.Text(new Rect(x, panel.yMax - footer - 2f * s, w - 14f * s, 18f * s), _hotkeyText, small, TextAnchor.MiddleLeft, Fx.Dim, false);
+		}
+
+		// ------------------------------------------------------------------ VPB gallery calls (by reflection: VPB is not referenced, so it may be absent)
+		private static object VpbSingleton(string typeName)
+		{
+			Type ty = null;
+			Assembly[] all = AppDomain.CurrentDomain.GetAssemblies();
+			for (int i = 0; i < all.Length && ty == null; i++)
+			{
+				try { ty = all[i].GetType(typeName, false); } catch { }
+			}
+			if (ty == null) return null;
+			BindingFlags f = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+			FieldInfo fi = ty.GetField("singleton", f);
+			if (fi != null) return fi.GetValue(null);
+			PropertyInfo pi = ty.GetProperty("singleton", f);
+			return pi != null ? pi.GetValue(null, null) : null;
+		}
+
+		private double _nextVpbProbe;
+		private bool _vpbUp;
+
+		private bool VpbUp()
+		{
+			double now = Time.realtimeSinceStartup;
+			if (now < _nextVpbProbe) return _vpbUp;
+			_nextVpbProbe = now + 1.0;
+			try { _vpbUp = VpbSingleton("VPB.Gallery") != null && VpbSingleton("VPB.VamHookPlugin") != null; } catch { _vpbUp = false; }
+			return _vpbUp;
+		}
+
+		private void VpbCall(string typeName, string method, string label)
+		{
+			try
+			{
+				object o = VpbSingleton(typeName);
+				if (o == null) { Logger.LogWarning("HUD Dock: " + label + ": VPB is not loaded."); return; }
+				MethodInfo m = o.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+				if (m == null) { Logger.LogWarning("HUD Dock: " + label + ": VPB has no " + method + "()."); return; }
+				m.Invoke(o, null);
+			}
+			catch (Exception ex) { Logger.LogWarning("HUD Dock: " + label + ": " + (ex.InnerException != null ? ex.InnerException.Message : ex.Message)); }
 		}
 
 		private void HandleDragResize(Rect panel, float s, bool collapsed)
