@@ -39,6 +39,7 @@ namespace ZeroT.ColliderFitHeadless
 		private ConfigEntry<float> cfgScan;
 		private ConfigEntry<float> cfgSettle;
 		private ConfigEntry<float> cfgQuiet;
+		private ConfigEntry<float> cfgRefit;
 		private ConfigEntry<bool> cfgLog;
 
 		internal readonly CeLink Ce = new CeLink();
@@ -74,6 +75,12 @@ namespace ZeroT.ColliderFitHeadless
 			get { return Mathf.Max(0.1f, cfgQuiet.Value); }
 		}
 
+		// 0 = only after a morph change; otherwise also refit every this many seconds (catches changes the morph check cannot see)
+		internal float RefitInterval
+		{
+			get { return Mathf.Max(0f, cfgRefit.Value); }
+		}
+
 		private bool On
 		{
 			get { return win == null || win.Active; }
@@ -105,6 +112,7 @@ namespace ZeroT.ColliderFitHeadless
 			cfgScan = Config.Bind<float>("Timing", "ScanInterval", 2f, new ConfigDescription("Seconds between scans for new or changed Person atoms.", new AcceptableValueRange<float>(0.25f, 30f)));
 			cfgSettle = Config.Bind<float>("Timing", "SettleSeconds", 2f, new ConfigDescription("Seconds to wait after a scene load, a new atom or a look change before the first fit (lets Collider Editor build its values first).", new AcceptableValueRange<float>(0.2f, 15f)));
 			cfgQuiet = Config.Bind<float>("Timing", "QuietSeconds", 0.4f, new ConfigDescription("Seconds the body morphs must stay still before the colliders are refitted.", new AcceptableValueRange<float>(0.1f, 5f)));
+			cfgRefit = Config.Bind<float>("Timing", "RefitIntervalSeconds", 3f, new ConfigDescription("Also refit all fitted colliders every this many seconds, even if no body morph changed (0 = only after a morph change).", new AcceptableValueRange<float>(0f, 120f)));
 			cfgLog = Config.Bind<bool>("General", "LogEvents", true, "Log when an atom's colliders are fitted or put back.");
 			cfgExcluded.SettingChanged += delegate
 			{

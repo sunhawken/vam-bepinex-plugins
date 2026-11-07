@@ -130,6 +130,19 @@ public static class ColliderFitScenario
 		SetMorph(w, 1f);
 		h.Step(1.5f);
 
+		// interval refit: the morph data changes without any appliedValue changing, so only the timer can notice
+		h.Set("Timing", "RefitIntervalSeconds", "1");
+		foreach (var d in w.morph.deltas) d.delta = d.delta * 2f;
+		h.Step(2.5f);
+		h.Near(w.cap.radius, 0.020f, "interval refit picks up a change no morph check can see (20 mm)", 0.0015f);
+		foreach (var d in w.morph.deltas) d.delta = d.delta * 0.5f;
+		h.Set("Timing", "RefitIntervalSeconds", "0");
+		h.Step(2.5f);
+		h.Near(w.cap.radius, 0.020f, "interval 0: no timed refit", 0.0015f);
+		h.Set("Timing", "RefitIntervalSeconds", "1");
+		h.Step(2.5f);
+		h.Near(w.cap.radius, 0.035f, "interval back on: fitted again (35 mm)", 0.0015f);
+
 		// margin
 		h.Set("Fit", "MarginMm", "2");
 		h.Step(1.5f);

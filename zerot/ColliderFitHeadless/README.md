@@ -42,7 +42,7 @@ The **HUD Dock** lists it as *ColliderFit* (show / collapse / On-Off through `Ge
 ## Config
 
 `Fit.MarginMm` (-10..10), `Targets.ExcludedAtoms`, `Targets.IncludeMales` (off: only the female body was tested by the original),
-`Targets.SkipAtomsWithColliderFitPlugin`, `Timing.ScanInterval / SettleSeconds / QuietSeconds`, `General.LogEvents`, `General.Active`.
+`Targets.SkipAtomsWithColliderFitPlugin`, `Timing.ScanInterval / SettleSeconds / QuietSeconds / RefitIntervalSeconds` (default 3 s: also refit on a timer, 0 = only after a morph change), `General.LogEvents`, `General.Active`.
 
 ## Limits
 

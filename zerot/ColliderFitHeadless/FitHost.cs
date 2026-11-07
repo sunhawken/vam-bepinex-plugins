@@ -46,6 +46,7 @@ namespace ZeroT.ColliderFitHeadless
 		private readonly List<bool> comAuto = new List<bool>();
 		private readonly List<bool> comFixed = new List<bool>();
 
+		private float nextRefit;
 		private float readyAt, dirtyFirst, dirtyLast, nextOwn, nextRead, nextSig, comUntil, nextCom;
 		private int sigN;
 		private double sigH;
@@ -206,6 +207,11 @@ namespace ZeroT.ColliderFitHeadless
 			{
 				dirty = false;
 				Refit();
+			}
+			float every = plugin.RefitInterval;
+			if (every > 0f && now >= nextRefit && !dirty)
+			{
+				Refit();      // sets the next time
 			}
 			if (now >= nextOwn)
 			{
@@ -376,6 +382,7 @@ namespace ZeroT.ColliderFitHeadless
 				return;
 			}
 			Stopwatch sw = Stopwatch.StartNew();
+			nextRefit = Time.realtimeSinceStartup + Mathf.Max(0.2f, plugin.RefitInterval);
 			mv.Rebuild();
 			Vector3[] V = mv.cur;
 			float margin = plugin.MarginMm * 0.001f;
