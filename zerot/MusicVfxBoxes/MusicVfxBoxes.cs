@@ -58,6 +58,23 @@ namespace ZeroT.MusicVfxBoxes
 		private Button bMusicToggle, bMusicSelect, bSlider, bMusic, bLight, bFly, bDeleteFly;
 		private bool busy;
 		private string message = "";
+
+		// the plugins on the four atoms: one row each, a window page at a time
+		private const int RowCount = 8;
+		private sealed class PluginRow
+		{
+			public JSONStorable Storable;
+			public string Label;
+			public string Kind;        // router / fly / other
+		}
+		private int viewAtom;          // 0 music, 1 slider, 2 light, 3 fly
+		private int page;
+		private List<PluginRow> rows = new List<PluginRow>();
+		private readonly Button[] rowMain = new Button[RowCount];
+		private readonly Button[] rowA = new Button[RowCount];
+		private readonly Button[] rowB = new Button[RowCount];
+		private Button bAtomPrev, bAtomNext, bAllOn, bAllOff, bPagePrev, bPageNext;
+		private Text atomLabel, pageLabel;
 		private float nextUi;
 
 		// installed packages (name -> newest version), refreshed now and then
@@ -82,7 +99,7 @@ namespace ZeroT.MusicVfxBoxes
 			fly = new Spec { Key = "fly", AtomType = "Empty", AtHead = true, Select = true, DeleteFirst = true, OpenUi = true };
 			fly.Name = Config.Bind<string>("Atoms", "Fly", "FlyObject", "Name of the Empty atom that carries AutoFlyObject.");
 			fly.Preset = Config.Bind<string>("Presets", "Fly", "", "Atom preset loaded into the new fly atom (UIAssist uses none).");
-			win = new RlUguiWindow(this, "Music and VFX", "Window", 40f, 60f, 320f, 270f, 260f, 230f, 700f, 600f);
+			win = new RlUguiWindow(this, "Music and VFX", "Window", 40f, 60f, 360f, 520f, 300f, 360f, 800f, 900f);
 		}
 
 		private IEnumerator Start()
@@ -625,8 +642,191 @@ namespace ZeroT.MusicVfxBoxes
 				int n = DeleteAtoms(fly);
 				Say(n > 0 ? "Deleted " + n + " fly object" + (n == 1 ? "." : "s.") : "No " + fly.Name.Value + " atom to delete.");
 			});
+			bAtomPrev = RlUguiWindow.NewButton("Atom prev", win.Body, "<", delegate { StepAtom(-1); });
+			bAtomNext = RlUguiWindow.NewButton("Atom next", win.Body, ">", delegate { StepAtom(1); });
+			atomLabel = RlUguiWindow.NewText("Atom", win.Body, "", TextAnchor.MiddleCenter);
+			bAllOn = RlUguiWindow.NewButton("All on", win.Body, "All on", delegate { SetAll(true); });
+			bAllOff = RlUguiWindow.NewButton("All off", win.Body, "All off", delegate { SetAll(false); });
+			for (int i = 0; i < RowCount; i++)
+			{
+				int k = i;
+				rowMain[i] = RlUguiWindow.NewButton("Plugin " + i, win.Body, "", delegate { Toggle(RowAt(k)); });
+				rowA[i] = RlUguiWindow.NewButton("Plugin " + i + " A", win.Body, "", delegate { Extra(RowAt(k), 0); });
+				rowB[i] = RlUguiWindow.NewButton("Plugin " + i + " B", win.Body, "", delegate { Extra(RowAt(k), 1); });
+			}
+			bPagePrev = RlUguiWindow.NewButton("Page prev", win.Body, "<", delegate { page = Mathf.Max(0, page - 1); Refresh(); });
+			bPageNext = RlUguiWindow.NewButton("Page next", win.Body, ">", delegate { page++; Refresh(); });
+			pageLabel = RlUguiWindow.NewText("Page", win.Body, "", TextAnchor.MiddleCenter);
 			win.AddResizeHandle();
 			win.Apply();
+			Refresh();
+		}
+
+		private Spec ViewSpec()
+		{
+			return viewAtom == 0 ? music : (viewAtom == 1 ? slider : (viewAtom == 2 ? light : fly));
+		}
+
+		private void StepAtom(int d)
+		{
+			viewAtom = ((viewAtom + d) % 4 + 4) % 4;
+			page = 0;
+			Refresh();
+		}
+
+		private PluginRow RowAt(int slot)
+		{
+			int i = page * RowCount + slot;
+			return i >= 0 && i < rows.Count ? rows[i] : null;
+		}
+
+		// ---------------------------------------------------------------- the plugins on an atom
+
+		private static string Short(string id)
+		{
+			int us = id.IndexOf('_');
+			string name = us >= 0 ? id.Substring(us + 1) : id;
+			int dot = name.LastIndexOf('.');
+			return dot >= 0 ? name.Substring(dot + 1) : name;
+		}
+
+		private static int PluginNumber(string id)
+		{
+			int us = id.IndexOf('_');
+			string n = id.Substring(7, (us > 7 ? us : id.Length) - 7);
+			int v;
+			return int.TryParse(n, out v) ? v : 0;
+		}
+
+		private List<PluginRow> RowsFor(Atom a)
+		{
+			List<PluginRow> list = new List<PluginRow>();
+			if (a == null)
+			{
+				return list;
+			}
+			List<string> ids = new List<string>();
+			foreach (string id in a.GetStorableIDs())
+			{
+				if (id.StartsWith("plugin#"))
+				{
+					ids.Add(id);
+				}
+			}
+			ids.Sort(delegate(string x, string y) { return PluginNumber(x).CompareTo(PluginNumber(y)); });
+			Dictionary<string, int> seen = new Dictionary<string, int>();
+			Dictionary<string, int> total = new Dictionary<string, int>();
+			for (int i = 0; i < ids.Count; i++)
+			{
+				string s = Short(ids[i]);
+				total[s] = total.ContainsKey(s) ? total[s] + 1 : 1;
+			}
+			for (int i = 0; i < ids.Count; i++)
+			{
+				JSONStorable js = a.GetStorableByID(ids[i]);
+				if (js == null)
+				{
+					continue;
+				}
+				string s = Short(ids[i]);
+				int n = seen.ContainsKey(s) ? seen[s] + 1 : 1;
+				seen[s] = n;
+				PluginRow r = new PluginRow();
+				r.Storable = js;
+				r.Label = total[s] > 1 ? s + " " + n : s;
+				r.Kind = ids[i].IndexOf(RouterType, StringComparison.OrdinalIgnoreCase) >= 0 ? "router" : (ids[i].IndexOf("AutoFlyObject", StringComparison.OrdinalIgnoreCase) >= 0 ? "fly" : "other");
+				list.Add(r);
+			}
+			return list;
+		}
+
+		private static bool IsOn(PluginRow r)
+		{
+			JSONStorableBool e = r.Storable.GetBoolJSONParam("enabled");
+			return e == null || e.val;
+		}
+
+		private void Toggle(PluginRow r)
+		{
+			if (r == null)
+			{
+				return;
+			}
+			try
+			{
+				JSONStorableBool e = r.Storable.GetBoolJSONParam("enabled");
+				if (e != null)
+				{
+					e.val = !e.val;
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.LogWarning("Could not switch " + r.Label + ": " + ex.Message);
+			}
+			Refresh();
+		}
+
+		private void SetAll(bool on)
+		{
+			Atom a = Find(ViewSpec());
+			List<PluginRow> all = RowsFor(a);
+			for (int i = 0; i < all.Count; i++)
+			{
+				try
+				{
+					JSONStorableBool e = all[i].Storable.GetBoolJSONParam("enabled");
+					if (e != null)
+					{
+						e.val = on;
+					}
+				}
+				catch (Exception ex)
+				{
+					Logger.LogWarning("Could not switch " + all[i].Label + ": " + ex.Message);
+				}
+			}
+			Say((on ? "All " : "All ") + (on ? "on" : "off") + ": " + (a != null ? a.uid : ViewSpec().Name.Value) + " (" + all.Count + " plugins).");
+		}
+
+		// the two small buttons next to a plugin: previous / next song for the AudioRouter, fly on-off / speed for AutoFlyObject
+		private void Extra(PluginRow r, int which)
+		{
+			if (r == null)
+			{
+				return;
+			}
+			try
+			{
+				if (r.Kind == "router")
+				{
+					r.Storable.CallAction(which == 0 ? "PlayPrevious [UIList]" : "PlayNext [UIList]");
+				}
+				else if (r.Kind == "fly")
+				{
+					if (which == 0)
+					{
+						JSONStorableBool mv = r.Storable.GetBoolJSONParam("Move Toggle");
+						if (mv != null)
+						{
+							mv.val = !mv.val;
+						}
+					}
+					else
+					{
+						JSONStorableFloat sp = r.Storable.GetFloatJSONParam("Fly Speed");
+						if (sp != null)
+						{
+							float v = sp.val + 0.5f;
+							sp.val = v > sp.max + 0.001f ? sp.min : v;
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.LogWarning("Plugin control failed: " + ex.Message);
+			}
 			Refresh();
 		}
 
@@ -651,8 +851,40 @@ namespace ZeroT.MusicVfxBoxes
 			}
 			RlUguiWindow.SetRect(bDeleteFly.GetComponent<RectTransform>(), m, y, inner, rowH);
 			y += rowH + 8f;
-			RlUguiWindow.SetRect(status.rectTransform, m, y, inner, Mathf.Max(30f, h - y - 22f));
+			RlUguiWindow.SetRect(status.rectTransform, m, y, inner, 50f);
+			y += 54f;
+			float b = 26f;
+			RlUguiWindow.SetRect(bAtomPrev.GetComponent<RectTransform>(), m, y, b, 24f);
+			RlUguiWindow.SetRect(atomLabel.rectTransform, m + b + 4f, y, inner - 2f * b - 8f - 140f, 24f);
+			RlUguiWindow.SetRect(bAtomNext.GetComponent<RectTransform>(), m + inner - b - 140f - 4f, y, b, 24f);
+			RlUguiWindow.SetRect(bAllOn.GetComponent<RectTransform>(), m + inner - 140f, y, 68f, 24f);
+			RlUguiWindow.SetRect(bAllOff.GetComponent<RectTransform>(), m + inner - 68f, y, 68f, 24f);
+			y += 30f;
+			float small = 38f, rh = 22f;
+			float mainW = inner - 2f * (small + 3f);
+			int fit = Mathf.Clamp(Mathf.FloorToInt((h - y - 50f) / (rh + 2f)), 1, RowCount);
+			for (int i = 0; i < RowCount; i++)
+			{
+				bool show = i < fit;
+				rowMain[i].gameObject.SetActive(show);
+				rowA[i].gameObject.SetActive(show);
+				rowB[i].gameObject.SetActive(show);
+				if (!show)
+				{
+					continue;
+				}
+				RlUguiWindow.SetRect(rowMain[i].GetComponent<RectTransform>(), m, y, mainW, rh);
+				RlUguiWindow.SetRect(rowA[i].GetComponent<RectTransform>(), m + mainW + 3f, y, small, rh);
+				RlUguiWindow.SetRect(rowB[i].GetComponent<RectTransform>(), m + mainW + small + 6f, y, small, rh);
+				y += rh + 2f;
+			}
+			visibleRows = fit;
+			RlUguiWindow.SetRect(bPagePrev.GetComponent<RectTransform>(), m, y + 2f, b, 22f);
+			RlUguiWindow.SetRect(pageLabel.rectTransform, m + b + 4f, y + 2f, inner - 2f * b - 8f, 22f);
+			RlUguiWindow.SetRect(bPageNext.GetComponent<RectTransform>(), m + inner - b, y + 2f, b, 22f);
 		}
+
+		private int visibleRows = RowCount;
 
 		private string Mark(Spec s)
 		{
@@ -688,6 +920,65 @@ namespace ZeroT.MusicVfxBoxes
 				sb.Append('\n').Append(message);
 			}
 			status.text = sb.ToString();
+
+			// the plugins of the atom in view
+			Spec vs = ViewSpec();
+			Atom va = Find(vs);
+			rows = RowsFor(va);
+			int per = Mathf.Max(1, visibleRows);
+			int pages = Mathf.Max(1, (rows.Count + per - 1) / per);
+			if (page >= pages)
+			{
+				page = pages - 1;
+			}
+			atomLabel.text = vs.Name.Value + (va == null ? " (none)" : " " + rows.Count);
+			pageLabel.text = rows.Count == 0 ? "" : (page + 1) + " / " + pages;
+			for (int i = 0; i < RowCount; i++)
+			{
+				int idx = page * per + i;
+				PluginRow r = idx < rows.Count && i < per ? rows[idx] : null;
+				SetRow(i, r);
+			}
+		}
+
+		private void SetRow(int i, PluginRow r)
+		{
+			bool show = r != null && i < visibleRows;
+			rowMain[i].gameObject.SetActive(show);
+			rowA[i].gameObject.SetActive(show);
+			rowB[i].gameObject.SetActive(show);
+			if (r == null)
+			{
+				RlUguiWindow.SetLabel(rowMain[i], "");
+				RlUguiWindow.SetLabel(rowA[i], "");
+				RlUguiWindow.SetLabel(rowB[i], "");
+				rowMain[i].interactable = false;
+				rowA[i].interactable = false;
+				rowB[i].interactable = false;
+				return;
+			}
+			rowMain[i].interactable = true;
+			RlUguiWindow.SetLabel(rowMain[i], r.Label + ":  " + (IsOn(r) ? "On" : "Off"));
+			bool router = r.Kind == "router", fly = r.Kind == "fly";
+			rowA[i].interactable = router || fly;
+			rowB[i].interactable = router || fly;
+			if (router)
+			{
+				RlUguiWindow.SetLabel(rowA[i], "Prev");
+				RlUguiWindow.SetLabel(rowB[i], "Next");
+			}
+			else if (fly)
+			{
+				JSONStorableBool mv = r.Storable.GetBoolJSONParam("Move Toggle");
+				JSONStorableFloat sp = r.Storable.GetFloatJSONParam("Fly Speed");
+				RlUguiWindow.SetLabel(rowA[i], mv != null && !mv.val ? "Still" : "Fly");
+				RlUguiWindow.SetLabel(rowB[i], sp != null ? sp.val.ToString("0.0") : "Spd");
+			}
+			else
+			{
+				RlUguiWindow.SetLabel(rowA[i], "");
+				RlUguiWindow.SetLabel(rowB[i], "");
+			}
 		}
 	}
 }

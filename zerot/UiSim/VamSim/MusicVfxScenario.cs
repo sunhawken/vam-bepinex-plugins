@@ -47,6 +47,22 @@ public static class MusicVfxScenario
 		r.RegisterAction(new JSONStorableAction("PlayRandom [UIList]", () => { if (en.val && mode.val == "PlayNow") { src.isPlaying = true; file.val = "Custom/Sounds/me/STAY BACK.mp3"; } }));
 		r.RegisterAction(new JSONStorableAction("Stop [UIList]", () => { src.isPlaying = false; }));
 		a.storables[r.storeId] = r;
+		r.RegisterAction(new JSONStorableAction("PlayPrevious [UIList]", () => Calls.Add("prev")));
+		r.RegisterAction(new JSONStorableAction("PlayNext [UIList]", () => Calls.Add("next")));
+		foreach (var id in new[] { "plugin#1_everlaster.AudioScrubber", "plugin#3_HAL9001.BeatIt", "plugin#2_HAL9001.BeatIt" })
+		{
+			var g = new GameObject(id); g.transform.SetParent(a.transform, false);
+			var s = g.AddComponent<JSONStorable>(); s.storeId = id; s.containingAtom = a; s.RegisterBool(new JSONStorableBool("enabled", true)); a.storables[id] = s;
+		}
+	}
+	private static readonly List<string> Calls = new List<string>();
+
+	private static JSONStorable FlyPlugin(Atom a)
+	{
+		var g = new GameObject("plugin#0_Feel.AutoFlyObject"); g.transform.SetParent(a.transform, false);
+		var s = g.AddComponent<JSONStorable>(); s.storeId = "plugin#0_Feel.AutoFlyObject"; s.containingAtom = a;
+		s.RegisterBool(new JSONStorableBool("enabled", true)); s.RegisterBool(new JSONStorableBool("Move Toggle", true)); s.RegisterFloat(new JSONStorableFloat("Fly Speed", 3f, 1f, 5f, true));
+		a.storables[s.storeId] = s; return s;
 	}
 
 	private static object Spec(BepInEx.BaseUnityPlugin p, string field) => p.GetType().GetField(field, All).GetValue(p);
@@ -131,6 +147,30 @@ public static class MusicVfxScenario
 		Spawn(p, "fly"); h.Step(2f);
 		h.Check(h.Sc.SimAddLog.SequenceEqual(new[] { "remove FlyObject", "add Empty FlyObject" }), "pressing it again deletes the old FlyObject first and spawns a fresh one under the same name (" + string.Join(", ", h.Sc.SimAddLog) + ")");
 		h.Check(at("FlyObject") != null && at("FlyObject") != firstFly, "...a new atom");
+
+		// individual plugin controls
+		music = at("_Music");   // the one respawned as partner above
+		var rowsM = (System.Collections.IList)p.GetType().GetMethod("RowsFor", All).Invoke(p, new object[] { music });
+		Func<object, string> label = r => (string)r.GetType().GetField("Label").GetValue(r);
+		h.Check(rowsM.Count == 4 && label(rowsM[0]) == "AudioRouter" && label(rowsM[1]) == "AudioScrubber" && label(rowsM[2]) == "BeatIt 1" && label(rowsM[3]) == "BeatIt 2", "the plugin list of _Music: AudioRouter, AudioScrubber, BeatIt 1, BeatIt 2 in plugin order (" + string.Join(", ", rowsM.Cast<object>().Select(label)) + ")");
+		var mt = p.GetType().GetMethod("Toggle", All, null, new[] { rowsM[2].GetType() }, null);
+		var beat1 = music.GetStorableByID("plugin#2_HAL9001.BeatIt");
+		mt.Invoke(p, new[] { rowsM[2] });
+		h.Check(!beat1.GetBoolJSONParam("enabled").val, "a plugin's On / Off button switches that plugin's own 'enabled'");
+		mt.Invoke(p, new[] { rowsM[2] });
+		h.Check(beat1.GetBoolJSONParam("enabled").val, "...and back");
+		p.GetType().GetMethod("SetAll", All).Invoke(p, new object[] { false });
+		h.Check(new[] { "plugin#0_VamEssentials.AudioRouter", "plugin#1_everlaster.AudioScrubber", "plugin#2_HAL9001.BeatIt", "plugin#3_HAL9001.BeatIt" }.All(id => !music.GetStorableByID(id).GetBoolJSONParam("enabled").val), "All off switches every plugin on the atom in view");
+		p.GetType().GetMethod("SetAll", All).Invoke(p, new object[] { true });
+		var ex = p.GetType().GetMethod("Extra", All);
+		Calls.Clear(); ex.Invoke(p, new[] { rowsM[0], (object)0 }); ex.Invoke(p, new[] { rowsM[0], (object)1 });
+		h.Check(Calls.SequenceEqual(new[] { "prev", "next" }), "the AudioRouter row's Prev / Next play the previous / next song");
+		var flyAtom = at("FlyObject"); var fp = FlyPlugin(flyAtom);
+		var rowsF = (System.Collections.IList)p.GetType().GetMethod("RowsFor", All).Invoke(p, new object[] { flyAtom });
+		ex.Invoke(p, new[] { rowsF[0], (object)0 });
+		h.Check(!fp.GetBoolJSONParam("Move Toggle").val, "the AutoFlyObject row's first button switches Move Toggle");
+		ex.Invoke(p, new[] { rowsF[0], (object)1 });
+		h.Near(fp.GetFloatJSONParam("Fly Speed").val, 3.5f, "...and the second raises Fly Speed by 0.5");
 
 		// Delete Fly Objects
 		h.Check(Delete(p, "fly") == 1 && at("FlyObject") == null, "Delete Fly Objects removes FlyObject");
