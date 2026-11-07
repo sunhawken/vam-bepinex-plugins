@@ -234,6 +234,7 @@ public partial class JSONStorable : MonoBehaviour
 	public JSONStorableAction GetAction(string n) { JSONStorableAction p; return actions.TryGetValue(n, out p) ? p : null; }
 	public List<string> GetFloatParamNames() => new List<string>(floats.Keys);
 	public List<string> GetBoolParamNames() => new List<string>(bools.Keys);
+	public List<string> GetActionNames() => new List<string>(actions.Keys);
 	public List<string> GetStringParamNames() => new List<string>(strings.Keys);
 	public List<string> GetStringChooserParamNames() => new List<string>(choosers.Keys);
 	public virtual void SetFloatParamValue(string n, float v) { var p = GetFloatJSONParam(n); if (p != null) p.val = v; }

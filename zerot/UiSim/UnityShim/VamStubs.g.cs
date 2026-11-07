@@ -2978,7 +2978,6 @@ public partial class JSONStorable {
   public bool mergeRestore { get; set; }
   public bool physicalLocked { get; set; }
   public string subScenePrefix { get; set; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetActionNames() { return new global::System.Collections.Generic.List<string>(); }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<string> GetAllParamAndActionNames() { return new global::System.Collections.Generic.List<string>(); }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::JSONStorableActionAudioClip GetAudioClipAction(string name) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool GetBoolParamValue(string param) { return default; }

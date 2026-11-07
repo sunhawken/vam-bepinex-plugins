@@ -73,6 +73,18 @@ namespace ZeroT.MusicVfxBoxes
 		private readonly Button[] rowMain = new Button[RowCount];
 		private readonly Button[] rowA = new Button[RowCount];
 		private readonly Button[] rowB = new Button[RowCount];
+		private readonly Button[] rowC = new Button[RowCount];
+		private readonly Button[] rowD = new Button[RowCount];
+		private Button bPagePrev5, bPageNext5;
+
+		// detail view: every parameter of one plugin
+		private sealed class ParamRow
+		{
+			public string Name;
+			public string Kind;        // bool / float / choice / action / text
+		}
+		private PluginRow detailRow;
+		private List<ParamRow> paramRows = new List<ParamRow>();
 		private Button bAtomPrev, bAtomNext, bAllOn, bAllOff, bPagePrev, bPageNext;
 		private Text atomLabel, pageLabel;
 		private float nextUi;
@@ -645,17 +657,21 @@ namespace ZeroT.MusicVfxBoxes
 			bAtomPrev = RlUguiWindow.NewButton("Atom prev", win.Body, "<", delegate { StepAtom(-1); });
 			bAtomNext = RlUguiWindow.NewButton("Atom next", win.Body, ">", delegate { StepAtom(1); });
 			atomLabel = RlUguiWindow.NewText("Atom", win.Body, "", TextAnchor.MiddleCenter);
-			bAllOn = RlUguiWindow.NewButton("All on", win.Body, "All on", delegate { SetAll(true); });
+			bAllOn = RlUguiWindow.NewButton("All on", win.Body, "All on", delegate { if (detailRow != null) { detailRow = null; page = 0; Refresh(); } else { SetAll(true); } });
 			bAllOff = RlUguiWindow.NewButton("All off", win.Body, "All off", delegate { SetAll(false); });
 			for (int i = 0; i < RowCount; i++)
 			{
 				int k = i;
-				rowMain[i] = RlUguiWindow.NewButton("Plugin " + i, win.Body, "", delegate { Toggle(RowAt(k)); });
-				rowA[i] = RlUguiWindow.NewButton("Plugin " + i + " A", win.Body, "", delegate { Extra(RowAt(k), 0); });
-				rowB[i] = RlUguiWindow.NewButton("Plugin " + i + " B", win.Body, "", delegate { Extra(RowAt(k), 1); });
+				rowMain[i] = RlUguiWindow.NewButton("Plugin " + i, win.Body, "", delegate { CellMain(k); });
+				rowA[i] = RlUguiWindow.NewButton("Plugin " + i + " A", win.Body, "", delegate { Cell(k, 0); });
+				rowB[i] = RlUguiWindow.NewButton("Plugin " + i + " B", win.Body, "", delegate { Cell(k, 1); });
+				rowC[i] = RlUguiWindow.NewButton("Plugin " + i + " C", win.Body, "", delegate { Cell(k, 2); });
+				rowD[i] = RlUguiWindow.NewButton("Plugin " + i + " D", win.Body, "", delegate { Cell(k, 3); });
 			}
 			bPagePrev = RlUguiWindow.NewButton("Page prev", win.Body, "<", delegate { page = Mathf.Max(0, page - 1); Refresh(); });
 			bPageNext = RlUguiWindow.NewButton("Page next", win.Body, ">", delegate { page++; Refresh(); });
+			bPagePrev5 = RlUguiWindow.NewButton("Page prev 5", win.Body, "<<", delegate { page = Mathf.Max(0, page - 5); Refresh(); });
+			bPageNext5 = RlUguiWindow.NewButton("Page next 5", win.Body, ">>", delegate { page += 5; Refresh(); });
 			pageLabel = RlUguiWindow.NewText("Page", win.Body, "", TextAnchor.MiddleCenter);
 			win.AddResizeHandle();
 			win.Apply();
@@ -669,8 +685,207 @@ namespace ZeroT.MusicVfxBoxes
 
 		private void StepAtom(int d)
 		{
+			if (detailRow != null)
+			{
+				StepPlugin(d);
+				return;
+			}
 			viewAtom = ((viewAtom + d) % 4 + 4) % 4;
 			page = 0;
+			Refresh();
+		}
+
+		private void StepPlugin(int d)
+		{
+			List<PluginRow> all = RowsFor(Find(ViewSpec()));
+			int at = -1;
+			for (int i = 0; i < all.Count; i++)
+			{
+				if (all[i].Storable == detailRow.Storable)
+				{
+					at = i;
+				}
+			}
+			if (all.Count == 0)
+			{
+				return;
+			}
+			detailRow = all[((at + d) % all.Count + all.Count) % all.Count];
+			page = 0;
+			Refresh();
+		}
+
+		private static List<ParamRow> ParamsOf(JSONStorable s)
+		{
+			List<ParamRow> list = new List<ParamRow>();
+			AddParams(list, s.GetBoolParamNames(), "bool");
+			AddParams(list, s.GetFloatParamNames(), "float");
+			AddParams(list, s.GetStringChooserParamNames(), "choice");
+			AddParams(list, s.GetActionNames(), "action");
+			List<string> texts = new List<string>();
+			foreach (string n in s.GetStringParamNames())
+			{
+				if (s.GetStringChooserJSONParam(n) == null && s.GetUrlJSONParam(n) == null)
+				{
+					texts.Add(n);
+				}
+			}
+			AddParams(list, texts, "text");
+			return list;
+		}
+
+		private static void AddParams(List<ParamRow> list, List<string> names, string kind)
+		{
+			if (names == null)
+			{
+				return;
+			}
+			List<string> sorted = new List<string>(names);
+			sorted.Sort(StringComparer.OrdinalIgnoreCase);
+			for (int i = 0; i < sorted.Count; i++)
+			{
+				ParamRow r = new ParamRow();
+				r.Name = sorted[i];
+				r.Kind = kind;
+				list.Add(r);
+			}
+		}
+
+		private ParamRow ParamAt(int slot)
+		{
+			int i = page * Mathf.Max(1, visibleRows) + slot;
+			return i >= 0 && i < paramRows.Count ? paramRows[i] : null;
+		}
+
+		private static float Step(JSONStorableFloat f, bool coarse)
+		{
+			float range = f.max - f.min;
+			if (range <= 0f || range > 1000000f)
+			{
+				range = 1f;
+			}
+			return range / (coarse ? 10f : 100f);
+		}
+
+		private static void Nudge(JSONStorableFloat f, float delta)
+		{
+			float v = f.val + delta;
+			f.val = f.constrained ? Mathf.Clamp(v, f.min, f.max) : v;
+		}
+
+		private static void Cycle(JSONStorableStringChooser c, int d)
+		{
+			List<string> ch = c.choices;
+			if (ch == null || ch.Count == 0)
+			{
+				return;
+			}
+			int at = ch.IndexOf(c.val);
+			c.val = ch[((at + d) % ch.Count + ch.Count) % ch.Count];
+		}
+
+		private void CellMain(int slot)
+		{
+			if (detailRow == null)
+			{
+				Toggle(RowAt(slot));
+				return;
+			}
+			ParamRow pr = ParamAt(slot);
+			JSONStorable s = detailRow.Storable;
+			if (pr == null || s == null)
+			{
+				return;
+			}
+			try
+			{
+				if (pr.Kind == "bool")
+				{
+					JSONStorableBool b = s.GetBoolJSONParam(pr.Name);
+					if (b != null)
+					{
+						b.val = !b.val;
+					}
+				}
+				else if (pr.Kind == "float")
+				{
+					JSONStorableFloat f = s.GetFloatJSONParam(pr.Name);
+					if (f != null)
+					{
+						f.val = f.defaultVal;       // the label resets to the default
+					}
+				}
+				else if (pr.Kind == "choice")
+				{
+					JSONStorableStringChooser c = s.GetStringChooserJSONParam(pr.Name);
+					if (c != null)
+					{
+						Cycle(c, 1);
+					}
+				}
+				else if (pr.Kind == "action")
+				{
+					s.CallAction(pr.Name);
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.LogWarning(detailRow.Label + " / " + pr.Name + ": " + ex.Message);
+			}
+			Refresh();
+		}
+
+		// the four small buttons of a row: plugin list = extras / Edit; detail = float steps (<< < > >>) or choice (< >)
+		private void Cell(int slot, int which)
+		{
+			if (detailRow == null)
+			{
+				PluginRow r = RowAt(slot);
+				if (which == 3)
+				{
+					if (r != null)
+					{
+						detailRow = r;
+						page = 0;
+						Refresh();
+					}
+				}
+				else if (which < 2)
+				{
+					Extra(r, which);
+				}
+				return;
+			}
+			ParamRow pr = ParamAt(slot);
+			JSONStorable s = detailRow.Storable;
+			if (pr == null || s == null)
+			{
+				return;
+			}
+			try
+			{
+				if (pr.Kind == "float")
+				{
+					JSONStorableFloat f = s.GetFloatJSONParam(pr.Name);
+					if (f != null)
+					{
+						float[] d = { -1f, -1f, 1f, 1f };
+						Nudge(f, d[which] * Step(f, which == 0 || which == 3));
+					}
+				}
+				else if (pr.Kind == "choice")
+				{
+					JSONStorableStringChooser c = s.GetStringChooserJSONParam(pr.Name);
+					if (c != null)
+					{
+						Cycle(c, which == 1 ? -1 : 1);
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.LogWarning(detailRow.Label + " / " + pr.Name + ": " + ex.Message);
+			}
 			Refresh();
 		}
 
@@ -860,8 +1075,8 @@ namespace ZeroT.MusicVfxBoxes
 			RlUguiWindow.SetRect(bAllOn.GetComponent<RectTransform>(), m + inner - 140f, y, 68f, 24f);
 			RlUguiWindow.SetRect(bAllOff.GetComponent<RectTransform>(), m + inner - 68f, y, 68f, 24f);
 			y += 30f;
-			float small = 38f, rh = 22f;
-			float mainW = inner - 2f * (small + 3f);
+			float small = 30f, rh = 22f;
+			float mainW = inner - 4f * (small + 3f);
 			int fit = Mathf.Clamp(Mathf.FloorToInt((h - y - 50f) / (rh + 2f)), 1, RowCount);
 			for (int i = 0; i < RowCount; i++)
 			{
@@ -869,6 +1084,8 @@ namespace ZeroT.MusicVfxBoxes
 				rowMain[i].gameObject.SetActive(show);
 				rowA[i].gameObject.SetActive(show);
 				rowB[i].gameObject.SetActive(show);
+				rowC[i].gameObject.SetActive(show);
+				rowD[i].gameObject.SetActive(show);
 				if (!show)
 				{
 					continue;
@@ -876,12 +1093,17 @@ namespace ZeroT.MusicVfxBoxes
 				RlUguiWindow.SetRect(rowMain[i].GetComponent<RectTransform>(), m, y, mainW, rh);
 				RlUguiWindow.SetRect(rowA[i].GetComponent<RectTransform>(), m + mainW + 3f, y, small, rh);
 				RlUguiWindow.SetRect(rowB[i].GetComponent<RectTransform>(), m + mainW + small + 6f, y, small, rh);
+				RlUguiWindow.SetRect(rowC[i].GetComponent<RectTransform>(), m + mainW + 2f * small + 9f, y, small, rh);
+				RlUguiWindow.SetRect(rowD[i].GetComponent<RectTransform>(), m + mainW + 3f * small + 12f, y, small, rh);
 				y += rh + 2f;
 			}
 			visibleRows = fit;
-			RlUguiWindow.SetRect(bPagePrev.GetComponent<RectTransform>(), m, y + 2f, b, 22f);
-			RlUguiWindow.SetRect(pageLabel.rectTransform, m + b + 4f, y + 2f, inner - 2f * b - 8f, 22f);
-			RlUguiWindow.SetRect(bPageNext.GetComponent<RectTransform>(), m + inner - b, y + 2f, b, 22f);
+			float pb = 28f;
+			RlUguiWindow.SetRect(bPagePrev5.GetComponent<RectTransform>(), m, y + 2f, pb, 22f);
+			RlUguiWindow.SetRect(bPagePrev.GetComponent<RectTransform>(), m + pb + 3f, y + 2f, pb, 22f);
+			RlUguiWindow.SetRect(pageLabel.rectTransform, m + 2f * pb + 8f, y + 2f, inner - 4f * pb - 16f, 22f);
+			RlUguiWindow.SetRect(bPageNext.GetComponent<RectTransform>(), m + inner - 2f * pb - 3f, y + 2f, pb, 22f);
+			RlUguiWindow.SetRect(bPageNext5.GetComponent<RectTransform>(), m + inner - pb, y + 2f, pb, 22f);
 		}
 
 		private int visibleRows = RowCount;
@@ -925,6 +1147,17 @@ namespace ZeroT.MusicVfxBoxes
 			Spec vs = ViewSpec();
 			Atom va = Find(vs);
 			rows = RowsFor(va);
+			if (detailRow != null && (detailRow.Storable == null || va == null))
+			{
+				detailRow = null;
+			}
+			RlUguiWindow.SetLabel(bAllOn, detailRow != null ? "Back" : "All on");
+			bAllOff.gameObject.SetActive(detailRow == null);
+			if (detailRow != null)
+			{
+				RefreshDetail(vs);
+				return;
+			}
 			int per = Mathf.Max(1, visibleRows);
 			int pages = Mathf.Max(1, (rows.Count + per - 1) / per);
 			if (page >= pages)
@@ -941,12 +1174,74 @@ namespace ZeroT.MusicVfxBoxes
 			}
 		}
 
+		private void RefreshDetail(Spec vs)
+		{
+			paramRows = ParamsOf(detailRow.Storable);
+			int per = Mathf.Max(1, visibleRows);
+			int pages = Mathf.Max(1, (paramRows.Count + per - 1) / per);
+			if (page >= pages)
+			{
+				page = pages - 1;
+			}
+			atomLabel.text = vs.Name.Value + " / " + detailRow.Label;
+			pageLabel.text = paramRows.Count + " settings   " + (page + 1) + " / " + pages;
+			JSONStorable s = detailRow.Storable;
+			for (int i = 0; i < RowCount; i++)
+			{
+				int idx = page * per + i;
+				ParamRow pr = idx < paramRows.Count && i < per ? paramRows[idx] : null;
+				bool show = pr != null;
+				rowMain[i].gameObject.SetActive(show);
+				rowA[i].gameObject.SetActive(show && pr.Kind == "float");
+				rowB[i].gameObject.SetActive(show && (pr.Kind == "float" || pr.Kind == "choice"));
+				rowC[i].gameObject.SetActive(show && (pr.Kind == "float" || pr.Kind == "choice"));
+				rowD[i].gameObject.SetActive(show && pr.Kind == "float");
+				if (!show)
+				{
+					continue;
+				}
+				string text = pr.Name;
+				rowMain[i].interactable = pr.Kind != "text";
+				if (pr.Kind == "bool")
+				{
+					JSONStorableBool b = s.GetBoolJSONParam(pr.Name);
+					text += ":  " + (b != null && b.val ? "On" : "Off");
+				}
+				else if (pr.Kind == "float")
+				{
+					JSONStorableFloat f = s.GetFloatJSONParam(pr.Name);
+					text += ":  " + (f != null ? f.val.ToString("0.###") : "?");
+					RlUguiWindow.SetLabel(rowA[i], "<<");
+					RlUguiWindow.SetLabel(rowB[i], "<");
+					RlUguiWindow.SetLabel(rowC[i], ">");
+					RlUguiWindow.SetLabel(rowD[i], ">>");
+				}
+				else if (pr.Kind == "choice")
+				{
+					JSONStorableStringChooser c = s.GetStringChooserJSONParam(pr.Name);
+					text += ":  " + (c != null ? c.val : "?");
+					RlUguiWindow.SetLabel(rowB[i], "<");
+					RlUguiWindow.SetLabel(rowC[i], ">");
+				}
+				else if (pr.Kind == "text")
+				{
+					JSONStorableString st = s.GetStringJSONParam(pr.Name);
+					string v = st != null ? st.val : "";
+					text += ":  " + (v != null && v.Length > 40 ? v.Substring(0, 40) + "..." : v);
+				}
+				RlUguiWindow.SetLabel(rowMain[i], text);
+				rowA[i].interactable = rowB[i].interactable = rowC[i].interactable = rowD[i].interactable = true;
+			}
+		}
+
 		private void SetRow(int i, PluginRow r)
 		{
 			bool show = r != null && i < visibleRows;
 			rowMain[i].gameObject.SetActive(show);
 			rowA[i].gameObject.SetActive(show);
 			rowB[i].gameObject.SetActive(show);
+			rowC[i].gameObject.SetActive(false);
+			rowD[i].gameObject.SetActive(show);
 			if (r == null)
 			{
 				RlUguiWindow.SetLabel(rowMain[i], "");
@@ -958,6 +1253,10 @@ namespace ZeroT.MusicVfxBoxes
 				return;
 			}
 			rowMain[i].interactable = true;
+			rowC[i].gameObject.SetActive(false);
+			rowD[i].gameObject.SetActive(show);
+			rowD[i].interactable = true;
+			RlUguiWindow.SetLabel(rowD[i], "Edit");
 			RlUguiWindow.SetLabel(rowMain[i], r.Label + ":  " + (IsOn(r) ? "On" : "Off"));
 			bool router = r.Kind == "router", fly = r.Kind == "fly";
 			rowA[i].interactable = router || fly;

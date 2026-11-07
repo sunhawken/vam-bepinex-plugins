@@ -65,6 +65,7 @@ public static class MusicVfxScenario
 		a.storables[s.storeId] = s; return s;
 	}
 
+	private static void visibleRowsSet(object p, int n) { p.GetType().GetField("visibleRows", All).SetValue(p, n); }
 	private static object Spec(BepInEx.BaseUnityPlugin p, string field) => p.GetType().GetField(field, All).GetValue(p);
 	private static void Spawn(BepInEx.BaseUnityPlugin p, string field) => p.GetType().GetMethod("Spawn", All).Invoke(p, new[] { Spec(p, field) });
 	private static int Delete(BepInEx.BaseUnityPlugin p, string field) => (int)p.GetType().GetMethod("DeleteAtoms", All).Invoke(p, new[] { Spec(p, field) });
@@ -171,6 +172,51 @@ public static class MusicVfxScenario
 		h.Check(!fp.GetBoolJSONParam("Move Toggle").val, "the AutoFlyObject row's first button switches Move Toggle");
 		ex.Invoke(p, new[] { rowsF[0], (object)1 });
 		h.Near(fp.GetFloatJSONParam("Fly Speed").val, 3.5f, "...and the second raises Fly Speed by 0.5");
+
+		// settings editor of one plugin (the AutoFlyObject on FlyObject)
+		var T = p.GetType();
+		Func<string, object> pf = n => T.GetField(n, All).GetValue(p);
+		var cellMain = T.GetMethod("CellMain", All); var cell = T.GetMethod("Cell", All);
+		var detailF = T.GetField("detailRow", All); var viewF = T.GetField("viewAtom", All);
+		viewF.SetValue(p, 3);
+		T.GetMethod("Refresh", All).Invoke(p, null);
+		var rowFly = ((System.Collections.IList)T.GetMethod("RowsFor", All).Invoke(p, new object[] { flyAtom }))[0];
+		detailF.SetValue(p, rowFly);
+		T.GetMethod("Refresh", All).Invoke(p, null);
+		var prs = (System.Collections.IList)pf("paramRows");
+		Func<string, int> slot = n => { var prs2 = (System.Collections.IList)pf("paramRows"); for (int i = 0; i < prs2.Count; i++) if ((string)prs2[i].GetType().GetField("Name").GetValue(prs2[i]) == n) return i; return -1; };
+		h.Check(prs.Count == 3 && slot("Fly Speed") >= 0 && slot("Move Toggle") >= 0 && slot("enabled") >= 0, "the editor lists every setting of the plugin (" + prs.Count + ")");
+		// the row slots depend on the page: put the wanted param on slot 0 by page index
+		Action<string, int, bool> press = (name, which, main) =>
+		{
+			int idx = slot(name); T.GetField("page", All).SetValue(p, idx / 8); int s = idx % 8;
+			visibleRowsSet(p, 8);
+			if (main) cellMain.Invoke(p, new object[] { s }); else cell.Invoke(p, new object[] { s, which });
+		};
+		var speed = fp.GetFloatJSONParam("Fly Speed"); speed.val = 3f;
+		press("Fly Speed", 3, false);   // > coarse: +10% of the 1..5 range
+		h.Near(speed.val, 3.4f, "a float's '>>' adds a tenth of its range", 0.001f);
+		press("Fly Speed", 2, false);
+		h.Near(speed.val, 3.44f, "...'>' a hundredth", 0.001f);
+		press("Fly Speed", 0, false); press("Fly Speed", 1, false);
+		h.Near(speed.val, 3.0f, "...'<<' and '<' take them back", 0.001f);
+		for (int i = 0; i < 20; i++) press("Fly Speed", 3, false);
+		h.Near(speed.val, 5f, "...and a constrained float stops at its maximum", 0.001f);
+		press("Fly Speed", 0, true);
+		h.Near(speed.val, 3f, "the label resets a float to its default", 0.001f);
+		fp.GetBoolJSONParam("Move Toggle").val = true;
+		press("Move Toggle", 0, true);
+		h.Check(!fp.GetBoolJSONParam("Move Toggle").val, "a switch's label toggles it");
+		viewF.SetValue(p, 0); detailF.SetValue(p, null);
+		var beat = ((System.Collections.IList)T.GetMethod("RowsFor", All).Invoke(p, new object[] { music }))[2];
+		var bs = beat.GetType().GetField("Storable").GetValue(beat) as JSONStorable;
+		var mode = new JSONStorableStringChooser("Preset", new List<string> { "a", "b", "c" }, "a", "Preset"); bs.RegisterStringChooser(mode);
+		detailF.SetValue(p, beat); T.GetMethod("Refresh", All).Invoke(p, null);
+		press("Preset", 2, false);
+		h.Check(mode.val == "b", "a choice's '>' picks the next choice");
+		press("Preset", 1, false); press("Preset", 1, false);
+		h.Check(mode.val == "c", "...and '<' wraps round to the last");
+		detailF.SetValue(p, null); viewF.SetValue(p, 0);
 
 		// Delete Fly Objects
 		h.Check(Delete(p, "fly") == 1 && at("FlyObject") == null, "Delete Fly Objects removes FlyObject");
