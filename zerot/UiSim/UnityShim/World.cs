@@ -27,6 +27,8 @@ namespace UnityEngine
 		public Vector3 right => rotation * new Vector3(1, 0, 0);
 		public Vector3 TransformPoint(Vector3 p) => position0() + rotation * Vector3.Scale(lossyScale, p);
 		public Vector3 InverseTransformPoint(Vector3 p) { var s = lossyScale; return Vector3.Scale(new Vector3(Inv(s.x), Inv(s.y), Inv(s.z)), Quaternion.Inverse(rotation) * (p - position0())); }
+		public Matrix4x4 localToWorldMatrix => Matrix4x4.TRS(position, rotation, lossyScale);
+		public Matrix4x4 worldToLocalMatrix => localToWorldMatrix.inverse;
 		public Vector3 TransformDirection(Vector3 d) => rotation * d;
 		public Vector3 InverseTransformDirection(Vector3 d) => Quaternion.Inverse(rotation) * d;
 		private Vector3 position0() => position;

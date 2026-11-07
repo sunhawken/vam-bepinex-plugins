@@ -87,9 +87,10 @@ namespace BepInEx.Configuration
 		public bool IsUp() { return false; }
 	}
 	public class SettingChangedEventArgs : EventArgs { public ConfigEntryBase ChangedSetting { get; set; } public SettingChangedEventArgs(ConfigEntryBase s) { ChangedSetting = s; } }
-	public class ConfigDescription { public ConfigDescription(string d) { } public ConfigDescription(string d, object acceptable) { } public ConfigDescription(string d, object acceptable, params object[] tags) { } }
-	public class AcceptableValueRange<T> { public AcceptableValueRange(T min, T max) { } }
-	public class AcceptableValueList<T> { public AcceptableValueList(params T[] values) { } }
+	public abstract class AcceptableValueBase { }
+	public class ConfigDescription { public ConfigDescription(string d, AcceptableValueBase acceptable = null, params object[] tags) { } }   // same signature as BepInEx 5 (plugins are retargeted onto this shim by exact signature)
+	public class AcceptableValueRange<T> : AcceptableValueBase { public AcceptableValueRange(T min, T max) { } }
+	public class AcceptableValueList<T> : AcceptableValueBase { public AcceptableValueList(params T[] values) { } }
 
 	public class ConfigFile
 	{

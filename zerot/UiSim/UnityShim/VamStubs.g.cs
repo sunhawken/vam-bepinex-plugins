@@ -514,6 +514,7 @@ public partial class DAZSkinV2 : global::GPUTools.Skinner.Scripts.Providers.PreC
   public bool[] postSkinVertsReady;
   public global::UnityEngine.Vector3[] rawSkinnedVerts;
   public global::UnityEngine.ComputeBuffer rawVertsBuffer;
+  public global::DAZBones root;
   public global::DAZSkinV2.SkinMethod skinMethod;
   public global::UnityEngine.ComputeBuffer smoothedVertsBuffer;
   public global::DAZBone[] strongestDAZBone;
@@ -539,6 +540,7 @@ public partial class DAZMesh : global::MVR.ObjectAllocator {
   public global::UnityEngine.Vector2[] UV { get; set; }
   public global::UnityEngine.Mesh uvMappedMesh { get; set; }
   public int[] UVTriangles { get; set; }
+  public global::UnityEngine.Vector3[] UVVertices { get; set; }
   public global::System.Collections.Generic.Dictionary<int, int> uvVertToBaseVert { get; set; }
   public bool wasInit { get; set; }
   public bool castShadows;
@@ -579,6 +581,7 @@ public partial class DAZPhysicsMeshCapsuleCollider {
 }
 public partial class DAZBone : global::JSONStorable {
   public global::UnityEngine.Vector3 baseJointRotation { get; set; }
+  public global::UnityEngine.Matrix4x4 morphedWorldToLocalMatrix { get; set; }
   public DAZBone() {}
 }
 public partial class DAZClothingItem : global::DAZDynamicItem {
@@ -593,6 +596,18 @@ public partial class MVRPlugin {
   public global::JSONStorableUrl pluginURLJSON;
   public string uid;
   public MVRPlugin() {}
+}
+public partial class DAZMergedMesh : global::DAZMesh {
+  public global::DAZMesh targetMesh;
+  public DAZMergedMesh() {}
+}
+public partial class DAZMorphVertex {
+  public global::UnityEngine.Vector3 delta;
+  public int vertex;
+  public DAZMorphVertex() {}
+}
+public partial class DAZBones : global::ScaleChangeReceiverJSONStorable {
+  public DAZBones() {}
 }
 public partial class UIDynamicButton : global::UIDynamic {
   public global::UnityEngine.Color buttonColor { get; set; }
@@ -1191,9 +1206,6 @@ public partial class DAZSkinWrapMaterialOptions : global::MaterialOptions {
   public global::DAZSkinWrap skinWrap { get; set; }
   public DAZSkinWrapMaterialOptions() {}
 }
-public partial class DAZBones : global::ScaleChangeReceiverJSONStorable {
-  public DAZBones() {}
-}
 public partial class SubScene : global::JSONStorable {
   public SubScene() {}
 }
@@ -1449,11 +1461,6 @@ public partial class SetDAZMorphControl : global::JSONStorable {
   public global::JSONStorableBool enabledJSON;
   public SetDAZMorphControl() {}
 }
-public partial class DAZMorphVertex {
-  public global::UnityEngine.Vector3 delta;
-  public int vertex;
-  public DAZMorphVertex() {}
-}
 public partial class AdjustJoints : global::ScaleChangeReceiverJSONStorable {
   public AdjustJoints() {}
 }
@@ -1477,6 +1484,8 @@ public partial interface RenderSuspend {
 public partial class PhysicsSimulator : global::ScaleChangeReceiver {
   public PhysicsSimulator() {}
 }
+public partial interface PhysicsResetter {
+}
 public partial interface TriggerActionHandler {
 }
 public partial class TriggerActionUI : global::UIProvider {
@@ -1489,8 +1498,6 @@ public partial class GPUCollidersConsumer : global::UnityEngine.MonoBehaviour {
   public GPUCollidersConsumer() {}
 }
 public partial interface AnimationTimelineTriggerHandler {
-}
-public partial interface PhysicsResetter {
 }
 public partial class GenerateTabbedUI : global::UnityEngine.MonoBehaviour {
   public GenerateTabbedUI() {}
@@ -1530,10 +1537,12 @@ public partial struct ContactPoint {
   public global::UnityEngine.Collider thisCollider { get; set; }
 }
 public sealed partial class SphereCollider : global::UnityEngine.Collider {
+  public global::UnityEngine.Vector3 center { get; set; }
   public float radius { get; set; }
   public SphereCollider() {}
 }
 public sealed partial class CapsuleCollider : global::UnityEngine.Collider {
+  public global::UnityEngine.Vector3 center { get; set; }
   public int direction { get; set; }
   public float height { get; set; }
   public float radius { get; set; }
@@ -2074,6 +2083,15 @@ public partial struct AsyncGPUReadbackRequest {
   public bool hasError { get; set; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::Unity.Collections.NativeArray<T> GetData<T>(int layer = default) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void WaitForCompletion() { }
+}
+}
+namespace GPUTools.Physics.Scripts.Behaviours {
+public partial class CapsuleLineSphereCollider : global::GPUTools.Physics.Scripts.Behaviours.LineSphereCollider {
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void UpdateData() { }
+  public CapsuleLineSphereCollider() {}
+}
+public partial class LineSphereCollider : global::UnityEngine.MonoBehaviour {
+  public LineSphereCollider() {}
 }
 }
 namespace MVR.FileManagement {
@@ -2628,8 +2646,6 @@ public static partial class Time {
   public static bool inFixedTimeStep { get; set; }
 }
 public partial class Transform {
-  public global::UnityEngine.Matrix4x4 localToWorldMatrix { get; set; }
-  public global::UnityEngine.Matrix4x4 worldToLocalMatrix { get; set; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::UnityEngine.Vector3 InverseTransformVector(global::UnityEngine.Vector3 vector) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LookAt(global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector3 worldUp) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Rotate(float xAngle, float yAngle, float zAngle) { }
@@ -2679,6 +2695,8 @@ public partial class Rigidbody {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddRelativeTorque(global::UnityEngine.Vector3 torque) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddRelativeTorque(global::UnityEngine.Vector3 torque, global::UnityEngine.ForceMode mode) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void AddTorque(global::UnityEngine.Vector3 torque) { }
+  public global::UnityEngine.Vector3 centerOfMass { get; set; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ResetCenterOfMass() { }
 }
 public partial class Collider {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool Raycast(global::UnityEngine.Ray ray, out global::UnityEngine.RaycastHit hitInfo, float maxDistance) { hitInfo = default; return default; }
@@ -3049,6 +3067,7 @@ public partial class DAZCharacterSelector {
   public global::DAZClothingItem[] femaleClothingItems { get; set; }
   public global::DAZClothingItem[] maleClothingItems { get; set; }
   public global::GenerateDAZMorphsControlUI morphsControlUIOtherGender { get; set; }
+  public bool useAdvancedColliders { get; set; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::DAZHairGroup GetHairItem(string itemId) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetActiveClothingItem(global::DAZClothingItem item, bool active, bool fromRestore = default) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetActiveClothingItem(string itemId, bool active, bool fromRestore = default) { }
@@ -3096,6 +3115,36 @@ public delegate void EndBrowseCallback();
 public delegate void BeginBrowseWithObjectCallback(global::JSONStorableUrl jsurl);
 public delegate void EndBrowseWithObjectCallback(global::JSONStorableUrl jsurl);
 }
+public partial class DAZCharacterRun {
+  public global::DAZMorphBank morphBank1;
+  public global::DAZMorphBank morphBank1OtherGender;
+  public global::DAZMergedSkinV2 skin;
+  public bool useOtherGenderMorphs;
+}
+public partial class DAZMorphBank {
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Init() { }
+  public global::DAZBones morphBones;
+}
+public partial class DAZMorph {
+  public string formulasString { get; set; }
+  public bool hasBoneModificationFormulas { get; set; }
+  public bool hasFormulas { get; set; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadDeltas() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool StoreJSON(global::SimpleJSON.JSONClass jc, bool forceStore = default) { return default; }
+  public float appliedValue;
+  public global::DAZMorphVertex[] deltas;
+  public bool deltasLoaded;
+  public global::DAZMorphFormula[] formulas;
+  public bool isDemandActivated;
+  public bool isInPackage;
+  public bool isPoseControl;
+  public bool isRuntime;
+  public string overrideName;
+  public string packageLicense;
+  public string packageUid;
+  public string version;
+  public bool visible;
+}
 public partial class GenerateDAZMorphsControlUI {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void DefaultMorph() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public global::System.Collections.Generic.List<global::DAZMorph> GetMorphs() { return new global::System.Collections.Generic.List<global::DAZMorph>(); }
@@ -3105,22 +3154,6 @@ public partial class GenerateDAZMorphsControlUI {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroNearZero() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroNearZeroMore() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void ZeroPose() { }
-}
-public partial class DAZMorph {
-  public string formulasString { get; set; }
-  public bool hasBoneModificationFormulas { get; set; }
-  public bool hasFormulas { get; set; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void LoadDeltas() { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public bool StoreJSON(global::SimpleJSON.JSONClass jc, bool forceStore = default) { return default; }
-  public global::DAZMorphVertex[] deltas;
-  public global::DAZMorphFormula[] formulas;
-  public bool isDemandActivated;
-  public bool isInPackage;
-  public bool isPoseControl;
-  public string overrideName;
-  public string packageLicense;
-  public string packageUid;
-  public string version;
 }
 public partial class CollisionTrigger {
   public global::Trigger trigger;
@@ -3141,10 +3174,6 @@ public partial class JSONStorableStringChooser {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public override bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
 public delegate void PopupOpenCallback();
 }
-public partial class DAZMorphBank {
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Init() { }
-  public global::DAZBones morphBones;
-}
 public abstract partial class JSONStorableParam {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool NeedsLateRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool NeedsRestore(global::SimpleJSON.JSONClass jc, bool restorePhysical = default, bool restoreAppearance = default) { return default; }
@@ -3155,9 +3184,6 @@ public abstract partial class JSONStorableParam {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual bool StoreJSON(global::SimpleJSON.JSONClass jc, bool includePhysical = default, bool includeAppearance = default, bool forceStore = default) { return default; }
   public string altName;
   public global::JSONStorable.Type type;
-}
-public partial class DAZCharacterRun {
-  public global::DAZMergedSkinV2 skin;
 }
 namespace SimpleJSON {
 public abstract partial class JSONNode {

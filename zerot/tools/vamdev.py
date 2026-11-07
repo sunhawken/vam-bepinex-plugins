@@ -63,11 +63,12 @@ P = {
     'detachedui': ('DetachedUIPanel/DetachedUIPanel.csproj', 'DetachedUIPanelStandalone.dll', None),
     'forcerodsync': ('ForceRodSync/ZeroT.ForceRodSync.csproj', 'ZeroT.ForceRodSync.dll', None),
     'errorsilencer': ('ErrorSilencer/ZeroT.ErrorSilencer.csproj', 'ZeroT.ErrorSilencer.dll', None),
+    'colliderfit': ('ColliderFitHeadless/ZeroT.ColliderFitHeadless.csproj', 'ZeroT.ColliderFitHeadless.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'forcerodsync', 'errorsilencer', 'hudclickshield', 'huddock', 'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HEADLESS = {'colliderfit', 'forcerodsync', 'errorsilencer', 'hudclickshield', 'huddock', 'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
 HELPERS = {'forcerodsync', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper', 'appearanceloaderhelper', 'zajeshufflehelper'}   # Harmony helpers: need the script assemblies from `simtargets`
-UI_PLUGINS = {'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
+UI_PLUGINS = {'colliderfit', 'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook', 'orgasmsuite', 'huddock'}
 
 

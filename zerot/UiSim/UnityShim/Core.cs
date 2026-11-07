@@ -91,14 +91,75 @@ namespace UnityEngine
 		public override string ToString() => "(x:" + m_x + ", y:" + m_y + ", w:" + m_w + ", h:" + m_h + ")";
 	}
 
+	// A real 4x4 (row-major, column vectors, like Unity). sx / sy / tx / ty are the 2D scale + translate the IMGUI code reads (GUI.matrix).
 	public partial struct Matrix4x4
 	{
-		public float sx, sy, tx, ty;   // enough for 2D scale+translate (what IMGUI plugins use)
-		public static Matrix4x4 identity => new Matrix4x4 { sx = 1, sy = 1 };
-		public Matrix4x4 inverse => new Matrix4x4 { sx = sx == 0f ? 0f : 1f / sx, sy = sy == 0f ? 0f : 1f / sy, tx = sx == 0f ? 0f : -tx / sx, ty = sy == 0f ? 0f : -ty / sy };
-		public static Matrix4x4 Scale(Vector3 v) => new Matrix4x4 { sx = v.x, sy = v.y };
-		public static Matrix4x4 TRS(Vector3 t, Quaternion r, Vector3 s) => new Matrix4x4 { sx = s.x, sy = s.y, tx = t.x, ty = t.y };
-		public static Matrix4x4 operator *(Matrix4x4 a, Matrix4x4 b) => new Matrix4x4 { sx = a.sx * b.sx, sy = a.sy * b.sy, tx = a.sx * b.tx + a.tx, ty = a.sy * b.ty + a.ty };
+		public float m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33;
+		public float sx { get { return m00; } set { m00 = value; } }
+		public float sy { get { return m11; } set { m11 = value; } }
+		public float tx { get { return m03; } set { m03 = value; } }
+		public float ty { get { return m13; } set { m13 = value; } }
+		public static Matrix4x4 identity { get { return new Matrix4x4 { m00 = 1f, m11 = 1f, m22 = 1f, m33 = 1f }; } }
+		public static Matrix4x4 Scale(Vector3 v) { return new Matrix4x4 { m00 = v.x, m11 = v.y, m22 = v.z, m33 = 1f }; }
+		public static Matrix4x4 TRS(Vector3 t, Quaternion q, Vector3 s)
+		{
+			float x2 = q.x * 2f, y2 = q.y * 2f, z2 = q.z * 2f, xx = q.x * x2, yy = q.y * y2, zz = q.z * z2, xy = q.x * y2, xz = q.x * z2, yz = q.y * z2, wx = q.w * x2, wy = q.w * y2, wz = q.w * z2;
+			return new Matrix4x4
+			{
+				m00 = (1f - (yy + zz)) * s.x, m01 = (xy - wz) * s.y, m02 = (xz + wy) * s.z, m03 = t.x,
+				m10 = (xy + wz) * s.x, m11 = (1f - (xx + zz)) * s.y, m12 = (yz - wx) * s.z, m13 = t.y,
+				m20 = (xz - wy) * s.x, m21 = (yz + wx) * s.y, m22 = (1f - (xx + yy)) * s.z, m23 = t.z,
+				m33 = 1f
+			};
+		}
+		public static Matrix4x4 operator *(Matrix4x4 a, Matrix4x4 b)
+		{
+			return new Matrix4x4
+			{
+				m00 = a.m00 * b.m00 + a.m01 * b.m10 + a.m02 * b.m20 + a.m03 * b.m30, m01 = a.m00 * b.m01 + a.m01 * b.m11 + a.m02 * b.m21 + a.m03 * b.m31, m02 = a.m00 * b.m02 + a.m01 * b.m12 + a.m02 * b.m22 + a.m03 * b.m32, m03 = a.m00 * b.m03 + a.m01 * b.m13 + a.m02 * b.m23 + a.m03 * b.m33,
+				m10 = a.m10 * b.m00 + a.m11 * b.m10 + a.m12 * b.m20 + a.m13 * b.m30, m11 = a.m10 * b.m01 + a.m11 * b.m11 + a.m12 * b.m21 + a.m13 * b.m31, m12 = a.m10 * b.m02 + a.m11 * b.m12 + a.m12 * b.m22 + a.m13 * b.m32, m13 = a.m10 * b.m03 + a.m11 * b.m13 + a.m12 * b.m23 + a.m13 * b.m33,
+				m20 = a.m20 * b.m00 + a.m21 * b.m10 + a.m22 * b.m20 + a.m23 * b.m30, m21 = a.m20 * b.m01 + a.m21 * b.m11 + a.m22 * b.m21 + a.m23 * b.m31, m22 = a.m20 * b.m02 + a.m21 * b.m12 + a.m22 * b.m22 + a.m23 * b.m32, m23 = a.m20 * b.m03 + a.m21 * b.m13 + a.m22 * b.m23 + a.m23 * b.m33,
+				m30 = a.m30 * b.m00 + a.m31 * b.m10 + a.m32 * b.m20 + a.m33 * b.m30, m31 = a.m30 * b.m01 + a.m31 * b.m11 + a.m32 * b.m21 + a.m33 * b.m31, m32 = a.m30 * b.m02 + a.m31 * b.m12 + a.m32 * b.m22 + a.m33 * b.m32, m33 = a.m30 * b.m03 + a.m31 * b.m13 + a.m32 * b.m23 + a.m33 * b.m33
+			};
+		}
+		public Vector3 MultiplyPoint3x4(Vector3 p) { return new Vector3(m00 * p.x + m01 * p.y + m02 * p.z + m03, m10 * p.x + m11 * p.y + m12 * p.z + m13, m20 * p.x + m21 * p.y + m22 * p.z + m23); }
+		public Vector3 MultiplyPoint(Vector3 p) { float w = m30 * p.x + m31 * p.y + m32 * p.z + m33; w = Math.Abs(w) < 1e-12f ? 1f : 1f / w; return new Vector3((m00 * p.x + m01 * p.y + m02 * p.z + m03) * w, (m10 * p.x + m11 * p.y + m12 * p.z + m13) * w, (m20 * p.x + m21 * p.y + m22 * p.z + m23) * w); }
+		public Vector3 MultiplyVector(Vector3 v) { return new Vector3(m00 * v.x + m01 * v.y + m02 * v.z, m10 * v.x + m11 * v.y + m12 * v.z, m20 * v.x + m21 * v.y + m22 * v.z); }
+		// general 4x4 inverse (a singular matrix gives the zero matrix, like Unity)
+		public Matrix4x4 inverse
+		{
+			get
+			{
+				double[] m = { m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33 };
+				double[] inv = new double[16];
+				inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] + m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
+				inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] - m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10];
+				inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] + m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9];
+				inv[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] - m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9];
+				inv[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] - m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10];
+				inv[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] + m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10];
+				inv[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] - m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9];
+				inv[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] + m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9];
+				inv[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] + m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6];
+				inv[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] - m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6];
+				inv[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] + m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5];
+				inv[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] - m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5];
+				inv[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] - m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6];
+				inv[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] + m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6];
+				inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] - m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
+				inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] + m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
+				double det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+				if (Math.Abs(det) < 1e-30) { return new Matrix4x4(); }
+				det = 1.0 / det;
+				return new Matrix4x4
+				{
+					m00 = (float)(inv[0] * det), m01 = (float)(inv[1] * det), m02 = (float)(inv[2] * det), m03 = (float)(inv[3] * det),
+					m10 = (float)(inv[4] * det), m11 = (float)(inv[5] * det), m12 = (float)(inv[6] * det), m13 = (float)(inv[7] * det),
+					m20 = (float)(inv[8] * det), m21 = (float)(inv[9] * det), m22 = (float)(inv[10] * det), m23 = (float)(inv[11] * det),
+					m30 = (float)(inv[12] * det), m31 = (float)(inv[13] * det), m32 = (float)(inv[14] * det), m33 = (float)(inv[15] * det)
+				};
+			}
+		}
 	}
 
 	public static partial class Mathf
@@ -213,6 +274,14 @@ namespace UnityEngine
 		public T[] GetComponentsInChildren<T>(bool includeInactive) where T : class => gameObject.GetComponentsInChildren<T>(includeInactive);
 		public T[] GetComponentsInChildren<T>() where T : class => gameObject.GetComponentsInChildren<T>(false);
 		internal virtual void OnAttached() { }
+		// Object.Destroy(component): like Unity the script gets OnDestroy and is gone from its game object (a game object's own destroy is below)
+		internal override void DestroyInternal()
+		{
+			if (destroyed) return;
+			if (this is MonoBehaviour m) { Sim.Lifecycle.OnDestroy(m); m.StopAllCoroutines(); }
+			destroyed = true;
+			if (!(this is Transform) && _go != null) _go.comps.Remove(this);
+		}
 	}
 
 	public partial class Behaviour : Component
