@@ -356,6 +356,7 @@ public partial class SuperController : MonoBehaviour
 	public List<Atom> GetAtoms() => atoms;
 	public List<string> GetAtomUIDs() => atoms.ConvertAll(a => a.uid);
 	public Atom GetAtomByUid(string uid) => atoms.Find(a => a.uid == uid);
+	public string NormalizePath(string path) { return (path ?? "").Replace((char)92, '/'); }   // VaM: forward slashes, resolved
 	public Atom GetSelectedAtom() => selectedAtom;
 	public void AddCanvas(Canvas c) { }
 	public void RemoveCanvas(Canvas c) { }

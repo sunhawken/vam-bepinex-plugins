@@ -738,6 +738,16 @@ public partial class DAZDynamicItem : global::JSONStorableDynamic {
   public DAZDynamicItem() {}
 public delegate void ThumbnailLoadedCallback(global::UnityEngine.Texture2D thumb);
 }
+public partial class CameraTarget : global::UnityEngine.MonoBehaviour {
+  public static global::CameraTarget centerTarget;
+  public CameraTarget() {}
+public enum CameraLocation : int {
+  None = 0,
+  Left = 1,
+  Right = 2,
+  Center = 3,
+}
+}
 public partial class DAZCharacterMaterialOptions : global::MaterialOptions {
   public global::DAZSkinV2 skin { get; set; }
   public DAZCharacterMaterialOptions() {}
@@ -969,16 +979,6 @@ public partial class AudioSourceControl : global::VariableTrigger {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void TogglePause() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void UnPause() { }
   public AudioSourceControl() {}
-}
-public partial class CameraTarget : global::UnityEngine.MonoBehaviour {
-  public static global::CameraTarget centerTarget;
-  public CameraTarget() {}
-public enum CameraLocation : int {
-  None = 0,
-  Left = 1,
-  Right = 2,
-  Center = 3,
-}
 }
 public partial class JSONStorableDynamic : global::UnityEngine.MonoBehaviour {
   public bool ready { get; set; }
@@ -1641,6 +1641,22 @@ public partial class Renderer : global::UnityEngine.Component {
   public global::UnityEngine.Material[] sharedMaterials { get; set; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void SetPropertyBlock(global::UnityEngine.MaterialPropertyBlock properties) { }
 }
+public sealed partial class AudioSource : global::UnityEngine.AudioBehaviour {
+  public bool isPlaying { get; set; }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Play() { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PlayOneShot(global::UnityEngine.AudioClip clip, float volumeScale) { }
+  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PlayOneShot(global::UnityEngine.AudioClip clip) { }
+  public global::UnityEngine.AudioClip clip { get; set; }
+  public float dopplerLevel { get; set; }
+  public float maxDistance { get; set; }
+  public float minDistance { get; set; }
+  public float pitch { get; set; }
+  public bool playOnAwake { get; set; }
+  public float spatialBlend { get; set; }
+  public bool spatialize { get; set; }
+  public float volume { get; set; }
+  public AudioSource() {}
+}
 public partial struct Ray {
   public Ray(global::UnityEngine.Vector3 origin, global::UnityEngine.Vector3 direction) {}
   public global::UnityEngine.Vector3 direction { get; set; }
@@ -1672,22 +1688,6 @@ public partial struct RaycastHit {
 public static partial class ImageConversion {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static byte[] EncodeToPNG(global::UnityEngine.Texture2D tex) { return new byte[0]; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool LoadImage(global::UnityEngine.Texture2D tex, byte[] data) { return true; }
-}
-public sealed partial class AudioSource : global::UnityEngine.AudioBehaviour {
-  public bool isPlaying { get; set; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void Play() { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PlayOneShot(global::UnityEngine.AudioClip clip, float volumeScale) { }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PlayOneShot(global::UnityEngine.AudioClip clip) { }
-  public global::UnityEngine.AudioClip clip { get; set; }
-  public float dopplerLevel { get; set; }
-  public float maxDistance { get; set; }
-  public float minDistance { get; set; }
-  public float pitch { get; set; }
-  public bool playOnAwake { get; set; }
-  public float spatialBlend { get; set; }
-  public bool spatialize { get; set; }
-  public float volume { get; set; }
-  public AudioSource() {}
 }
 public sealed partial class Random {
   public Random() {}
@@ -2826,7 +2826,6 @@ public partial class SuperController {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string NormalizeDirectoryPath(string path) { return ""; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string NormalizeLoadPath(string path) { return ""; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string NormalizeMediaPath(string path) { return ""; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public string NormalizePath(string path) { return ""; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void OpenHub() { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PauseSimulation(int numFrames, string pauseName) { }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public void PushOverrideLoadDirFromFilePath(string path) { }

@@ -91,6 +91,7 @@ namespace ZeroT.HudDock
 			_targets.Add(T("XRay + Slap", "zerot.xrayslapstandalone", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("Deeper Plugin", "com.zerot.deeperplugin.standalone", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("Detached UI Panel", "zero.vam.detached-ui-panel", "Window", "Show", "Window", "Collapsed"));
+			_targets.Add(T("Music and VFX", "com.zerot.musicvfxboxes", "Window", "Show", "Window", "Collapsed"));
 			_targets.Add(T("ColliderFit", "com.zerot.colliderfit.headless", "Window", "Show", "Window", "Collapsed"));   // headless mutoe.ColliderFit: General.Active is its on / off
 			_targets.Add(Native(T("Orgasm Suite", "com.zerot.orgasmsuite", "Window", "Show", "Window", "Collapsed"), "com.zerot.orgasmsuite", "Suite", "Active"));
 			_targets.Add(T("VPB Random Look", "com.zerot.vpbrandomlook", "Window", "Show", "Window", "Collapsed"));

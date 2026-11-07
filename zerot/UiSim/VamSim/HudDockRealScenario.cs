@@ -28,7 +28,7 @@ public static class HudDockRealScenario
 			"helicalpink.penispalignment.standalone", "ky1001.movecontrolstobody.standalone", "com.particlepinnacle.thighcompressorandvibrations", "zerot.particlepinnacle.uiskin",
 			"com.14mhz.penetrationcounter.bepinex", "ridgerock.proceduralslaps.standalone", "skynet.orificedynamics.standalone", "zerot.vamfastmode", "zerot.fluidbridge.helper",
 			"com.zerot.givemefps.standalone", "zerot.iamjoi.garments.standalone", "zerot.xrayslapstandalone", "com.zerot.deeperplugin.standalone", "zero.vam.detached-ui-panel",
-			"com.zerot.orgasmsuite", "com.zerot.vpbrandomlook", "com.zerot.colliderfit.headless"
+			"com.zerot.orgasmsuite", "com.zerot.vpbrandomlook", "com.zerot.colliderfit.headless", "com.zerot.musicvfxboxes"
 		};
 		var loaded = new Dictionary<string, BaseUnityPlugin>();
 		var all = Directory.GetFiles(art, "*.dll").Where(d => !Path.GetFileName(d).StartsWith("Mono.") && !Path.GetFileName(d).Contains("HudDock")).ToArray();
