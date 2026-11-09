@@ -13,11 +13,15 @@ using UnityEngine;
 public sealed class FakeBeat : JSONStorable
 {
 	public readonly List<string[]> Links = new List<string[]>();   // light, band
+	public int Sliders;
 	public override SimpleJSON.JSONClass GetJSON(bool includePhysical = true, bool includeAppearance = true, bool forceStore = false)
 	{
 		var jc = new SimpleJSON.JSONClass(); var arr = new SimpleJSON.JSONArray();
 		foreach (var l in Links) { var o = new SimpleJSON.JSONClass(); o["light"] = l[0]; o["band"] = l[1]; o["enabled"] = "True"; o["intensity"] = "2.5"; arr.Add(o); }
 		jc["LightLinks"] = arr;
+		var sarr = new SimpleJSON.JSONArray();
+		for (int i = 0; i < Sliders; i++) { var o = new SimpleJSON.JSONClass(); o["atom"] = "None"; o["band"] = "None"; sarr.Add(o); }
+		jc["SliderLinks"] = sarr;
 		var en = GetBoolJSONParam("enabled"); if (en != null) jc["enabled"] = en.val ? "true" : "false";
 		return jc;
 	}
@@ -25,6 +29,11 @@ public sealed class FakeBeat : JSONStorable
 	{
 		if (jc == null) return;
 		if (jc.HasKey("enabled")) { var en = GetBoolJSONParam("enabled"); if (en != null) en.val = jc["enabled"].Value == "true"; }
+		if (jc.HasKey("SliderLinks"))
+		{
+			Sliders = jc["SliderLinks"].AsArray.Count;
+			for (int i = 1; i <= Sliders; i++) { RegisterStringChooser(new JSONStorableStringChooser("SliderLink " + i + " Atom", new List<string> { "None" }, "None", "Atom")); RegisterBool(new JSONStorableBool("SliderLink " + i + " Enabled", true)); }
+		}
 		if (!jc.HasKey("LightLinks")) return;
 		Links.Clear();
 		var arr = jc["LightLinks"].AsArray;
@@ -314,6 +323,45 @@ public static class MusicVfxScenario
 		h.Check(beatB.Links.Count == 1 && beatB.Links[0][1] == "Band 7", "...and the BeatIt light link as it was (" + string.Join(",", beatB.Links[0]) + ")");
 		T2.GetMethod("RestoreEverything", All).Invoke(p, null);
 		h.Check(Msg(p).Contains("Nothing to restore"), "a second Restore all has nothing to do");
+
+		// the BeatIt panel: switch, what it links to, add / remove links
+		var Tb = p.GetType();
+		Tb.GetMethod("OpenBeatPanel", All).Invoke(p, null);
+		var pr2 = (System.Collections.IList)Tb.GetField("paramRows", All).GetValue(p);
+		Func<int, string> nm = i => (string)pr2[i].GetType().GetField("Name").GetValue(pr2[i]);
+		var names2 = Enumerable.Range(0, pr2.Count).Select(nm).ToList();
+		h.Check(names2.Take(5).All(n => n.StartsWith("+") || n.StartsWith("-") || n.StartsWith("Refresh")) && names2.Contains("enabled") && names2.Contains("LightLink 1 Light") && names2.Contains("LightLink 1 Band"), "the BeatIt panel lists the link actions, the switch and the light link settings (" + string.Join(", ", names2) + ")");
+		Func<string, int, bool, bool> pressB = (name, which, main) =>
+		{
+			var pr3 = (System.Collections.IList)Tb.GetField("paramRows", All).GetValue(p);
+			int idx = -1; for (int i = 0; i < pr3.Count; i++) if ((string)pr3[i].GetType().GetField("Name").GetValue(pr3[i]) == name) idx = i;
+			if (idx < 0) return false;
+			Tb.GetField("page", All).SetValue(p, idx / 8); visibleRowsSet(p, 8);
+			if (main) Tb.GetMethod("CellMain", All).Invoke(p, new object[] { idx % 8 }); else Tb.GetMethod("Cell", All).Invoke(p, new object[] { idx % 8, which });
+			return true;
+		};
+		var panelRow = Tb.GetField("detailRow", All).GetValue(p);
+		var panelStore = (FakeBeat)panelRow.GetType().GetField("Storable").GetValue(panelRow);
+		var wasOn = panelStore.GetBoolJSONParam("enabled").val;
+		pressB("enabled", 0, true);
+		h.Check(panelStore.GetBoolJSONParam("enabled").val != wasOn, "the panel's switch turns that BeatIt on / off");
+		pressB("enabled", 0, true);
+		var bandBefore = panelStore.GetStringChooserJSONParam("LightLink 1 Band").val;
+		pressB("LightLink 1 Band", 2, false);
+		h.Check(panelStore.GetStringChooserJSONParam("LightLink 1 Band").val != bandBefore, "'>' on a link's Band picks the next band (" + bandBefore + " -> " + panelStore.GetStringChooserJSONParam("LightLink 1 Band").val + ")");
+		var linksBefore = panelStore.Links.Count;
+		pressB("+ Add light link", 0, true);
+		h.Check(panelStore.Links.Count == linksBefore + 1 && panelStore.Links[linksBefore][0] == "_LightVFX", "'+ Add light link' adds a link pointing at _LightVFX");
+		pressB("- Remove last light link", 0, true);
+		h.Check(panelStore.Links.Count == linksBefore, "'- Remove last light link' takes it away again");
+		pressB("+ Add slider link", 0, true);
+		h.Check(panelStore.Sliders == 1 && panelStore.GetStringChooserJSONParam("SliderLink 1 Atom") != null, "'+ Add slider link' adds a slider link with its settings");
+		pressB("- Remove last slider link", 0, true);
+		h.Check(panelStore.Sliders == 0, "...and removes it");
+		Tb.GetMethod("StepAtom", All).Invoke(p, new object[] { 1 });
+		var panelRow2 = Tb.GetField("detailRow", All).GetValue(p);
+		h.Check(panelRow2 != panelRow && (string)panelRow2.GetType().GetField("Label").GetValue(panelRow2) != null && ((string)panelRow2.GetType().GetField("Label").GetValue(panelRow2)).StartsWith("BeatIt"), "'>' in the panel steps to the other BeatIt plugin");
+		Tb.GetField("detailRow", All).SetValue(p, null); Tb.GetField("beatMode", All).SetValue(p, false);
 		h.Check(!Sim.Errors.Any(e => e.Contains("MusicVfx")), "the plugin threw nothing");
 	}
 }

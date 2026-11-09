@@ -3187,8 +3187,6 @@ namespace SimpleJSON {
 public abstract partial class JSONNode {
   public global::System.Collections.Generic.IEnumerable<global::SimpleJSON.JSONNode> Childs { get; set; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static global::SimpleJSON.JSONNode Parse(string aJSON) { return default; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::SimpleJSON.JSONNode Remove(string aKey) { return default; }
-  [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual global::SimpleJSON.JSONNode Remove(int aIndex) { return default; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual string ToString(string aPrefix) { return ""; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public virtual void ToString(string aPrefix, global::System.Text.StringBuilder sb) { }
 }

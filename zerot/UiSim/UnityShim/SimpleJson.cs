@@ -8,6 +8,7 @@ namespace SimpleJSON
 {
 	public abstract partial class JSONNode
 	{
+		public virtual JSONNode Remove(int aIndex) { return null; }
 		public virtual JSONNode this[string key] { get { return null; } set { } }
 		public virtual JSONNode this[int index] { get { return null; } set { } }
 		public virtual string Value { get { return ""; } set { } }
@@ -93,6 +94,7 @@ namespace SimpleJSON
 		public override int Count { get { return list.Count; } }
 		public override void Add(string key, JSONNode item) { list.Add(item); }
 		public override void Add(JSONNode item) { list.Add(item); }
+		public override JSONNode Remove(int aIndex) { if (aIndex < 0 || aIndex >= list.Count) return null; var n = list[aIndex]; list.RemoveAt(aIndex); return n; }
 		public System.Collections.IEnumerator GetEnumerator() { return ((System.Collections.IEnumerable)list).GetEnumerator(); }
 		internal override void Write(StringBuilder sb)
 		{

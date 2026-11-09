@@ -63,7 +63,7 @@ namespace ZeroT.MusicVfxBoxes
 
 		private RlUguiWindow win;
 		private Text status;
-		private Button bMusicToggle, bMusicSelect, bSlider, bMusic, bLight, bFly, bDeleteFly, bAll, bLinkBeat, bDeleteAll, bRestoreAll;
+		private Button bMusicToggle, bMusicSelect, bSlider, bMusic, bLight, bFly, bDeleteFly, bAll, bLinkBeat, bDeleteAll, bRestoreAll, bBeatPanel;
 		private bool busy;
 		private string message = "";
 
@@ -92,6 +92,7 @@ namespace ZeroT.MusicVfxBoxes
 			public string Kind;        // bool / float / choice / action / text
 		}
 		private PluginRow detailRow;
+		private bool beatMode;         // the detail view is the BeatIt panel (links + on/off)
 		private List<ParamRow> paramRows = new List<ParamRow>();
 		private Button bAtomPrev, bAtomNext, bAllOn, bAllOff, bPagePrev, bPageNext;
 		private Text atomLabel, pageLabel;
@@ -942,7 +943,8 @@ namespace ZeroT.MusicVfxBoxes
 			bAll = RlUguiWindow.NewButton("Spawn all", win.Body, "Spawn all 1-4", delegate { SpawnEverything(); });
 			bDeleteAll = RlUguiWindow.NewButton("Delete all", win.Body, "Delete all", delegate { DeleteEverything(); });
 			bRestoreAll = RlUguiWindow.NewButton("Restore all", win.Body, "Restore all", delegate { RestoreEverything(); });
-			bLinkBeat = RlUguiWindow.NewButton("Link BeatIt", win.Body, "Link BeatIt to light", delegate
+			bBeatPanel = RlUguiWindow.NewButton("BeatIt panel", win.Body, "BeatIt panel", delegate { OpenBeatPanel(); });
+			bLinkBeat = RlUguiWindow.NewButton("Link BeatIt", win.Body, "Link BeatIt > light", delegate
 			{
 				int n = LinkBeat();
 				Say(n > 0 ? "BeatIt linked to " + light.Name.Value + " (" + n + " plugin" + (n == 1 ? ")." : "s).") : "Needs both " + music.Name.Value + " (with BeatIt) and " + light.Name.Value + ".");
@@ -955,7 +957,7 @@ namespace ZeroT.MusicVfxBoxes
 			bAtomPrev = RlUguiWindow.NewButton("Atom prev", win.Body, "<", delegate { StepAtom(-1); });
 			bAtomNext = RlUguiWindow.NewButton("Atom next", win.Body, ">", delegate { StepAtom(1); });
 			atomLabel = RlUguiWindow.NewText("Atom", win.Body, "", TextAnchor.MiddleCenter);
-			bAllOn = RlUguiWindow.NewButton("All on", win.Body, "All on", delegate { if (detailRow != null) { detailRow = null; page = 0; Refresh(); } else { SetAll(true); } });
+			bAllOn = RlUguiWindow.NewButton("All on", win.Body, "All on", delegate { if (detailRow != null) { detailRow = null; beatMode = false; page = 0; Refresh(); } else { SetAll(true); } });
 			bAllOff = RlUguiWindow.NewButton("All off", win.Body, "All off", delegate { SetAll(false); });
 			for (int i = 0; i < RowCount; i++)
 			{
@@ -996,6 +998,10 @@ namespace ZeroT.MusicVfxBoxes
 		private void StepPlugin(int d)
 		{
 			List<PluginRow> all = RowsFor(Find(ViewSpec()));
+			if (beatMode)
+			{
+				all = all.FindAll(delegate(PluginRow r) { return r.Label.StartsWith("BeatIt"); });
+			}
 			int at = -1;
 			for (int i = 0; i < all.Count; i++)
 			{
@@ -1011,6 +1017,174 @@ namespace ZeroT.MusicVfxBoxes
 			detailRow = all[((at + d) % all.Count + all.Count) % all.Count];
 			page = 0;
 			Refresh();
+		}
+
+		private void OpenBeatPanel()
+		{
+			Atom m = Find(music);
+			if (m == null)
+			{
+				Say("There is no " + music.Name.Value + " atom: press the _Music box first.");
+				return;
+			}
+			List<PluginRow> beats = RowsFor(m).FindAll(delegate(PluginRow r) { return r.Label.StartsWith("BeatIt"); });
+			if (beats.Count == 0)
+			{
+				Say(m.uid + " has no BeatIt plugin.");
+				return;
+			}
+			PluginRow pick = beats[0];
+			for (int i = 0; i < beats.Count; i++)
+			{
+				if (IsOn(beats[i]))
+				{
+					pick = beats[i];
+					break;
+				}
+			}
+			viewAtom = 1;
+			beatMode = true;
+			detailRow = pick;
+			page = 0;
+			Refresh();
+		}
+
+		private static readonly string[] LinkOrder = { "Enabled", "Light", "Atom", "Storable", "Param", "Band", "Random Band", "Random Interval", "Min", "Max", "Intensity" };
+
+		private static int LinkRank(string name)
+		{
+			// "LightLink 2 Band" -> (light, 2, Band); lights before sliders, by number, then in a readable order
+			string[] part = name.Split(new char[] { ' ' }, 3);
+			int kind = part[0] == "LightLink" ? 0 : 1;
+			int n;
+			int.TryParse(part.Length > 1 ? part[1] : "0", out n);
+			int a = Array.IndexOf(LinkOrder, part.Length > 2 ? part[2] : "");
+			return kind * 100000 + n * 100 + (a < 0 ? 99 : a);
+		}
+
+		// what the BeatIt panel lists: the link actions, the plugin's own switch, then every light link and slider link setting
+		private static List<ParamRow> BeatParams(JSONStorable s)
+		{
+			List<ParamRow> list = new List<ParamRow>();
+			string[][] actions =
+			{
+				new string[] { "+ Add light link", "beat-add-light" },
+				new string[] { "+ Add slider link", "beat-add-slider" },
+				new string[] { "- Remove last light link", "beat-rm-light" },
+				new string[] { "- Remove last slider link", "beat-rm-slider" },
+				new string[] { "Refresh atom lists", "beat-refresh" }
+			};
+			for (int i = 0; i < actions.Length; i++)
+			{
+				ParamRow r = new ParamRow();
+				r.Name = actions[i][0];
+				r.Kind = actions[i][1];
+				list.Add(r);
+			}
+			ParamRow en = new ParamRow();
+			en.Name = "enabled";
+			en.Kind = "bool";
+			list.Add(en);
+			List<string> names = new List<string>();
+			foreach (string n in s.GetBoolParamNames())
+			{
+				if (n.StartsWith("LightLink ") || n.StartsWith("SliderLink "))
+				{
+					names.Add(n);
+				}
+			}
+			foreach (string n in s.GetFloatParamNames())
+			{
+				if (n.StartsWith("LightLink ") || n.StartsWith("SliderLink "))
+				{
+					names.Add(n);
+				}
+			}
+			foreach (string n in s.GetStringChooserParamNames())
+			{
+				if (n.StartsWith("LightLink ") || n.StartsWith("SliderLink "))
+				{
+					names.Add(n);
+				}
+			}
+			names.Sort(delegate(string x, string y) { return LinkRank(x).CompareTo(LinkRank(y)); });
+			for (int i = 0; i < names.Count; i++)
+			{
+				ParamRow r = new ParamRow();
+				r.Name = names[i];
+				r.Kind = s.GetBoolJSONParam(names[i]) != null ? "bool" : (s.GetFloatJSONParam(names[i]) != null ? "float" : "choice");
+				list.Add(r);
+			}
+			return list;
+		}
+
+		// adds / removes an entry of BeatIt's "LightLinks" / "SliderLinks" array (what its own "+ Add ... Link" button does) and has it rebuild from that
+		private void BeatLinkEdit(JSONStorable s, string array, int delta)
+		{
+			try
+			{
+				JSONClass jc = s.GetJSON(true, true, false);
+				JSONArray arr = jc.HasKey(array) ? jc[array].AsArray : null;
+				if (arr == null)
+				{
+					arr = new JSONArray();
+					jc[array] = arr;
+				}
+				if (delta > 0)
+				{
+					if (arr.Count >= 8)
+					{
+						Say("BeatIt allows 8 links of a kind.");
+						return;
+					}
+					JSONClass link = new JSONClass();
+					if (array == "LightLinks")
+					{
+						Atom l = Find(light);
+						link["light"] = l != null ? l.uid : "None";
+						link["band"] = "Band " + UnityEngine.Random.Range(1, 9);
+						link["enabled"] = "True";
+						link["intensity"] = "2.5";
+					}
+					else
+					{
+						link["atom"] = "None";
+						link["storable"] = "None";
+						link["param"] = "None";
+						link["band"] = "None";
+						link["enabled"] = "True";
+						link["min"] = "0";
+						link["max"] = "1";
+						link["randomBand"] = "False";
+						link["randomInterval"] = "5";
+					}
+					arr.Add(link);
+				}
+				else if (delta < 0)
+				{
+					if (arr.Count == 0)
+					{
+						Say("No " + (array == "LightLinks" ? "light" : "slider") + " link to remove.");
+						return;
+					}
+					arr.Remove(arr.Count - 1);
+				}
+				s.RestoreFromJSON(jc, true, true, null, false);     // delta 0: rebuild so the lists see the atoms that exist now
+			}
+			catch (Exception e)
+			{
+				Logger.LogWarning("BeatIt links: " + e.Message);
+			}
+		}
+
+		private bool BeatAction(string kind, JSONStorable s)
+		{
+			if (kind == "beat-add-light") { BeatLinkEdit(s, "LightLinks", 1); return true; }
+			if (kind == "beat-add-slider") { BeatLinkEdit(s, "SliderLinks", 1); return true; }
+			if (kind == "beat-rm-light") { BeatLinkEdit(s, "LightLinks", -1); return true; }
+			if (kind == "beat-rm-slider") { BeatLinkEdit(s, "SliderLinks", -1); return true; }
+			if (kind == "beat-refresh") { BeatLinkEdit(s, "LightLinks", 0); return true; }
+			return false;
 		}
 
 		private static List<ParamRow> ParamsOf(JSONStorable s)
@@ -1097,6 +1271,11 @@ namespace ZeroT.MusicVfxBoxes
 			}
 			try
 			{
+				if (BeatAction(pr.Kind, s))
+				{
+					Refresh();
+					return;
+				}
 				if (pr.Kind == "bool")
 				{
 					JSONStorableBool b = s.GetBoolJSONParam(pr.Name);
@@ -1143,6 +1322,7 @@ namespace ZeroT.MusicVfxBoxes
 				{
 					if (r != null)
 					{
+						beatMode = false;
 						detailRow = r;
 						page = 0;
 						Refresh();
@@ -1362,7 +1542,8 @@ namespace ZeroT.MusicVfxBoxes
 				RlUguiWindow.SetRect(right[r].GetComponent<RectTransform>(), m + half + 6f, y, half, rowH);
 				y += rowH + 4f;
 			}
-			RlUguiWindow.SetRect(bLinkBeat.GetComponent<RectTransform>(), m, y, inner, rowH);
+			RlUguiWindow.SetRect(bLinkBeat.GetComponent<RectTransform>(), m, y, half, rowH);
+			RlUguiWindow.SetRect(bBeatPanel.GetComponent<RectTransform>(), m + half + 6f, y, half, rowH);
 			y += rowH + 8f;
 			RlUguiWindow.SetRect(status.rectTransform, m, y, inner, 50f);
 			y += 54f;
@@ -1448,6 +1629,7 @@ namespace ZeroT.MusicVfxBoxes
 			if (detailRow != null && (detailRow.Storable == null || va == null))
 			{
 				detailRow = null;
+				beatMode = false;
 			}
 			RlUguiWindow.SetLabel(bAllOn, detailRow != null ? "Back" : "All on");
 			bAllOff.gameObject.SetActive(detailRow == null);
@@ -1472,16 +1654,33 @@ namespace ZeroT.MusicVfxBoxes
 			}
 		}
 
+		private static string CountLinks(JSONStorable s)
+		{
+			int lights = 0, sliders = 0;
+			for (int i = 1; i <= 8; i++)
+			{
+				if (s.GetStringChooserJSONParam("LightLink " + i + " Light") != null)
+				{
+					lights++;
+				}
+				if (s.GetStringChooserJSONParam("SliderLink " + i + " Atom") != null)
+				{
+					sliders++;
+				}
+			}
+			return lights + "L " + sliders + "S";
+		}
+
 		private void RefreshDetail(Spec vs)
 		{
-			paramRows = ParamsOf(detailRow.Storable);
+			paramRows = beatMode ? BeatParams(detailRow.Storable) : ParamsOf(detailRow.Storable);
 			int per = Mathf.Max(1, visibleRows);
 			int pages = Mathf.Max(1, (paramRows.Count + per - 1) / per);
 			if (page >= pages)
 			{
 				page = pages - 1;
 			}
-			atomLabel.text = vs.Name.Value + " / " + detailRow.Label;
+			atomLabel.text = beatMode ? detailRow.Label + (IsOn(detailRow) ? "  On" : "  Off") + "  " + CountLinks(detailRow.Storable) : vs.Name.Value + " / " + detailRow.Label;
 			pageLabel.text = paramRows.Count + " settings   " + (page + 1) + " / " + pages;
 			JSONStorable s = detailRow.Storable;
 			for (int i = 0; i < RowCount; i++)
@@ -1500,6 +1699,12 @@ namespace ZeroT.MusicVfxBoxes
 				}
 				string text = pr.Name;
 				rowMain[i].interactable = pr.Kind != "text";
+				if (pr.Kind.StartsWith("beat-"))
+				{
+					RlUguiWindow.SetLabel(rowMain[i], pr.Name);
+					rowA[i].interactable = rowB[i].interactable = rowC[i].interactable = rowD[i].interactable = true;
+					continue;
+				}
 				if (pr.Kind == "bool")
 				{
 					JSONStorableBool b = s.GetBoolJSONParam(pr.Name);
