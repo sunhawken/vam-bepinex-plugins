@@ -9,6 +9,33 @@ using UnityEngine;
 // The seven UIAssist boxes as one plugin, on a fake scene: atoms are spawned the way UIAssist does (free name, AddAtomByType, preset through the atom's
 // "Preset" storable, extra plugin through its plugin manager). The fake atoms give the spawned atom the storables VaM would: "Preset" (loads a .vap:
 // registers its plugins), a plugin manager, a main controller; an AudioRouter storable with the real action names drives an AudioSource.
+// BeatIt keeps its light links in a "LightLinks" JSON array and rebuilds its "LightLink n Light / Band" choosers from it on RestoreFromJSON
+public sealed class FakeBeat : JSONStorable
+{
+	public readonly List<string[]> Links = new List<string[]>();   // light, band
+	public override SimpleJSON.JSONClass GetJSON(bool includePhysical = true, bool includeAppearance = true, bool forceStore = false)
+	{
+		var jc = new SimpleJSON.JSONClass(); var arr = new SimpleJSON.JSONArray();
+		foreach (var l in Links) { var o = new SimpleJSON.JSONClass(); o["light"] = l[0]; o["band"] = l[1]; o["enabled"] = "True"; o["intensity"] = "2.5"; arr.Add(o); }
+		jc["LightLinks"] = arr; return jc;
+	}
+	public override void RestoreFromJSON(SimpleJSON.JSONClass jc, bool restorePhysical = true, bool restoreAppearance = true, SimpleJSON.JSONArray presetAtoms = null, bool setMissingToDefault = true)
+	{
+		if (jc == null || !jc.HasKey("LightLinks")) return;
+		Links.Clear();
+		var arr = jc["LightLinks"].AsArray;
+		var lights = new List<string> { "None" };
+		foreach (var a in SuperController.singleton.GetAtoms()) if (a.type == "InvisibleLight") lights.Add(a.uid);
+		var bands = new List<string> { "None" }; for (int i = 1; i <= 8; i++) bands.Add("Band " + i);
+		for (int i = 0; i < arr.Count; i++)
+		{
+			Links.Add(new[] { arr[i]["light"].Value, arr[i]["band"].Value });
+			RegisterStringChooser(new JSONStorableStringChooser("LightLink " + (i + 1) + " Light", lights, lights.Contains(arr[i]["light"].Value) ? arr[i]["light"].Value : "None", "Light"));
+			RegisterStringChooser(new JSONStorableStringChooser("LightLink " + (i + 1) + " Band", bands, arr[i]["band"].Value, "Band"));
+		}
+	}
+}
+
 public static class MusicVfxScenario
 {
 	private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
@@ -52,7 +79,8 @@ public static class MusicVfxScenario
 		foreach (var id in new[] { "plugin#1_everlaster.AudioScrubber", "plugin#3_HAL9001.BeatIt", "plugin#2_HAL9001.BeatIt" })
 		{
 			var g = new GameObject(id); g.transform.SetParent(a.transform, false);
-			var s = g.AddComponent<JSONStorable>(); s.storeId = id; s.containingAtom = a; s.RegisterBool(new JSONStorableBool("enabled", true)); a.storables[id] = s;
+			JSONStorable s = id.Contains("BeatIt") ? (JSONStorable)g.AddComponent<FakeBeat>() : g.AddComponent<JSONStorable>();
+			s.storeId = id; s.containingAtom = a; s.RegisterBool(new JSONStorableBool("enabled", true)); a.storables[id] = s;
 		}
 	}
 	private static readonly List<string> Calls = new List<string>();
@@ -77,6 +105,7 @@ public static class MusicVfxScenario
 	public static void Boxes(Harness h)
 	{
 		Loaded.Clear();
+		if (UnityEngine.EventSystems.EventSystem.current == null) UnityEngine.EventSystems.EventSystem.current = new GameObject("EventSystem").AddComponent<UnityEngine.EventSystems.EventSystem>();
 		string root = Path.Combine(Path.GetTempPath(), "vamsim_musicvfx_" + Environment.ProcessId);
 		if (Directory.Exists(root)) Directory.Delete(root, true);
 		foreach (var d in new[] { "Custom/Atom/AudioSource", "Custom/Atom/UISlider", "Custom/Atom/InvisibleLight", "AddonPackages/resources", "AddonPackages/keep" }) Directory.CreateDirectory(Path.Combine(root, d));
@@ -98,9 +127,10 @@ public static class MusicVfxScenario
 		Toggle(p);
 		h.Check(Msg(p).Contains("_Music"), "Music On/Off without a _Music atom says so (" + Msg(p) + ")");
 
-		// _Music box
-		Spawn(p, "music"); h.Step(1f);
+		// _Music box: its AudioScrubber looks _AudioS up when it loads, so the slider comes first
+		Spawn(p, "music"); h.Step(3f);
 		var music = at("_Music");
+		h.Check(h.Sc.SimAddLog.SequenceEqual(new[] { "add UISlider _AudioS", "add AudioSource _Music" }), "the _Music box spawns _AudioS first, then _Music (" + string.Join(", ", h.Sc.SimAddLog) + ")");
 		h.Check(music != null && music.type == "AudioSource", "the _Music box spawns the AudioSource atom _Music");
 		h.Check(Loaded.Contains("_Music: Custom/Atom/AudioSource/Preset_Audio.vap"), "...and loads Custom/Atom/AudioSource/Preset_Audio.vap through its Preset storable (" + string.Join(" | ", Loaded) + ")");
 		h.Check(Msg(p).Contains("Missing.Package"), "...and reports the package its preset needs that is not installed (" + Msg(p) + ")");
@@ -115,19 +145,20 @@ public static class MusicVfxScenario
 		Toggle(p); h.Step(0.2f);
 		h.Check(!src.isPlaying, "Music On -> Off: 'Stop [UIList]' stops it");
 
-		// _Audio box (partner _Music is there)
+		// _Audio box (the first one: it needs nothing)
+		h.Sc.RemoveAtom(at("_AudioS")); h.Step(0.2f);
 		var spawnsBefore = h.Sc.SimAddLog.Count;
 		Spawn(p, "slider"); h.Step(1f);
 		var slider = at("_AudioS");
 		h.Check(slider != null && slider.type == "UISlider", "the _Audio box spawns the UISlider _AudioS");
 		h.Check(Loaded.Contains("_AudioS: Custom/Atom/UISlider/Preset_Audio.vap"), "...with Custom/Atom/UISlider/Preset_Audio.vap");
-		h.Check(h.Sc.SimAddLog.Count - spawnsBefore == 1, "...and only that one atom, _Music is already there");
+		h.Check(h.Sc.SimAddLog.Count - spawnsBefore == 1, "...and only that one atom");
 
-		// _Audio without _Music: the partner comes first
-		h.Sc.RemoveAtom(slider); h.Sc.RemoveAtom(music); h.Step(0.2f);
+		// _Music with no _AudioS: the slider comes first (and the music atom is renewed, so its BeatIt starts unlinked again)
+		h.Sc.RemoveAtom(slider); h.Sc.RemoveAtom(at("_Music")); h.Step(0.2f);
 		h.Sc.SimAddLog.Clear();
-		Spawn(p, "slider"); h.Step(2f);
-		h.Check(h.Sc.SimAddLog.SequenceEqual(new[] { "add AudioSource _Music", "add UISlider _AudioS" }), "_Audio with no _Music spawns _Music first, then _AudioS (" + string.Join(", ", h.Sc.SimAddLog) + ")");
+		Spawn(p, "music"); h.Step(3f);
+		h.Check(h.Sc.SimAddLog.SequenceEqual(new[] { "add UISlider _AudioS", "add AudioSource _Music" }), "_Music with no _AudioS spawns _AudioS first, then _Music (" + string.Join(", ", h.Sc.SimAddLog) + ")");
 
 		// _LightVFX box
 		Spawn(p, "light"); h.Step(1f);
@@ -135,6 +166,23 @@ public static class MusicVfxScenario
 		h.Check(light != null && light.type == "InvisibleLight", "the _LightVFX box spawns the InvisibleLight _LightVFX");
 		h.Check(Loaded.Contains("_LightVFX: Custom/Atom/InvisibleLight/Preset_SpiralLight.vap"), "...with Preset_SpiralLight.vap");
 		h.Check(Plugins(light).SequenceEqual(new[] { "Dragontales.Light_Atom_Excluder.12:/Custom/Scripts/Light Atom Excluder/Light Atom Excluder.cs" }), "...and adds Light Atom Excluder after the preset (" + string.Join(", ", Plugins(light)) + ")");
+
+		// BeatIt <-> _LightVFX: every BeatIt plugin on _Music gets a light link to the light, once, and its band moves around
+		var mus = at("_Music");
+		var beats = new[] { "plugin#2_HAL9001.BeatIt", "plugin#3_HAL9001.BeatIt" }.Select(id => (FakeBeat)mus.GetStorableByID(id)).ToArray();
+		h.Check(beats.All(b => b.Links.Count == 1 && b.Links[0][0] == "_LightVFX" && b.GetStringChooserJSONParam("LightLink 1 Light").val == "_LightVFX"), "spawning _LightVFX links both BeatIt plugins of _Music to it (" + string.Join(" | ", beats.Select(b => string.Join(",", b.Links.Select(l => l[0] + "/" + l[1])))) + ")");
+		h.Check(Msg(p).Contains("BeatIt linked"), "...and says so (" + Msg(p) + ")");
+		p.GetType().GetMethod("LinkBeat", All).Invoke(p, null);
+		h.Check(beats.All(b => b.Links.Count == 1), "linking again adds nothing");
+		h.Set("Wiring", "BeatRandomBandSeconds", "1");
+		var seen = new HashSet<string>();
+		for (int i = 0; i < 12; i++) { h.Step(1.05f); seen.Add(beats[1].GetStringChooserJSONParam("LightLink 1 Band").val); }
+		h.Check(seen.Count >= 3 && seen.All(b => b.StartsWith("Band ")), "the link's band jumps about at random (" + string.Join(", ", seen) + ")");
+		h.Set("Wiring", "BeatRandomBandSeconds", "0");
+		var held = beats[1].GetStringChooserJSONParam("LightLink 1 Band").val;
+		h.Step(4f);
+		h.Check(beats[1].GetStringChooserJSONParam("LightLink 1 Band").val == held, "BeatRandomBandSeconds = 0 keeps the band");
+		h.Set("Wiring", "BeatRandomBandSeconds", "5");
 
 		// FlyObject box
 		h.Sc.SimAddLog.Clear();
@@ -160,6 +208,7 @@ public static class MusicVfxScenario
 		h.Check(!beat1.GetBoolJSONParam("enabled").val, "a plugin's On / Off button switches that plugin's own 'enabled'");
 		mt.Invoke(p, new[] { rowsM[2] });
 		h.Check(beat1.GetBoolJSONParam("enabled").val, "...and back");
+		p.GetType().GetField("viewAtom", All).SetValue(p, 1);   // 0 _AudioS, 1 _Music, 2 _LightVFX, 3 FlyObject
 		p.GetType().GetMethod("SetAll", All).Invoke(p, new object[] { false });
 		h.Check(new[] { "plugin#0_VamEssentials.AudioRouter", "plugin#1_everlaster.AudioScrubber", "plugin#2_HAL9001.BeatIt", "plugin#3_HAL9001.BeatIt" }.All(id => !music.GetStorableByID(id).GetBoolJSONParam("enabled").val), "All off switches every plugin on the atom in view");
 		p.GetType().GetMethod("SetAll", All).Invoke(p, new object[] { true });
@@ -207,7 +256,7 @@ public static class MusicVfxScenario
 		fp.GetBoolJSONParam("Move Toggle").val = true;
 		press("Move Toggle", 0, true);
 		h.Check(!fp.GetBoolJSONParam("Move Toggle").val, "a switch's label toggles it");
-		viewF.SetValue(p, 0); detailF.SetValue(p, null);
+		viewF.SetValue(p, 1); detailF.SetValue(p, null);
 		var beat = ((System.Collections.IList)T.GetMethod("RowsFor", All).Invoke(p, new object[] { music }))[2];
 		var bs = beat.GetType().GetField("Storable").GetValue(beat) as JSONStorable;
 		var mode = new JSONStorableStringChooser("Preset", new List<string> { "a", "b", "c" }, "a", "Preset"); bs.RegisterStringChooser(mode);
@@ -216,7 +265,7 @@ public static class MusicVfxScenario
 		h.Check(mode.val == "b", "a choice's '>' picks the next choice");
 		press("Preset", 1, false); press("Preset", 1, false);
 		h.Check(mode.val == "c", "...and '<' wraps round to the last");
-		detailF.SetValue(p, null); viewF.SetValue(p, 0);
+		detailF.SetValue(p, null); viewF.SetValue(p, 1);
 
 		// Delete Fly Objects
 		h.Check(Delete(p, "fly") == 1 && at("FlyObject") == null, "Delete Fly Objects removes FlyObject");
@@ -235,6 +284,16 @@ public static class MusicVfxScenario
 		h.Sc.SimAddLog.Clear();
 		Spawn(p, "fly"); h.Step(2f);
 		h.Check(h.Sc.SimAddLog.SequenceEqual(new[] { "remove FlyObject", "add Empty FlyObject" }), "SpawnMissingPartners=false: only the FlyObject (" + string.Join(", ", h.Sc.SimAddLog) + ")");
+
+		// Spawn all 1-4: in the working order, from nothing
+		h.Set("Wiring", "SpawnMissingPartners", "true");
+		foreach (var a in h.Sc.atoms.Where(a => a.type != "Person" && a.uid != "CoreControl").ToArray()) h.Sc.RemoveAtom(a);
+		h.Step(0.3f);
+		h.Sc.SimAddLog.Clear();
+		p.GetType().GetMethod("SpawnEverything", All).Invoke(p, null); h.Step(6f);
+		h.Check(h.Sc.SimAddLog.SequenceEqual(new[] { "add UISlider _AudioS", "add AudioSource _Music", "add InvisibleLight _LightVFX", "add Empty FlyObject" }), "Spawn all goes _Audio, _Music, _LightVFX, FlyObject (" + string.Join(", ", h.Sc.SimAddLog) + ")");
+		var mus2 = at("_Music");
+		h.Check(new[] { "plugin#2_HAL9001.BeatIt", "plugin#3_HAL9001.BeatIt" }.All(id => ((FakeBeat)mus2.GetStorableByID(id)).Links.Count == 1), "...and BeatIt is linked to the light at the end");
 		h.Check(!Sim.Errors.Any(e => e.Contains("MusicVfx")), "the plugin threw nothing");
 	}
 }

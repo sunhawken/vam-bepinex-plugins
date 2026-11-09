@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using BepInEx;
 using BepInEx.Configuration;
+using SimpleJSON;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -47,6 +48,9 @@ namespace ZeroT.MusicVfxBoxes
 			public bool OpenUi;
 		}
 
+		private ConfigEntry<bool> cfgLinkBeat;
+		private ConfigEntry<float> cfgBandSeconds;
+		private float nextBand;
 		private ConfigEntry<bool> cfgPartners;
 		private ConfigEntry<bool> cfgLatest;
 		private ConfigEntry<string> cfgLightPlugin;
@@ -55,7 +59,7 @@ namespace ZeroT.MusicVfxBoxes
 
 		private RlUguiWindow win;
 		private Text status;
-		private Button bMusicToggle, bMusicSelect, bSlider, bMusic, bLight, bFly, bDeleteFly;
+		private Button bMusicToggle, bMusicSelect, bSlider, bMusic, bLight, bFly, bDeleteFly, bAll, bLinkBeat;
 		private bool busy;
 		private string message = "";
 
@@ -67,7 +71,7 @@ namespace ZeroT.MusicVfxBoxes
 			public string Label;
 			public string Kind;        // router / fly / other
 		}
-		private int viewAtom;          // 0 music, 1 slider, 2 light, 3 fly
+		private int viewAtom;          // 0 slider, 1 music, 2 light, 3 fly (the spawn order)
 		private int page;
 		private List<PluginRow> rows = new List<PluginRow>();
 		private readonly Button[] rowMain = new Button[RowCount];
@@ -95,7 +99,9 @@ namespace ZeroT.MusicVfxBoxes
 
 		private void Awake()
 		{
-			cfgPartners = Config.Bind<bool>("Wiring", "SpawnMissingPartners", true, "A box whose partner atom is missing spawns it first: _Audio needs _Music (its text is bound to _Music's AudioRouter), FlyObject needs _LightVFX (AutoFlyObject flies the atom named _LightVFX).");
+			cfgPartners = Config.Bind<bool>("Wiring", "SpawnMissingPartners", true, "The boxes work in the order _Audio, _Music, _LightVFX, FlyObject. A box whose partner atom is missing spawns it first: _Music needs _AudioS (its AudioScrubber looks the slider up when it loads), FlyObject needs _LightVFX (AutoFlyObject flies the atom named _LightVFX).");
+			cfgLinkBeat = Config.Bind<bool>("Wiring", "LinkBeatToLight", true, "When _Music and _LightVFX both exist, every BeatIt plugin on _Music gets a light link to _LightVFX (added if missing).");
+			cfgBandSeconds = Config.Bind<float>("Wiring", "BeatRandomBandSeconds", 5f, new ConfigDescription("The BeatIt light link to _LightVFX jumps to a random frequency band this often, in seconds (0 = keep the band as it is).", new AcceptableValueRange<float>(0f, 120f)));
 			cfgLatest = Config.Bind<bool>("Wiring", "UseLatestPackageVersion", true, "Plugin paths like Pkg.5:/... are replaced with the newest installed version of that package (UIAssist's 'use latest VAR').");
 			cfgLightPlugin = Config.Bind<string>("Plugins", "LightExtra", "Dragontales.Light_Atom_Excluder.12:/Custom/Scripts/Light Atom Excluder/Light Atom Excluder.cs", "Plugin added to the spawned _LightVFX after its preset (empty = none).");
 			cfgFlyPlugin = Config.Bind<string>("Plugins", "FlyObject", "Feel.AutoFlyObject.5:/Custom/Scripts/Feel/AutoFlyObject.cslist", "Plugin added to the spawned FlyObject.");
@@ -111,7 +117,7 @@ namespace ZeroT.MusicVfxBoxes
 			fly = new Spec { Key = "fly", AtomType = "Empty", AtHead = true, Select = true, DeleteFirst = true, OpenUi = true };
 			fly.Name = Config.Bind<string>("Atoms", "Fly", "FlyObject", "Name of the Empty atom that carries AutoFlyObject.");
 			fly.Preset = Config.Bind<string>("Presets", "Fly", "", "Atom preset loaded into the new fly atom (UIAssist uses none).");
-			win = new RlUguiWindow(this, "Music and VFX", "Window", 40f, 60f, 360f, 520f, 300f, 360f, 800f, 900f);
+			win = new RlUguiWindow(this, "Music and VFX", "Window", 40f, 60f, 360f, 560f, 300f, 400f, 800f, 900f);
 		}
 
 		private IEnumerator Start()
@@ -149,6 +155,7 @@ namespace ZeroT.MusicVfxBoxes
 
 		private void Update()
 		{
+			BeatTick();
 			if (win == null || win.Window == null)
 			{
 				return;
@@ -333,9 +340,9 @@ namespace ZeroT.MusicVfxBoxes
 			{
 				return null;
 			}
-			if (s == slider && Find(music) == null)
+			if (s == music && Find(slider) == null)
 			{
-				return music;
+				return slider;
 			}
 			if (s == fly && Find(light) == null)
 			{
@@ -428,8 +435,170 @@ namespace ZeroT.MusicVfxBoxes
 				Say("Setting up " + uid + " failed: " + e.Message);
 				yield break;
 			}
-			Say("Spawned " + uid + (missing.Length > 0 ? "  (missing packages: " + missing + ")" : "."));
+			string linked = "";
+			if ((s == music || s == light) && cfgLinkBeat.Value)
+			{
+				int n = LinkBeat();
+				linked = n > 0 ? "  BeatIt linked to " + light.Name.Value + " (" + n + ")." : "";
+			}
+			Say("Spawned " + uid + (missing.Length > 0 ? "  (missing packages: " + missing + ")" : ".") + linked);
 			Logger.LogInfo("Spawned " + uid + " (" + s.AtomType + ")" + (missing.Length > 0 ? ", missing packages: " + missing : ""));
+		}
+
+		// all four in the working order: _Audio, _Music, _LightVFX, FlyObject (the ones that exist are kept, FlyObject is renewed)
+		private void SpawnEverything()
+		{
+			if (busy)
+			{
+				Say("Still spawning, one moment.");
+				return;
+			}
+			StartCoroutine(SpawnChain());
+		}
+
+		private IEnumerator SpawnChain()
+		{
+			busy = true;
+			Spec[] order = { slider, music, light, fly };
+			for (int i = 0; i < order.Length; i++)
+			{
+				if (order[i] == fly || Find(order[i]) == null)
+				{
+					yield return StartCoroutine(SpawnOne(order[i]));
+				}
+			}
+			if (cfgLinkBeat.Value)
+			{
+				LinkBeat();
+			}
+			busy = false;
+		}
+
+		private static string[] BeatIds(Atom a)
+		{
+			List<string> ids = new List<string>();
+			if (a != null)
+			{
+				foreach (string id in a.GetStorableIDs())
+				{
+					if (id.StartsWith("plugin#") && id.IndexOf("BeatIt", StringComparison.OrdinalIgnoreCase) >= 0)
+					{
+						ids.Add(id);
+					}
+				}
+			}
+			return ids.ToArray();
+		}
+
+		// which LightLink n of a BeatIt points at the light (0 = none)
+		private static int LinkIndex(JSONStorable s, string lightUid)
+		{
+			for (int i = 1; i <= 8; i++)
+			{
+				JSONStorableStringChooser c = s.GetStringChooserJSONParam("LightLink " + i + " Light");
+				if (c != null && c.val == lightUid)
+				{
+					return i;
+				}
+			}
+			return 0;
+		}
+
+		// BeatIt keeps its light links in a JSON array it rebuilds from on load: add a link to the light there (like the plugin's own "+ Add Light Link")
+		// when there is none yet, everything else it stores stays as it is. Returns how many BeatIt plugins now have the link.
+		private int LinkBeat()
+		{
+			Atom m = Find(music), l = Find(light);
+			if (m == null || l == null)
+			{
+				return 0;
+			}
+			int count = 0;
+			foreach (string id in BeatIds(m))
+			{
+				JSONStorable s = m.GetStorableByID(id);
+				if (s == null)
+				{
+					continue;
+				}
+				try
+				{
+					if (LinkIndex(s, l.uid) == 0)
+					{
+						JSONClass jc = s.GetJSON(true, true, false);
+						JSONArray arr = jc.HasKey("LightLinks") ? jc["LightLinks"].AsArray : null;
+						if (arr == null)
+						{
+							arr = new JSONArray();
+							jc["LightLinks"] = arr;
+						}
+						if (arr.Count >= 8)
+						{
+							Logger.LogWarning(id + " already has 8 light links.");
+							continue;
+						}
+						JSONClass link = new JSONClass();
+						link["light"] = l.uid;
+						link["band"] = "Band " + UnityEngine.Random.Range(1, 9);
+						link["enabled"] = "True";
+						link["intensity"] = "2.5";
+						arr.Add(link);
+						s.RestoreFromJSON(jc, true, true, null, false);
+					}
+					if (LinkIndex(s, l.uid) > 0)
+					{
+						count++;
+					}
+				}
+				catch (Exception e)
+				{
+					Logger.LogWarning("Could not link " + id + " to " + l.uid + ": " + e.Message);
+				}
+			}
+			return count;
+		}
+
+		// "random band": the link to the light moves to another band every few seconds
+		private void BeatTick()
+		{
+			float every = cfgBandSeconds == null ? 0f : cfgBandSeconds.Value;
+			if (every <= 0f || !cfgLinkBeat.Value || Time.unscaledTime < nextBand || Sc == null)
+			{
+				return;
+			}
+			nextBand = Time.unscaledTime + every;
+			Atom m = Find(music), l = Find(light);
+			if (m == null || l == null)
+			{
+				return;
+			}
+			foreach (string id in BeatIds(m))
+			{
+				JSONStorable s = m.GetStorableByID(id);
+				int k = s == null ? 0 : LinkIndex(s, l.uid);
+				if (k == 0)
+				{
+					continue;
+				}
+				JSONStorableStringChooser band = s.GetStringChooserJSONParam("LightLink " + k + " Band");
+				if (band == null)
+				{
+					continue;
+				}
+				string next = band.val;
+				for (int tries = 0; tries < 8 && next == band.val; tries++)
+				{
+					next = "Band " + UnityEngine.Random.Range(1, 9);
+				}
+				try
+				{
+					band.val = next;
+				}
+				catch (Exception e)
+				{
+					Logger.LogWarning("Could not move the band of " + id + ": " + e.Message);
+				}
+			}
 		}
 
 		private void Place(Atom atom, bool atHead)
@@ -649,6 +818,12 @@ namespace ZeroT.MusicVfxBoxes
 			bMusic = RlUguiWindow.NewButton("Music atom", win.Body, "_Music", delegate { Spawn(music); });
 			bLight = RlUguiWindow.NewButton("Light VFX", win.Body, "_LightVFX", delegate { Spawn(light); });
 			bFly = RlUguiWindow.NewButton("FlyObject", win.Body, "FlyObject", delegate { Spawn(fly); });
+			bAll = RlUguiWindow.NewButton("Spawn all", win.Body, "Spawn all 1-4", delegate { SpawnEverything(); });
+			bLinkBeat = RlUguiWindow.NewButton("Link BeatIt", win.Body, "Link BeatIt to light", delegate
+			{
+				int n = LinkBeat();
+				Say(n > 0 ? "BeatIt linked to " + light.Name.Value + " (" + n + " plugin" + (n == 1 ? ")." : "s).") : "Needs both " + music.Name.Value + " (with BeatIt) and " + light.Name.Value + ".");
+			});
 			bDeleteFly = RlUguiWindow.NewButton("Delete fly objects", win.Body, "Delete Fly Objects", delegate
 			{
 				int n = DeleteAtoms(fly);
@@ -680,7 +855,7 @@ namespace ZeroT.MusicVfxBoxes
 
 		private Spec ViewSpec()
 		{
-			return viewAtom == 0 ? music : (viewAtom == 1 ? slider : (viewAtom == 2 ? light : fly));
+			return viewAtom == 0 ? slider : (viewAtom == 1 ? music : (viewAtom == 2 ? light : fly));
 		}
 
 		private void StepAtom(int d)
@@ -1056,15 +1231,15 @@ namespace ZeroT.MusicVfxBoxes
 			float half = (inner - 6f) / 2f;
 			float rowH = 28f;
 			float y = 30f;
-			Button[] left = { bMusicToggle, bSlider, bLight, bDeleteFly };
-			Button[] right = { bMusicSelect, bMusic, bFly, null };
-			for (int r = 0; r < 3; r++)
+			Button[] left = { bSlider, bLight, bMusicToggle, bDeleteFly };
+			Button[] right = { bMusic, bFly, bMusicSelect, bAll };
+			for (int r = 0; r < 4; r++)
 			{
 				RlUguiWindow.SetRect(left[r].GetComponent<RectTransform>(), m, y, half, rowH);
 				RlUguiWindow.SetRect(right[r].GetComponent<RectTransform>(), m + half + 6f, y, half, rowH);
 				y += rowH + 4f;
 			}
-			RlUguiWindow.SetRect(bDeleteFly.GetComponent<RectTransform>(), m, y, inner, rowH);
+			RlUguiWindow.SetRect(bLinkBeat.GetComponent<RectTransform>(), m, y, inner, rowH);
 			y += rowH + 8f;
 			RlUguiWindow.SetRect(status.rectTransform, m, y, inner, 50f);
 			y += 54f;
@@ -1123,7 +1298,7 @@ namespace ZeroT.MusicVfxBoxes
 			bool playing = MusicPlaying();
 			RlUguiWindow.SetLabel(bMusicToggle, playing ? "Music On" : "Music Off");
 			StringBuilder sb = new StringBuilder();
-			sb.Append(Mark(music)).Append("   ").Append(Mark(slider)).Append('\n').Append(Mark(light)).Append("   ").Append(Mark(fly));
+			sb.Append("1 ").Append(Mark(slider)).Append("   2 ").Append(Mark(music)).Append('\n').Append("3 ").Append(Mark(light)).Append("   4 ").Append(Mark(fly));
 			Atom m = Find(music);
 			if (m != null)
 			{
