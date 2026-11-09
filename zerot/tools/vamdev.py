@@ -67,7 +67,7 @@ P = {
     'musicvfx': ('MusicVfxBoxes/ZeroT.MusicVfxBoxes.csproj', 'ZeroT.MusicVfxBoxes.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'musicvfx', 'colliderfit', 'forcerodsync', 'errorsilencer', 'hudclickshield', 'huddock', 'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HEADLESS = {'givemefps', 'musicvfx', 'colliderfit', 'forcerodsync', 'errorsilencer', 'hudclickshield', 'huddock', 'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
 HELPERS = {'forcerodsync', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper', 'appearanceloaderhelper', 'zajeshufflehelper'}   # Harmony helpers: need the script assemblies from `simtargets`
 UI_PLUGINS = {'musicvfx', 'colliderfit', 'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook', 'orgasmsuite', 'huddock'}

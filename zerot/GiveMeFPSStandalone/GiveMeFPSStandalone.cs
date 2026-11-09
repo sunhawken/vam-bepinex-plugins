@@ -43,6 +43,8 @@ namespace ZeroT.GiveMeFPSStandalone
 		private ConfigEntry<bool> cfgAuto;
 		private ConfigEntry<string> cfgPreset;
 		private ConfigEntry<float> cfgDelay;
+		private ConfigEntry<float> cfgReapply;
+		private float nextReapply;
 		private RlUguiWindow win;
 		private Text status;
 		private Button autoButton;
@@ -59,6 +61,7 @@ namespace ZeroT.GiveMeFPSStandalone
 			cfgAuto = Config.Bind<bool>("General", "AutoApply", true, "Apply the preset automatically at startup, after scene loads and when a person is added.");
 			cfgPreset = Config.Bind<string>("General", "AutoPreset", "Full", "Preset applied automatically: Full, Recommend, Hair Only or VaM Defaults.");
 			cfgDelay = Config.Bind<float>("General", "StartupDelaySeconds", 4f, "Wait this long after VaM finishes loading before the first automatic apply.");
+			cfgReapply = Config.Bind<float>("General", "ReapplyIntervalSeconds", 5f, "While the plugin is On (and auto-apply is on), apply the preset again this often, so anything that changed the settings back (a scene load, another plugin) is put right. 0 = only at startup, after scene loads and when a person is added.");
 			presets = new Preset[] { Full, Recommend, HairOnly, VamDefaults };
 			win = new RlUguiWindow(this, "GiveMeFPS", "Window", 40f, 60f, 300f, 178f, 240f, 150f, 800f, 600f);
 		}
@@ -185,6 +188,17 @@ namespace ZeroT.GiveMeFPSStandalone
 				Hook();
 				Schedule(Mathf.Max(0f, cfgDelay.Value));
 			}
+			if (applyAt < 0f && cfgAuto.Value && cfgReapply.Value > 0f && !sc.isLoading)
+			{
+				// idle: replay the preset every few seconds
+				if (Time.unscaledTime >= nextReapply)
+				{
+					nextReapply = Time.unscaledTime + Mathf.Max(1f, cfgReapply.Value);
+					Apply(AutoPreset());
+					RefreshStatus();
+				}
+				return;
+			}
 			if (applyAt < 0f || Time.unscaledTime < applyAt || sc.isLoading)
 			{
 				return;
@@ -196,6 +210,7 @@ namespace ZeroT.GiveMeFPSStandalone
 			if (complete || attemptsLeft <= 0)
 			{
 				applyAt = -1f;
+				nextReapply = Time.unscaledTime + Mathf.Max(1f, cfgReapply.Value);
 			}
 			else
 			{
