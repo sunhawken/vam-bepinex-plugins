@@ -51,6 +51,10 @@ namespace ZeroT.MusicVfxBoxes
 		private ConfigEntry<bool> cfgLinkBeat;
 		private ConfigEntry<float> cfgBandSeconds;
 		private float nextBand;
+
+		// Delete all remembers what was there (and every plugin's settings) so Restore all can bring it back
+		private readonly List<string> deletedKeys = new List<string>();
+		private readonly Dictionary<string, JSONClass> savedPlugins = new Dictionary<string, JSONClass>();
 		private ConfigEntry<bool> cfgPartners;
 		private ConfigEntry<bool> cfgLatest;
 		private ConfigEntry<string> cfgLightPlugin;
@@ -59,7 +63,7 @@ namespace ZeroT.MusicVfxBoxes
 
 		private RlUguiWindow win;
 		private Text status;
-		private Button bMusicToggle, bMusicSelect, bSlider, bMusic, bLight, bFly, bDeleteFly, bAll, bLinkBeat;
+		private Button bMusicToggle, bMusicSelect, bSlider, bMusic, bLight, bFly, bDeleteFly, bAll, bLinkBeat, bDeleteAll, bRestoreAll;
 		private bool busy;
 		private string message = "";
 
@@ -117,7 +121,7 @@ namespace ZeroT.MusicVfxBoxes
 			fly = new Spec { Key = "fly", AtomType = "Empty", AtHead = true, Select = true, DeleteFirst = true, OpenUi = true };
 			fly.Name = Config.Bind<string>("Atoms", "Fly", "FlyObject", "Name of the Empty atom that carries AutoFlyObject.");
 			fly.Preset = Config.Bind<string>("Presets", "Fly", "", "Atom preset loaded into the new fly atom (UIAssist uses none).");
-			win = new RlUguiWindow(this, "Music and VFX", "Window", 40f, 60f, 360f, 560f, 300f, 400f, 800f, 900f);
+			win = new RlUguiWindow(this, "Music and VFX", "Window", 40f, 60f, 360f, 590f, 300f, 430f, 800f, 900f);
 		}
 
 		private IEnumerator Start()
@@ -474,6 +478,123 @@ namespace ZeroT.MusicVfxBoxes
 			busy = false;
 		}
 
+		private Spec[] Order()
+		{
+			return new Spec[] { slider, music, light, fly };
+		}
+
+		// removes the four atoms; the plugin settings of each are kept for Restore all
+		private void DeleteEverything()
+		{
+			if (busy)
+			{
+				Say("Still spawning, one moment.");
+				return;
+			}
+			deletedKeys.Clear();
+			savedPlugins.Clear();
+			int atoms = 0;
+			foreach (Spec s in Order())
+			{
+				Atom a = Find(s);
+				if (a == null)
+				{
+					continue;
+				}
+				deletedKeys.Add(s.Key);
+				foreach (string id in a.GetStorableIDs())
+				{
+					if (!id.StartsWith("plugin#"))
+					{
+						continue;
+					}
+					try
+					{
+						JSONStorable js = a.GetStorableByID(id);
+						if (js != null)
+						{
+							savedPlugins[s.Key + "|" + id] = js.GetJSON(true, true, false);
+						}
+					}
+					catch (Exception e)
+					{
+						Logger.LogWarning("Could not remember " + id + ": " + e.Message);
+					}
+				}
+				atoms += DeleteAtoms(s);
+			}
+			Say(atoms > 0 ? "Deleted " + atoms + " atom" + (atoms == 1 ? "" : "s") + ". Restore all brings them back with their settings." : "Nothing to delete.");
+		}
+
+		private void RestoreEverything()
+		{
+			if (busy)
+			{
+				Say("Still spawning, one moment.");
+				return;
+			}
+			if (deletedKeys.Count == 0)
+			{
+				Say("Nothing to restore: use Delete all first (or Spawn all for a fresh set).");
+				return;
+			}
+			StartCoroutine(RestoreChain());
+		}
+
+		private IEnumerator RestoreChain()
+		{
+			busy = true;
+			List<string> keys = new List<string>(deletedKeys);
+			Spec[] order = Order();
+			for (int i = 0; i < order.Length; i++)
+			{
+				Spec s = order[i];
+				if (!keys.Contains(s.Key))
+				{
+					continue;
+				}
+				yield return StartCoroutine(SpawnOne(s));
+			}
+			yield return new WaitForSeconds(1.5f);           // the plugins load a few frames after the atoms
+			for (int i = 0; i < order.Length; i++)
+			{
+				Spec s = order[i];
+				Atom a = keys.Contains(s.Key) ? Find(s) : null;
+				if (a == null)
+				{
+					continue;
+				}
+				foreach (string id in a.GetStorableIDs())
+				{
+					JSONClass jc;
+					if (!id.StartsWith("plugin#") || !savedPlugins.TryGetValue(s.Key + "|" + id, out jc))
+					{
+						continue;
+					}
+					try
+					{
+						JSONStorable js = a.GetStorableByID(id);
+						if (js != null)
+						{
+							js.RestoreFromJSON(jc, true, true, null, false);
+						}
+					}
+					catch (Exception e)
+					{
+						Logger.LogWarning("Could not restore " + id + ": " + e.Message);
+					}
+				}
+			}
+			if (cfgLinkBeat.Value)
+			{
+				LinkBeat();
+			}
+			deletedKeys.Clear();
+			savedPlugins.Clear();
+			Say("Restored " + keys.Count + " atom" + (keys.Count == 1 ? "" : "s") + " with their plugin settings.");
+			busy = false;
+		}
+
 		private static string[] BeatIds(Atom a)
 		{
 			List<string> ids = new List<string>();
@@ -819,6 +940,8 @@ namespace ZeroT.MusicVfxBoxes
 			bLight = RlUguiWindow.NewButton("Light VFX", win.Body, "_LightVFX", delegate { Spawn(light); });
 			bFly = RlUguiWindow.NewButton("FlyObject", win.Body, "FlyObject", delegate { Spawn(fly); });
 			bAll = RlUguiWindow.NewButton("Spawn all", win.Body, "Spawn all 1-4", delegate { SpawnEverything(); });
+			bDeleteAll = RlUguiWindow.NewButton("Delete all", win.Body, "Delete all", delegate { DeleteEverything(); });
+			bRestoreAll = RlUguiWindow.NewButton("Restore all", win.Body, "Restore all", delegate { RestoreEverything(); });
 			bLinkBeat = RlUguiWindow.NewButton("Link BeatIt", win.Body, "Link BeatIt to light", delegate
 			{
 				int n = LinkBeat();
@@ -1231,9 +1354,9 @@ namespace ZeroT.MusicVfxBoxes
 			float half = (inner - 6f) / 2f;
 			float rowH = 28f;
 			float y = 30f;
-			Button[] left = { bSlider, bLight, bMusicToggle, bDeleteFly };
-			Button[] right = { bMusic, bFly, bMusicSelect, bAll };
-			for (int r = 0; r < 4; r++)
+			Button[] left = { bSlider, bLight, bMusicToggle, bDeleteFly, bDeleteAll };
+			Button[] right = { bMusic, bFly, bMusicSelect, bAll, bRestoreAll };
+			for (int r = 0; r < 5; r++)
 			{
 				RlUguiWindow.SetRect(left[r].GetComponent<RectTransform>(), m, y, half, rowH);
 				RlUguiWindow.SetRect(right[r].GetComponent<RectTransform>(), m + half + 6f, y, half, rowH);

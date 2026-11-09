@@ -1657,6 +1657,9 @@ public sealed partial class AudioSource : global::UnityEngine.AudioBehaviour {
   public float volume { get; set; }
   public AudioSource() {}
 }
+public sealed partial class Random {
+  public Random() {}
+}
 public partial struct Ray {
   public Ray(global::UnityEngine.Vector3 origin, global::UnityEngine.Vector3 direction) {}
   public global::UnityEngine.Vector3 direction { get; set; }
@@ -1688,9 +1691,6 @@ public partial struct RaycastHit {
 public static partial class ImageConversion {
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static byte[] EncodeToPNG(global::UnityEngine.Texture2D tex) { return new byte[0]; }
   [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] public static bool LoadImage(global::UnityEngine.Texture2D tex, byte[] data) { return true; }
-}
-public sealed partial class Random {
-  public Random() {}
 }
 public sealed partial class MeshFilter : global::UnityEngine.Component {
   public global::UnityEngine.Mesh mesh { get; set; }

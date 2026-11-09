@@ -17,11 +17,15 @@ public sealed class FakeBeat : JSONStorable
 	{
 		var jc = new SimpleJSON.JSONClass(); var arr = new SimpleJSON.JSONArray();
 		foreach (var l in Links) { var o = new SimpleJSON.JSONClass(); o["light"] = l[0]; o["band"] = l[1]; o["enabled"] = "True"; o["intensity"] = "2.5"; arr.Add(o); }
-		jc["LightLinks"] = arr; return jc;
+		jc["LightLinks"] = arr;
+		var en = GetBoolJSONParam("enabled"); if (en != null) jc["enabled"] = en.val ? "true" : "false";
+		return jc;
 	}
 	public override void RestoreFromJSON(SimpleJSON.JSONClass jc, bool restorePhysical = true, bool restoreAppearance = true, SimpleJSON.JSONArray presetAtoms = null, bool setMissingToDefault = true)
 	{
-		if (jc == null || !jc.HasKey("LightLinks")) return;
+		if (jc == null) return;
+		if (jc.HasKey("enabled")) { var en = GetBoolJSONParam("enabled"); if (en != null) en.val = jc["enabled"].Value == "true"; }
+		if (!jc.HasKey("LightLinks")) return;
 		Links.Clear();
 		var arr = jc["LightLinks"].AsArray;
 		var lights = new List<string> { "None" };
@@ -294,6 +298,22 @@ public static class MusicVfxScenario
 		h.Check(h.Sc.SimAddLog.SequenceEqual(new[] { "add UISlider _AudioS", "add AudioSource _Music", "add InvisibleLight _LightVFX", "add Empty FlyObject" }), "Spawn all goes _Audio, _Music, _LightVFX, FlyObject (" + string.Join(", ", h.Sc.SimAddLog) + ")");
 		var mus2 = at("_Music");
 		h.Check(new[] { "plugin#2_HAL9001.BeatIt", "plugin#3_HAL9001.BeatIt" }.All(id => ((FakeBeat)mus2.GetStorableByID(id)).Links.Count == 1), "...and BeatIt is linked to the light at the end");
+
+		// Delete all / Restore all: the atoms go, then come back in order with their plugin settings
+		var beatA = (FakeBeat)at("_Music").GetStorableByID("plugin#2_HAL9001.BeatIt");
+		beatA.GetBoolJSONParam("enabled").val = false;
+		beatA.Links[0][1] = "Band 7";
+		var T2 = p.GetType();
+		T2.GetMethod("DeleteEverything", All).Invoke(p, null); h.Step(0.3f);
+		h.Check(new[] { "_AudioS", "_Music", "_LightVFX", "FlyObject" }.All(n => at(n) == null), "Delete all removes all four atoms (" + Msg(p) + ")");
+		h.Sc.SimAddLog.Clear();
+		T2.GetMethod("RestoreEverything", All).Invoke(p, null); h.Step(12f);
+		h.Check(h.Sc.SimAddLog.SequenceEqual(new[] { "add UISlider _AudioS", "add AudioSource _Music", "add InvisibleLight _LightVFX", "add Empty FlyObject" }), "Restore all brings them back in the working order (" + string.Join(", ", h.Sc.SimAddLog) + ")");
+		var beatB = (FakeBeat)at("_Music").GetStorableByID("plugin#2_HAL9001.BeatIt");
+		h.Check(beatB != beatA && !beatB.GetBoolJSONParam("enabled").val, "...with the plugin settings they had (BeatIt 1 still switched off)");
+		h.Check(beatB.Links.Count == 1 && beatB.Links[0][1] == "Band 7", "...and the BeatIt light link as it was (" + string.Join(",", beatB.Links[0]) + ")");
+		T2.GetMethod("RestoreEverything", All).Invoke(p, null);
+		h.Check(Msg(p).Contains("Nothing to restore"), "a second Restore all has nothing to do");
 		h.Check(!Sim.Errors.Any(e => e.Contains("MusicVfx")), "the plugin threw nothing");
 	}
 }
