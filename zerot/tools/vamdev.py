@@ -6,7 +6,9 @@
   python zerot/tools/vamdev.py build <name|all>
   python zerot/tools/vamdev.py ship  <name>          build + test + deploy (stops if a test fails)
   python zerot/tools/vamdev.py deploy <name> [--force]   copy to T:\\New folder\\BepInEx\\plugins (keeps one .bak)
-  python zerot/tools/vamdev.py simbuild              rebuild the simulator (UnityShim, vamsim, uisim) and regenerate stubs
+  python zerot/tools/vamdev.py simbuild              rebuild the simulator (UnityShim, vamsim, uisim) and regenerate stubs (fills UiSim/in first; restores the old stubs if the result is worse)
+  python zerot/tools/vamdev.py stubadd <dll|var>     add only the stubs a plugin / script needs (VamStubs.<name>.g.cs), then list what is still missing
+  python zerot/tools/vamdev.py simtargets            build the script targets (incl. RigifyVRPlusHud); scenarios that need a missing one are SKIPPED, not failed
   python zerot/tools/vamdev.py unpack <file.var> [dest]
   python zerot/tools/vamdev.py pack <folder> <out.var>   zip with forward slashes + a fresh meta.json check
   python zerot/tools/vamdev.py cslcheck <file.var|folder>  Roslyn compile check of VaM .cs/.cslist scripts against the real VaM assemblies
@@ -65,11 +67,12 @@ P = {
     'errorsilencer': ('ErrorSilencer/ZeroT.ErrorSilencer.csproj', 'ZeroT.ErrorSilencer.dll', None),
     'colliderfit': ('ColliderFitHeadless/ZeroT.ColliderFitHeadless.csproj', 'ZeroT.ColliderFitHeadless.dll', None),
     'musicvfx': ('MusicVfxBoxes/ZeroT.MusicVfxBoxes.csproj', 'ZeroT.MusicVfxBoxes.dll', None),
+    'browserassist': ('BrowserAssistStandalone/ZeroT.BrowserAssistStandalone.csproj', 'ZeroT.BrowserAssistStandalone.dll', None),
 }
 # plugins whose logic scenario exists in VamSim/Scenarios.cs (others get the generic smoke run only if they are headless)
-HEADLESS = {'givemefps', 'musicvfx', 'colliderfit', 'forcerodsync', 'errorsilencer', 'hudclickshield', 'huddock', 'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
+HEADLESS = {'browserassist', 'givemefps', 'musicvfx', 'colliderfit', 'forcerodsync', 'errorsilencer', 'hudclickshield', 'huddock', 'orgasmsuite', 'shakeit', 'autoflutterhip', 'forcepersoncache', 'clothingbackface', 'zajeshufflehelper', 'appearanceloaderhelper', 'controllersappearance', 'uxplushelper', 'personguard', 'microphysics', 'bodyweight', 'extraautogenitals', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper'}
 HELPERS = {'forcerodsync', 'decalmakerhelper', 'bodylanguagehelper', 'uiassisthelper', 'uxplushelper', 'appearanceloaderhelper', 'zajeshufflehelper'}   # Harmony helpers: need the script assemblies from `simtargets`
-UI_PLUGINS = {'musicvfx', 'colliderfit', 'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
+UI_PLUGINS = {'browserassist', 'musicvfx', 'colliderfit', 'givemefps', 'sceneperformance', 'deeper', 'movecontrols', 'smartwardrobe', 'xrayslap', 'counterthrust', 'iamjoi', 'orifice',
               'fluidbridge', 'anus', 'penetrationcounter', 'ppa', 'slaps', 'vpbrandomlook', 'orgasmsuite', 'huddock'}
 
 
@@ -200,14 +203,91 @@ def cmd_ship(name):
     cmd_deploy(name)
 
 
+def sim_inputs():
+    """The stub generator emits stubs for what the DLLs in UiSim/in (and in/targets ...) use, so a regeneration from a half-empty `in` loses stubs the
+    other plugins need. Fill `in` from the built plugins first, and the script targets if there are none."""
+    inp = os.path.join(SIM, 'in')
+    os.makedirs(os.path.join(inp, 'targets'), exist_ok=True)
+    n = 0
+    for f in os.listdir(ART) if os.path.isdir(ART) else []:
+        if f.lower().endswith('.dll') and not f.startswith('Mono.'):
+            try:
+                shutil.copy2(os.path.join(ART, f), os.path.join(inp, f))
+                n += 1
+            except OSError:
+                pass
+    t = [f for f in os.listdir(os.path.join(inp, 'targets')) if f.lower().endswith('.dll')]
+    print('sim inputs: %d plugin dll(s) in, %d script target(s)' % (n, len(t)))
+    if len(t) < 5:
+        print('script targets missing: building them (simtargets) ...')
+        cmd_simtargets()
+
+
 def cmd_simbuild():
-    for p in ('UnityShim/UnityShim.csproj',):
-        pass
-    r = run(['powershell', '-NoProfile', '-File', os.path.join(SIM, 'regen.ps1')], cwd=SIM)
+    sim_inputs()
+    stubs = os.path.join(SIM, 'UnityShim', 'VamStubs.g.cs')
+    backup = stubs + '.prev'
+    if os.path.exists(stubs):
+        shutil.copy2(stubs, backup)
+    run(['powershell', '-NoProfile', '-File', os.path.join(SIM, 'regen.ps1')], cwd=SIM)
     r2 = run(['dotnet', 'build', os.path.join(SIM, 'VamSim', 'VamSim.csproj'), '-c', 'Release', '--nologo', '-v', 'q'], quiet=True)
-    print('vamsim build', 'ok' if r2.returncode == 0 else 'FAILED')
-    if r2.returncode != 0:
+    ok = r2.returncode == 0
+    if ok and os.path.exists(backup):
+        old, new = os.path.getsize(backup), os.path.getsize(stubs)
+        if new < old * 0.8:
+            print('WARNING: the regenerated stubs shrank from %d to %d bytes: some inputs were missing, so stubs other plugins need are gone' % (old, new))
+            ok = False
+    print('vamsim build', 'ok' if ok else 'FAILED')
+    if not ok:
         print((r2.stdout or '')[-1500:])
+        if os.path.exists(backup):
+            shutil.copy2(backup, stubs)
+            run(['dotnet', 'build', os.path.join(SIM, 'VamSim', 'VamSim.csproj'), '-c', 'Release', '--nologo', '-v', 'q'], quiet=True)
+            print('previous stubs restored and the simulator rebuilt from them')
+    elif os.path.exists(backup):
+        os.remove(backup)
+
+
+def cmd_stubadd(target):
+    """Add only what a plugin / script needs and the shim lacks, as UiSim/UnityShim/VamStubs.<name>.g.cs (additive: nothing already generated is touched).
+    target = a built .dll, or a .var / folder of scripts (compiled first). Then prints what `vamsim --linkcheck` still reports (members of hand-written shim types
+    cannot be generated: they are listed so they can be added to the shim by hand)."""
+    if not target.lower().endswith('.dll'):
+        tmp = os.path.join(tempfile.mkdtemp(prefix='stubadd_'), os.path.splitext(os.path.basename(target.rstrip('/\\')))[0] + '.dll')
+        if not cmd_cslcheck(target, tmp):
+            return False
+        target = tmp
+    name = re.sub(r'[^A-Za-z0-9]', '', os.path.splitext(os.path.basename(target))[0])
+    out = os.path.join(SIM, 'UnityShim', 'VamStubs.%s.g.cs' % name)
+    shim = os.path.join(SIM, 'VamSim', 'bin', 'Release', 'net8.0-windows', 'UnityShim.dll')
+    gen = os.path.join(SIM, 'stubgen_bin', 'stubgen.exe')
+    r = run([gen, out, shim, os.path.join(VAM, 'VaM_Data', 'Managed'), target], quiet=True)
+    print('\n'.join(l for l in (r.stdout or '').splitlines() if not l.startswith('note'))[-1500:])
+    if os.path.exists(out) and os.path.getsize(out) < 200:
+        os.remove(out)
+    r2 = run(['dotnet', 'build', os.path.join(SIM, 'VamSim', 'VamSim.csproj'), '-c', 'Release', '--nologo', '-v', 'q'], quiet=True)
+    if r2.returncode != 0:
+        print((r2.stdout or '')[-1200:])
+        return False
+    run([VAMSIM, '--linkcheck', target])
+    return True
+
+
+def cmd_rigifytarget():
+    """RigifyVRPlus.4 (HUD + Skynet.Rigify.7) as a script target: builds the merged script from the user's .var files and compiles it into in/targets/RigifyVRPlusHud.dll"""
+    tool = os.path.join(ZEROT, 'RigifyHud', 'build_rigify_hud.py')
+    src = os.path.join(VAM, 'AddonPackages', 'resources', 'LightningBunny.RigifyVRPlus.3.var')
+    if not (os.path.exists(tool) and os.path.exists(src)):
+        print('SKIP RigifyVRPlusHud (no build tool or no LightningBunny.RigifyVRPlus.3.var)')
+        return True
+    work = tempfile.mkdtemp(prefix='rigifytarget_')
+    merged = os.path.join(work, 'src', 'Custom', 'Scripts', 'Skynet', 'Rigify', 'RigifyVRPlus.cs')
+    os.makedirs(os.path.dirname(merged))
+    r = run([sys.executable, tool, '--out', work, '--force', '--merged', merged], quiet=True)
+    if r.returncode != 0:
+        print((r.stdout or '') + (r.stderr or ''))
+        return False
+    return cmd_cslcheck(os.path.join(work, 'src'), os.path.join(SIM, 'in', 'targets', 'RigifyVRPlusHud.dll'))
 
 
 def cmd_unpack(var, dest=None):
@@ -340,6 +420,7 @@ def cmd_simtargets():
             continue
         print('== %s <- %s' % (name, os.path.basename(v)))
         ok = cmd_cslcheck(v, os.path.join(SIM, 'in', 'targets', name + '.dll'), only) and ok
+    ok = cmd_rigifytarget() and ok
     return ok
 
 
@@ -655,6 +736,10 @@ def main(argv):
         cmd_sheet(a[0] if a else None)
     elif c == 'simtargets':
         return 0 if cmd_simtargets() else 1
+    elif c == 'stubadd':
+        return 0 if cmd_stubadd(a[0]) else 1
+    elif c == 'rigifytarget':
+        return 0 if cmd_rigifytarget() else 1
     else:
         print(__doc__)
         return 2

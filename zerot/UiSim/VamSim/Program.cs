@@ -20,6 +20,9 @@ public sealed class ScenarioAttribute : Attribute
 	public ScenarioAttribute(string name, string plugin) { Name = name; Plugin = plugin; }
 }
 
+// a scenario that needs a script assembly (in/targets) nobody has built yet: reported as SKIP, with the command that builds it
+public sealed class MissingTargetException : FileNotFoundException { public MissingTargetException(string m) : base(m) { } }
+
 public sealed class Harness
 {
 	public SuperController Sc;
@@ -32,7 +35,7 @@ public sealed class Harness
 	public Assembly LoadTarget(string name)
 	{
 		string src = Path.Combine(CoresDir, name + ".dll");
-		if (!File.Exists(src)) throw new FileNotFoundException("build it first: python zerot/tools/vamdev.py simtargets  (missing " + src + ")");
+		if (!File.Exists(src)) throw new MissingTargetException("build it first: python zerot/tools/vamdev.py simtargets  (missing " + src + ")");
 		return Assembly.LoadFrom(Program.Retarget(src, Work));
 	}
 	public void Unpatch(string harmonyId) { new HarmonyLib.Harmony(harmonyId).UnpatchAll(harmonyId); }
@@ -91,6 +94,7 @@ public sealed class Harness
 internal static class Program
 {
 	private static int runCounter;
+	private static int SkippedScenarios, SkippedNoDll, Ran;
 	private static int Main(string[] args)
 	{
 		NreProbe.InstallFromEnvironment();
@@ -128,9 +132,12 @@ internal static class Program
 			foreach (var s in scenarios)
 			{
 				string dll = Path.Combine(dir, s.a.Plugin + ".dll");
-				if (!File.Exists(dll)) { Console.WriteLine("SKIP " + s.a.Name + " (no " + s.a.Plugin + ".dll in " + dir + ")"); continue; }
+				if (!File.Exists(dll)) { Console.WriteLine("SKIP " + s.a.Name + " (no " + s.a.Plugin + ".dll in " + dir + ")"); SkippedNoDll++; continue; }
 				failed += Run(dll, s.a.Name, s.m, overrides);
+				Ran++;
 			}
+			// "ALL PASSED" must not hide that most scenarios were skipped: say how many really ran
+			Console.WriteLine(Ran + " scenario(s) ran" + (SkippedNoDll > 0 ? ", " + SkippedNoDll + " SKIPPED because their plugin dll is not built (python zerot/tools/vamdev.py build all)" : "") + (SkippedScenarios > 0 ? ", " + SkippedScenarios + " SKIPPED because a script target is not built (python zerot/tools/vamdev.py simtargets)" : ""));
 			Console.WriteLine(failed == 0 ? "ALL PASSED" : failed + " scenario(s) FAILED");
 			return failed == 0 ? 0 : 1;
 		}
@@ -174,6 +181,7 @@ internal static class Program
 		h.Asm = Assembly.LoadFrom(patched);
 		h.Sc = SimWorld.NewSuperController();
 		try { scenario.Invoke(null, new object[] { h }); }
+		catch (TargetInvocationException e) when (e.InnerException is MissingTargetException) { Console.WriteLine("  SKIP " + name + ": " + e.InnerException.Message); SkippedScenarios++; return 0; }
 		catch (TargetInvocationException e) { h.Checks++; h.Failures++; Console.WriteLine("  FAIL scenario threw: " + (e.InnerException ?? e)); }
 		foreach (var e in Sim.Errors) { h.Checks++; h.Failures++; Console.WriteLine("  FAIL plugin error: " + e); }
 		foreach (var l in BepInEx.Logging.ManualLogSource.Lines.Distinct().Take(40)) Console.WriteLine("  log  " + l);
