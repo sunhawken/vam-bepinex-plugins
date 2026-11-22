@@ -95,7 +95,7 @@ namespace ZeroT.BrowserAssistStandalone
 
 		private void Awake()
 		{
-			cfgAutoLoad = Config.Bind<bool>("General", "AutoLoadSessionPlugin", true, "Create the BrowserAssist session plugin automatically at startup when VaM has not loaded it already.");
+			cfgAutoLoad = Config.Bind<bool>("General", "AutoLoadSessionPlugin", false, "Create the BrowserAssist session plugin automatically at startup when VaM has not loaded it already. OFF by default: BrowserAssist scans every package when it is created (minutes on a big library) and VaM is frozen meanwhile. Set this to true only if you accept that wait (or add BrowserAssist yourself in VaM's session plugins).");
 			cfgStartupDelay = Config.Bind<float>("General", "StartupDelaySeconds", 8f, "Wait this long after VaM finishes loading before adding BrowserAssist (VaM restores its saved session plugins first, so it is not added twice).");
 			cfgUnloadOnOff = Config.Bind<bool>("General", "UnloadWhenSwitchedOff", false, "Switching this plugin Off also removes the BrowserAssist session plugin (off = only the window and auto-load stop; BrowserAssist keeps running).");
 			cfgNativeScale = Config.Bind<float>("Window", "NativeUiScale", 1f, new ConfigDescription("Size of BrowserAssist's own settings UI inside the window: 1 = exactly as it looks in VaM (1:1, the window scrolls if it is smaller); 0 = shrink it to fit the window width.", new AcceptableValueRange<float>(0f, 3f)));
