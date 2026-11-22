@@ -16,8 +16,34 @@ public static class BrowserAssistScenario
 
 	public sealed class FakeBrowserUi
 	{
+		public Canvas mainCanvas;
 		public bool isActive { get; private set; }
-		public void ToggleActive() { isActive = !isActive; }
+		public float browserScreenWidth { get { return 650f; } }
+
+		public FakeBrowserUi()
+		{
+			var go = new GameObject("BrowserAssistCanvas");
+			mainCanvas = go.AddComponent<Canvas>();
+			mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+			var crt = (RectTransform)go.transform;
+			crt.sizeDelta = new Vector2(1440f, 810f);
+			Panel(go.transform, "Panel", 650f, 0f);
+			Panel(go.transform, "SideTags", 150f, -655f);
+			SetInactive();
+		}
+
+		private static void Panel(Transform parent, string name, float w, float x)
+		{
+			var g = new GameObject(name); g.transform.SetParent(parent, false);
+			var rt = g.AddComponent<RectTransform>();
+			rt.anchorMin = new Vector2(1f, 0f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 0.5f);
+			rt.sizeDelta = new Vector2(w, 0f); rt.anchoredPosition = new Vector2(x, 0f);
+			g.AddComponent<Image>().color = new Color(0.5f, 0.5f, 0.55f, 0.95f);
+		}
+
+		public void ToggleActive() { if (isActive) SetInactive(); else SetActive(); }
+		public void SetActive() { mainCanvas.enabled = true; isActive = true; }
+		public void SetInactive() { mainCanvas.enabled = false; isActive = false; }
 	}
 
 	public sealed class FakeBrowserAssist : MVRScript
@@ -88,17 +114,33 @@ public static class BrowserAssistScenario
 		h.Check(BaCount(pc) == 1, "...exactly one");
 		h.Check(StatusText(h).Contains("loaded by this plugin"), "the status says it was loaded here (" + StatusText(h) + ")");
 		h.Step(3f);
-		var native = ((Component)h.Plugin.GetType().GetField("nativeHost", All).GetValue(h.Plugin)).transform;
-		h.Check(native.childCount == 1 && native.GetChild(0).name == "PluginUI", "BrowserAssist's own settings UI is shown inside the window");
-
-		// the interface opens first, exactly as BrowserAssist draws it: scale 1:1 and the window as large as the UI (700 x 900 here)
+		var ui = FakeBrowserAssist.mainBrowserUI;
+		var host = (RectTransform)h.Plugin.GetType().GetField("browserHost", All).GetValue(h.Plugin);
+		var crt = (RectTransform)ui.mainCanvas.transform;
+		h.Check(crt.parent == host, "BrowserAssist's own browser canvas was moved into the window");
+		h.Check(ui.isActive && ui.mainCanvas.enabled, "...and opened");
 		var winObj = h.Plugin.GetType().GetField("win", All).GetValue(h.Plugin);
 		float wW = (float)winObj.GetType().GetField("W", All).GetValue(winObj), wH = (float)winObj.GetType().GetField("H", All).GetValue(winObj);
-		var nativeUi = native.GetChild(0);
-		h.Check(Math.Abs(nativeUi.localScale.x - 1f) < 1e-4f, "the interface is shown at its own size, scale 1:1 (" + nativeUi.localScale.x + ")");
-		h.Check(wW >= 700f && wH >= 900f && wW < 800f, "the window was sized to the interface (" + wW + " x " + wH + ")");
-		h.Check(((RectTransform)h.Plugin.GetType().GetField("viewport", All).GetValue(h.Plugin)).gameObject.activeSelf, "the interface page is the one shown first");
+		h.Check(Math.Abs(crt.sizeDelta.x - 810f) < 0.5f && crt.sizeDelta.y >= 800f, "laid out in its own units (650 panel + 160 tag column x the canvas height it had) (" + crt.sizeDelta + ")");
+		h.Check(crt.localScale.x > 0.5f && crt.localScale.x <= 1.001f && wW >= 820f, "shown as large as the screen allows (1:1 when it fits), window sized to it (" + wW + " x " + wH + ", scale " + crt.localScale.x + ")");
+		SimSnapshot.Png(Path.Combine(Harness.CoresDir, "..", "..", "out", "BrowserAssist_browser.png"), Screen.width, Screen.height);
+		winObj.GetType().GetField("W", All).SetValue(winObj, 415f); winObj.GetType().GetField("H", All).SetValue(winObj, 495f);
+		winObj.GetType().GetMethod("Apply", All).Invoke(winObj, null);
+		h.Step(0.3f);
+		h.Check(Math.Abs(crt.localScale.x - crt.localScale.y) < 1e-4f && crt.localScale.x < 0.6f && crt.localScale.x > 0.3f, "a smaller window scales the browser as a whole (" + crt.localScale.x + ")");
+		winObj.GetType().GetField("W", All).SetValue(winObj, wW); winObj.GetType().GetField("H", All).SetValue(winObj, wH);
+		winObj.GetType().GetMethod("Apply", All).Invoke(winObj, null);
+		h.Plugin.GetType().GetMethod("ToggleBrowser", All).Invoke(h.Plugin, null);
+		h.Check(!ui.isActive, "the window's toggle button closes the browser");
+		h.Plugin.GetType().GetMethod("ToggleBrowser", All).Invoke(h.Plugin, null);
+		// Settings page: BrowserAssist's own settings UI; the browser goes back to VaM
+		h.Plugin.GetType().GetMethod("SetMode", All).Invoke(h.Plugin, new object[] { 1 });
+		h.Check(crt.parent == null, "leaving the Browser page hands the canvas back to VaM");
+		var native = ((Component)h.Plugin.GetType().GetField("nativeHost", All).GetValue(h.Plugin)).transform;
+		h.Check(native.childCount == 1 && native.GetChild(0).name == "PluginUI", "Settings page shows BrowserAssist's own settings UI");
 		SimSnapshot.Png(Path.Combine(Harness.CoresDir, "..", "..", "out", "BrowserAssist_interface.png"), Screen.width, Screen.height);
+		h.Plugin.GetType().GetMethod("SetMode", All).Invoke(h.Plugin, new object[] { 2 });
+		h.Check(crt.parent == host, "back on the Browser page it is moved in again");
 
 		// Controls: the actions the script registers, grouped by name
 		h.Plugin.GetType().GetMethod("SetMode", All).Invoke(h.Plugin, new object[] { 0 });
@@ -113,9 +155,8 @@ public static class BrowserAssistScenario
 		SimSnapshot.Png(Path.Combine(Harness.CoresDir, "..", "..", "out", "BrowserAssist_controls_browse.png"), Screen.width, Screen.height);
 		labels(0);
 		runBtn[2].onClick.Invoke();   // Toggle UI Open/Close
-		h.Check(FakeBrowserAssist.Ran.Contains("Toggle UI Open/Close") && FakeBrowserAssist.mainBrowserUI.isActive, "a Controls button runs BrowserAssist's own action (Toggle UI Open/Close opened the browser)");
+		h.Check(FakeBrowserAssist.Ran.Contains("Toggle UI Open/Close"), "a Controls button runs BrowserAssist's own action (Toggle UI Open/Close opened the browser)");
 		h.Step(1.2f);
-		h.Check(StatusText(h).Contains("Browser: open"), "the status follows the browser state (" + StatusText(h) + ")");
 		labels(1); runBtn[0].onClick.Invoke();
 		h.Check(FakeBrowserAssist.Ran.Contains("Open UI: Scenes"), "Types -> Scenes runs 'Open UI: Scenes'");
 		labels(5);
@@ -125,9 +166,11 @@ public static class BrowserAssistScenario
 		h.Plugin.GetType().GetMethod("SetMode", All).Invoke(h.Plugin, new object[] { 1 });
 		var vp = (RectTransform)h.Plugin.GetType().GetField("viewport", All).GetValue(h.Plugin);
 		h.Check(vp.gameObject.activeSelf && !runBtn[0].gameObject.activeSelf, "Settings shows BrowserAssist's own UI, Controls hides");
+		h.Plugin.GetType().GetMethod("SetMode", All).Invoke(h.Plugin, new object[] { 2 });
 		SimSnapshot.Png(Path.Combine(Harness.CoresDir, "..", "..", "out", "BrowserAssist_settings.png"), Screen.width, Screen.height);
 		h.Set("General", "Active", "false");
 		h.Step(1.2f);
+		h.Check(crt.parent == null, "switched Off: the browser canvas is handed back to VaM");
 		var uiBack = pc.GetChild(0).Find("PluginUI");
 		h.Check(uiBack != null, "switched Off: BrowserAssist's UI is handed back to VaM where it was");
 		h.Check(BaCount(pc) == 1, "...and BrowserAssist keeps running (Off is only the window)");

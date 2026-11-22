@@ -16,7 +16,9 @@ namespace ZeroT.BrowserAssistStandalone
 	// only one copy may run, so this plugin:
 	//   - waits for VaM's session plugin manager, finds a BrowserAssist that is already loaded (VaM restores the saved session plugins itself) and never adds a second one;
 	//   - otherwise creates the session plugin by itself at startup (newest installed JayJayWon.BrowserAssist.<n>.var) - no manual "add plugin";
-	//   - shows the plugin's own native settings UI (all its tabs) in a desktop window that looks and behaves like the other restyled plugin windows;
+	//   - shows BrowserAssist's own resource browser (the docked panel with the filters, thumbnails, tabs and actions) INSIDE the window: the plugin's live canvas is moved into the
+	//     window (desktop only) at the layout size BrowserAssist built it for, so it looks and works exactly like the .var's own interface, and is handed back to VaM when the
+	//     page is left, the window is switched Off or the plugin is removed. Its settings UI is the second page;
 	//   - adds a Controls page: every action BrowserAssist registers on its plugin (Open / Close / Toggle UI, Open UI: Scenes / Clothing / Hair / Plugins ..., the Only Favorites /
 	//     Show Hidden / Only New filters, results paging, selection, thumbnail size, the tabs, Load Random, Lock Import Target ...) as grouped buttons - found at run time, so a
 	//     newer BrowserAssist with more actions shows them too.
@@ -33,6 +35,15 @@ namespace ZeroT.BrowserAssistStandalone
 		private ConfigEntry<bool> cfgUnloadOnOff;
 		private ConfigEntry<float> cfgNativeScale;
 		private ConfigEntry<bool> cfgAutoSize;
+		private ConfigEntry<float> cfgBrowserScale;
+		private ConfigEntry<bool> cfgMirrorBrowser;
+		private RectTransform browserHost;
+		private Canvas mirrorCanvas;
+		private RectTransform mirrorRt;
+		private Vector2 mirrorOriginal;       // the size (in BrowserAssist's own canvas units) it laid itself out in
+		private object mirrorUi;
+		private Button browserToggleButton, modeBrowser;
+		private const float SideTagWidth = 160f;
 		private bool sizedToNative;
 
 		private RlUguiWindow win;
@@ -80,6 +91,7 @@ namespace ZeroT.BrowserAssistStandalone
 		private const int ActSlots = 16;
 		private static readonly string[] CatNames = { "Browser", "Types", "Filters", "Browse", "Tabs", "Random" };
 		private float HeaderH = 86f;
+		private bool mirrorSized;
 
 		private void Awake()
 		{
@@ -88,6 +100,8 @@ namespace ZeroT.BrowserAssistStandalone
 			cfgUnloadOnOff = Config.Bind<bool>("General", "UnloadWhenSwitchedOff", false, "Switching this plugin Off also removes the BrowserAssist session plugin (off = only the window and auto-load stop; BrowserAssist keeps running).");
 			cfgNativeScale = Config.Bind<float>("Window", "NativeUiScale", 1f, new ConfigDescription("Size of BrowserAssist's own settings UI inside the window: 1 = exactly as it looks in VaM (1:1, the window scrolls if it is smaller); 0 = shrink it to fit the window width.", new AcceptableValueRange<float>(0f, 3f)));
 			cfgAutoSize = Config.Bind<bool>("Window", "SizeToNativeUi", true, "When BrowserAssist's UI first appears, size the window to show it at its original size (as far as the screen allows).");
+			cfgMirrorBrowser = Config.Bind<bool>("Window", "ShowBrowserInWindow", true, "Show BrowserAssist's resource browser (its docked panel) inside this window (desktop only; in VR it stays where BrowserAssist puts it). Off = the browser stays on VaM's screen and the window only has the settings and the controls.");
+			cfgBrowserScale = Config.Bind<float>("Window", "BrowserScale", 0f, new ConfigDescription("Size of the browser inside the window: 0 = fit the window (resize the window to scale it, proportions stay the same); otherwise a fixed factor (1 = BrowserAssist's own canvas units).", new AcceptableValueRange<float>(0f, 3f)));
 			win = new RlUguiWindow(this, "Browser Assist", "Window", 40f, 60f, 620f, 680f, 380f, 300f, 1700f, 1400f);
 		}
 
@@ -293,7 +307,18 @@ namespace ZeroT.BrowserAssistStandalone
 			{
 				Attach(ui);
 			}
-			SetStatus("BrowserAssist is running" + (created ? " (loaded by this plugin)" : " (already loaded by VaM)") + ".   Browser: " + (BrowserIsOpen() ? "open" : "closed"));
+			if (mode == 2)
+			{
+				// BrowserAssist can rebuild its browser (rescan / restore): follow the new canvas
+				if (mirrorCanvas != null && (mirrorCanvas == null || BrowserUi() != mirrorUi))
+				{
+					Unmirror();
+				}
+				Mirror();
+				LayoutMirror();
+			}
+			SetStatus("BrowserAssist is running" + (created ? " (loaded by this plugin)" : " (already loaded by VaM)") + ".   Browser: " + (BrowserIsOpen() ? "open" : "closed") + (mirrorCanvas != null ? " (shown in this window)" : ""));
+			RefreshModeButtons();
 			RefreshControls();
 		}
 
@@ -458,9 +483,206 @@ namespace ZeroT.BrowserAssistStandalone
 			win.Apply();
 		}
 
+		// ------------------------------------------------------------------ BrowserAssist's own browser, inside the window
+
+		private static bool IsVR()
+		{
+			SuperController sc = SuperController.singleton;
+			return sc != null && (sc.isOVR || sc.isOpenVR);
+		}
+
+		private Canvas BrowserCanvas(object ui)
+		{
+			if (ui == null)
+			{
+				return null;
+			}
+			try
+			{
+				FieldInfo f = ui.GetType().GetField("mainCanvas", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+				if (f != null)
+				{
+					return f.GetValue(ui) as Canvas;
+				}
+				PropertyInfo p = ui.GetType().GetProperty("mainCanvas", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+				return p != null ? p.GetValue(ui, null) as Canvas : null;
+			}
+			catch
+			{
+				return null;
+			}
+		}
+
+		// width of BrowserAssist's panel in its own units (650 docked, wider in full-width mode) plus the side panel that holds the tag list
+		private float PanelUnitsWidth()
+		{
+			float w = 650f;
+			try
+			{
+				PropertyInfo p = mirrorUi != null ? mirrorUi.GetType().GetProperty("browserScreenWidth", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) : null;
+				if (p != null)
+				{
+					object v = p.GetValue(mirrorUi, null);
+					if (v is float && (float)v > 100f)
+					{
+						w = (float)v;
+					}
+				}
+			}
+			catch
+			{
+			}
+			return w + SideTagWidth;
+		}
+
+		private void InvokeBrowser(string method)
+		{
+			object ui = mirrorUi ?? BrowserUi();
+			if (ui == null)
+			{
+				return;
+			}
+			try
+			{
+				MethodInfo m = ui.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+				if (m != null)
+				{
+					m.Invoke(ui, null);
+				}
+			}
+			catch (Exception e)
+			{
+				Logger.LogWarning("BrowserAssist " + method + " failed: " + (e.InnerException != null ? e.InnerException.Message : e.Message));
+			}
+		}
+
+		private void ToggleBrowser()
+		{
+			if (BrowserUi() == null)
+			{
+				SetStatus("BrowserAssist's browser is not ready yet (it is still scanning, or it failed to start - see its settings).");
+				return;
+			}
+			InvokeBrowser("ToggleActive");
+			nextTick = 0f;
+			RefreshModeButtons();
+		}
+
+		private void Mirror()
+		{
+			if (mirrorCanvas != null || browserHost == null || script == null || !cfgMirrorBrowser.Value || IsVR())
+			{
+				return;
+			}
+			object ui = BrowserUi();
+			Canvas c = BrowserCanvas(ui);
+			RectTransform rt = c != null ? c.transform as RectTransform : null;
+			if (rt == null)
+			{
+				return;
+			}
+			mirrorUi = ui;
+			mirrorCanvas = c;
+			mirrorRt = rt;
+			mirrorOriginal = rt.rect.size;      // an overlay canvas is the screen divided by its scale: the units the panel's stretched parts were sized in
+			if (mirrorOriginal.y < 200f)
+			{
+				mirrorOriginal = new Vector2(1440f, 810f);
+			}
+			rt.SetParent(browserHost, false);
+			rt.anchorMin = Vector2.zero;
+			rt.anchorMax = Vector2.zero;
+			rt.pivot = Vector2.zero;
+			rt.anchoredPosition = Vector2.zero;
+			rt.localRotation = Quaternion.identity;
+			browserHost.gameObject.SetActive(mode == 2);
+			Logger.LogInfo("BrowserAssist's browser is shown inside the window.");
+			LayoutMirror();
+			SizeWindowToBrowser();
+			if (!BrowserIsOpen())
+			{
+				InvokeBrowser("SetActive");     // the window is the browser's place now: open it
+			}
+		}
+
+		private void Unmirror()
+		{
+			if (mirrorCanvas == null)
+			{
+				return;
+			}
+			try
+			{
+				if (mirrorRt != null)
+				{
+					mirrorRt.SetParent(null, false);     // a root overlay canvas again: VaM draws it on the screen as before
+					mirrorRt.localScale = Vector3.one;
+				}
+			}
+			catch (Exception e)
+			{
+				Logger.LogWarning("Handing the browser back failed: " + e.Message);
+			}
+			mirrorCanvas = null;
+			mirrorRt = null;
+			mirrorUi = null;
+			mirrorSized = false;
+		}
+
+		// the browser fills the window's content area: one factor for both directions, so the proportions never change
+		private void LayoutMirror()
+		{
+			if (mirrorRt == null || browserHost == null || win == null)
+			{
+				return;
+			}
+			float w = PanelUnitsWidth(), h = mirrorOriginal.y;
+			float availW = Mathf.Max(50f, win.W - 2f * RlUguiWindow.Margin), availH = Mathf.Max(50f, win.H - HeaderH - RlUguiWindow.Margin);
+			float k = cfgBrowserScale.Value > 0f ? cfgBrowserScale.Value : Mathf.Clamp(Mathf.Min(availW / w, availH / h), 0.25f, 4f);
+			mirrorRt.sizeDelta = new Vector2(w, h);
+			mirrorRt.localScale = new Vector3(k, k, 1f);
+			mirrorRt.anchoredPosition = Vector2.zero;
+		}
+
+		// once per mirror: make the window as large as the browser at 1:1 (as far as the screen allows)
+		private void SizeWindowToBrowser()
+		{
+			if (mirrorSized || win == null || mirrorRt == null || !cfgAutoSize.Value)
+			{
+				return;
+			}
+			mirrorSized = true;
+			float sw = Mathf.Max(400f, Screen.width / Mathf.Max(0.5f, win.Scale) - 40f);
+			float sh = Mathf.Max(300f, Screen.height / Mathf.Max(0.5f, win.Scale) - 60f);
+			float k = cfgBrowserScale.Value > 0f ? cfgBrowserScale.Value : 1f;
+			win.W = Mathf.Clamp(PanelUnitsWidth() * k + 2f * RlUguiWindow.Margin + 4f, 380f, Mathf.Min(1700f, sw));
+			win.H = Mathf.Clamp(mirrorOriginal.y * k + HeaderH + RlUguiWindow.Margin, 300f, Mathf.Min(1400f, sh));
+			win.Apply();
+		}
+
+		private void RefreshModeButtons()
+		{
+			if (browserToggleButton != null)
+			{
+				RlUguiWindow.SetLabel(browserToggleButton, BrowserIsOpen() ? "Close browser" : "Open browser");
+			}
+		}
+
 		private void SetMode(int m)
 		{
 			mode = m;
+			if (m != 2)
+			{
+				Unmirror();     // the browser goes back to VaM's screen while another page is shown
+			}
+			if (browserHost != null)
+			{
+				browserHost.gameObject.SetActive(m == 2);
+			}
+			if (m == 2)
+			{
+				Mirror();
+			}
 			if (viewport != null)
 			{
 				viewport.gameObject.SetActive(m == 1);
@@ -543,14 +765,16 @@ namespace ZeroT.BrowserAssistStandalone
 			win.OnActiveChanged = SetActive;
 			win.Build("Browser Assist Standalone Desktop");
 			status = RlUguiWindow.NewText("Status", win.Body, "Starting...", TextAnchor.MiddleLeft);
+			modeBrowser = RlUguiWindow.NewButton("Mode browser", win.Body, "Browser", delegate { SetMode(2); });
+			modeSettings = RlUguiWindow.NewButton("Mode settings", win.Body, "Settings", delegate { SetMode(1); });
 			modeControls = RlUguiWindow.NewButton("Mode controls", win.Body, "Controls", delegate { SetMode(0); });
-			modeSettings = RlUguiWindow.NewButton("Mode settings", win.Body, "Interface", delegate { SetMode(1); });
-			reattachButton = RlUguiWindow.NewButton("Reattach UI", win.Body, "Reload interface", delegate
-			{
-				Restore();
-				sizedToNative = false;
-				nextTick = 0f;
-			});
+			browserToggleButton = RlUguiWindow.NewButton("Browser toggle", win.Body, "Open browser", delegate { ToggleBrowser(); });
+			reattachButton = browserToggleButton;
+			browserHost = RlUguiWindow.NewRect("Browser host", win.Body);
+			browserHost.gameObject.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.05f, 1f);
+			browserHost.gameObject.AddComponent<RectMask2D>();
+			browserHost.anchorMin = Vector2.zero;
+			browserHost.anchorMax = Vector2.one;
 			for (int i = 0; i < CatCount; i++)
 			{
 				int k = i;
@@ -587,7 +811,7 @@ namespace ZeroT.BrowserAssistStandalone
 			nativeHost.anchoredPosition = Vector2.zero;
 			win.AddResizeHandle();
 			win.Apply();
-			SetMode(1);
+			SetMode(IsVR() || !cfgMirrorBrowser.Value ? 1 : 2);
 		}
 
 		private void LayoutBody(float w, float h)
@@ -599,10 +823,11 @@ namespace ZeroT.BrowserAssistStandalone
 			float m = RlUguiWindow.Margin;
 			float inner = Mathf.Max(60f, w - 2f * m);
 			RlUguiWindow.SetRect(status.rectTransform, m, 30f, inner, 22f);
-			float third = (inner - 8f) / 3f;
-			RlUguiWindow.SetRect(modeControls.GetComponent<RectTransform>(), m, 54f, third, 26f);
-			RlUguiWindow.SetRect(modeSettings.GetComponent<RectTransform>(), m + third + 4f, 54f, third, 26f);
-			RlUguiWindow.SetRect(reattachButton.GetComponent<RectTransform>(), m + 2f * (third + 4f), 54f, third, 26f);
+			float quarter = (inner - 12f) / 4f;
+			RlUguiWindow.SetRect(modeBrowser.GetComponent<RectTransform>(), m, 54f, quarter, 26f);
+			RlUguiWindow.SetRect(modeSettings.GetComponent<RectTransform>(), m + (quarter + 4f), 54f, quarter, 26f);
+			RlUguiWindow.SetRect(modeControls.GetComponent<RectTransform>(), m + 2f * (quarter + 4f), 54f, quarter, 26f);
+			RlUguiWindow.SetRect(browserToggleButton.GetComponent<RectTransform>(), m + 3f * (quarter + 4f), 54f, quarter, 26f);
 			// Controls: two rows of group chips, then a grid of the group's actions, then the pager
 			float cw = (inner - 8f) / 3f;
 			for (int i = 0; i < CatCount; i++)
@@ -623,6 +848,14 @@ namespace ZeroT.BrowserAssistStandalone
 			RlUguiWindow.SetRect(pageLabel.rectTransform, m + 34f, py, inner - 68f, 24f);
 			RlUguiWindow.SetRect(pageNext.GetComponent<RectTransform>(), m + inner - 30f, py, 30f, 24f);
 			HeaderH = 86f;
+			if (browserHost != null)
+			{
+				browserHost.anchorMin = Vector2.zero;
+				browserHost.anchorMax = Vector2.one;
+				browserHost.offsetMin = new Vector2(m, m);
+				browserHost.offsetMax = new Vector2(-m, -HeaderH);
+				LayoutMirror();
+			}
 			if (viewport != null)
 			{
 				viewport.anchorMin = Vector2.zero;
@@ -685,6 +918,7 @@ namespace ZeroT.BrowserAssistStandalone
 
 		private void Restore()
 		{
+			Unmirror();
 			if (detached != null && originalParent != null)
 			{
 				detached.SetParent(originalParent, false);
