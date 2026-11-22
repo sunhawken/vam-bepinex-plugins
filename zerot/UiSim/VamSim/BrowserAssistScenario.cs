@@ -14,6 +14,49 @@ public static class BrowserAssistScenario
 {
 	private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
+	// real data: scenes (with their thumbnails) read from the .var files of the user's VaM install; nothing is copied anywhere, the picture only lives in the simulator's memory
+	public sealed class RealScene { public string Title, Package, Creator; public byte[] Jpg; }
+
+	public static class RealData
+	{
+		public static List<RealScene> Scenes = new List<RealScene>();
+		public static int Packages, SceneCount;
+
+		public static void Load(string vamRoot, int want)
+		{
+			var files = new List<string>();
+			foreach (var d in new[] { "AddonPackages", Path.Combine("AddonPackages", "keep"), Path.Combine("AddonPackages", "resources") })
+			{
+				var dir = Path.Combine(vamRoot, d);
+				if (Directory.Exists(dir)) files.AddRange(Directory.GetFiles(dir, "*.var"));
+			}
+			Packages = files.Count;
+			files = files.OrderByDescending(f => File.GetLastWriteTimeUtc(f)).ToList();
+			foreach (var f in files)
+			{
+				try
+				{
+					using (var z = System.IO.Compression.ZipFile.OpenRead(f))
+					{
+						var jsons = z.Entries.Where(e => e.FullName.StartsWith("Saves/scene/", StringComparison.OrdinalIgnoreCase) && e.FullName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)).ToList();
+						SceneCount += jsons.Count;
+						if (Scenes.Count >= want) continue;
+						foreach (var j in jsons)
+						{
+							var jpg = z.GetEntry(j.FullName.Substring(0, j.FullName.Length - 5) + ".jpg");
+							if (jpg == null || jpg.Length > 400000) continue;
+							var pkg = Path.GetFileNameWithoutExtension(f);
+							byte[] bytes; using (var s = jpg.Open()) using (var ms = new MemoryStream()) { s.CopyTo(ms); bytes = ms.ToArray(); }
+							Scenes.Add(new RealScene { Title = Path.GetFileNameWithoutExtension(j.Name), Package = pkg, Creator = pkg.Split('.')[0], Jpg = bytes });
+							break;   // one scene per package: a more varied grid
+						}
+					}
+				}
+				catch { }
+			}
+		}
+	}
+
 	// drawing helpers for the stand-in's two screens (top-left origin inside the parent)
 	internal static RectTransform Box(Transform parent, string name, float x, float y, float w, float h, Color col, bool bottom = false)
 	{
@@ -76,7 +119,7 @@ public static class BrowserAssistScenario
 			Field(panel, "Search", "", 8f, 94f, 408f);
 			Btn(panel, "Show Hidden", 424f, 109f, 104f, 24f, chip);
 			Btn(panel, "Only Favorites", 536f, 109f, 106f, 24f, chip);
-			Label(panel, "1 - 400 of 725", 8f, 140f, 300f, 20f, 13, dark);
+			Label(panel, RealData.Scenes.Count > 0 ? "1 - " + RealData.Scenes.Count + " of " + RealData.SceneCount : "1 - 400 of 725", 8f, 140f, 300f, 20f, 13, dark);
 			Btn(panel, "<", 560f, 140f, 36f, 20f, chip); Btn(panel, ">", 600f, 140f, 36f, 20f, chip);
 			for (int r = 0; r < 4; r++)
 				for (int c = 0; c < 6; c++)
@@ -84,15 +127,17 @@ public static class BrowserAssistScenario
 					int i = r * 6 + c;
 					float x = 8f + c * 106f, y = 166f + r * 138f;
 					var tile = Box(panel, "Tile " + i, x, y, 100f, 100f, Color.HSVToRGB((i * 0.071f) % 1f, 0.45f, 0.75f));
-					Box(tile, "Shade", 0f, 62f, 100f, 38f, new Color(0f, 0f, 0f, 0.25f));
+					var real = i < RealData.Scenes.Count ? RealData.Scenes[i] : null;
+					if (real != null) SimPictures.Set(tile.gameObject, real.Jpg);
+					else Box(tile, "Shade", 0f, 62f, 100f, 38f, new Color(0f, 0f, 0f, 0.25f));
 					if (i % 5 == 0) Label(tile, "*", 80f, 2f, 18f, 18f, 16, new Color(1f, 0.85f, 0.2f), TextAnchor.MiddleCenter);
-					Label(panel, Names[i % Names.Length], x, y + 102f, 100f, 28f, 11, dark, TextAnchor.UpperCenter);
+					Label(panel, real != null ? real.Title : Names[i % Names.Length], x, y + 102f, 100f, 28f, 11, dark, TextAnchor.UpperCenter);
 				}
 			Btn(panel, "Action", 8f, 100f, 100f, 26f, new Color(0.25f, 0.28f, 0.5f), true);
 			Btn(panel, "Tags", 112f, 100f, 100f, 26f, new Color(0.45f, 0.47f, 0.6f), true);
 			Btn(panel, "Load Scene", 8f, 66f, 200f, 28f, new Color(0.2f, 0.5f, 0.3f), true);
 			Btn(panel, "Merge Load", 216f, 66f, 200f, 28f, chip, true);
-			Label(panel, "Beach Day  -  Creator.BeachDay.3  -  Scene  -  Free", 8f, 30f, 630f, 28f, 11, dark, TextAnchor.UpperLeft, true);
+			Label(panel, RealData.Scenes.Count > 0 ? RealData.Scenes[0].Title + "  -  " + RealData.Scenes[0].Package + "  -  Scene" : "Beach Day  -  Creator.BeachDay.3  -  Scene  -  Free", 8f, 30f, 630f, 28f, 11, dark, TextAnchor.UpperLeft, true);
 			Label(tags, "Tags", 8f, 6f, 134f, 20f, 13, dark);
 			string[] tg = { "outdoor", "indoor", "night", "party", "bedroom", "beach", "city", "studio", "dance", "water", "cinematic", "pose" };
 			for (int i = 0; i < tg.Length; i++) Btn(tags, tg[i], 8f, 30f + i * 30f, 134f, 24f, new Color(0.4f + 0.02f * i, 0.42f, 0.58f));
@@ -135,7 +180,7 @@ public static class BrowserAssistScenario
 		}
 		Btn(ui, "Rescan packages", 16f, 548f, 200f, 32f, new Color(0.25f, 0.28f, 0.5f));
 		Btn(ui, "Clear thumbnail cache", 230f, 548f, 200f, 32f, new Color(0.35f, 0.38f, 0.55f));
-		Label(ui, "Packages indexed: 725   Cache: 1.2 GB", 16f, 596f, 600f, 24f, 12, dark);
+		Label(ui, RealData.Packages > 0 ? "Packages indexed: " + RealData.Packages + "   Scenes: " + RealData.SceneCount : "Packages indexed: 725   Cache: 1.2 GB", 16f, 596f, 600f, 24f, 12, dark);
 	}
 
 	public sealed class FakeBrowserAssist : MVRScript
@@ -193,6 +238,7 @@ public static class BrowserAssistScenario
 	public static void Standalone(Harness h)
 	{
 		if (UnityEngine.EventSystems.EventSystem.current == null) UnityEngine.EventSystems.EventSystem.current = new GameObject("EventSystem").AddComponent<UnityEngine.EventSystems.EventSystem>();
+		if (Environment.GetEnvironmentVariable("BA_REAL_DATA") != "0" && Directory.Exists(@"T:\New folder\AddonPackages")) RealData.Load(@"T:\New folder", 24);
 		string root = Path.Combine(Path.GetTempPath(), "vamsim_browserassist_" + Environment.ProcessId);
 		Packages(root, "JayJayWon.BrowserAssist.94.var", "JayJayWon.BrowserAssist.96.var", "JayJayWon.UIAssist(Patron).100.var");
 		MVRPluginManager mgr; Transform pc;

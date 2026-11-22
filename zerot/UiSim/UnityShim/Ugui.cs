@@ -164,6 +164,7 @@ namespace UnityEngine.UI
 				}
 				catch { }
 				using (var b = new SolidBrush(SDColor.FromArgb((int)(Math.Min(1f, c.a * 1f) * 255), (int)(c.r * 255), (int)(c.g * 255), (int)(c.b * 255)))) g.FillRectangle(b, drawRect);
+				if (SimPictures.Map.TryGetValue(go, out var pic) && pic != null) { g.SetClip(RectangleF.Intersect(clip, screen)); g.DrawImage(pic, screen); }
 				var ol = go.GetComponent<Outline>();
 				if (ol != null && ol.enabled) using (var p = new Pen(SDColor.FromArgb((int)(ol.effectColor.a * 255), (int)(ol.effectColor.r * 255), (int)(ol.effectColor.g * 255), (int)(ol.effectColor.b * 255)))) g.DrawRectangle(p, screen.X, screen.Y, screen.Width - 1, screen.Height - 1);
 				g.ResetClip();
@@ -229,6 +230,13 @@ namespace UnityEngine.UI
 namespace UnityEngine
 {
 	// a picture of every uGUI canvas the scripts built (what the HUD scripts make): a size, a background, a PNG
+	// real pictures (thumbnails) for Image objects: the renderer draws them over the Image's colour
+	public static class SimPictures
+	{
+		public static readonly Dictionary<UnityEngine.GameObject, System.Drawing.Bitmap> Map = new Dictionary<UnityEngine.GameObject, System.Drawing.Bitmap>();
+		public static void Set(UnityEngine.GameObject go, byte[] image) { try { using (var ms = new System.IO.MemoryStream(image)) Map[go] = new System.Drawing.Bitmap(ms); } catch { } }
+	}
+
 	public static class SimSnapshot
 	{
 		public static List<string> Png(string path, int w, int h, int bgR = 44, int bgG = 50, int bgB = 58)
