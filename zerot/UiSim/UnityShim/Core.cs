@@ -221,6 +221,7 @@ namespace UnityEngine
 		public static readonly System.Collections.Generic.HashSet<int> SimMouseDown = new System.Collections.Generic.HashSet<int>();
 		public static bool GetMouseButton(int b) => SimMouseHeld.Contains(b);
 		public static bool GetMouseButtonDown(int b) => SimMouseDown.Contains(b);
+		public static bool GetMouseButtonUp(int b) => false;
 	}
 
 	public static partial class Debug
@@ -368,7 +369,7 @@ namespace UnityEngine
 				transform = tr;
 			}
 			c.OnAttached();
-			if (c is Canvas && !(transform is RectTransform)) AddComponent(typeof(RectTransform));   // a Canvas needs its RectTransform
+			if ((c is Canvas || c is UnityEngine.UI.Graphic) && !(transform is RectTransform)) AddComponent(typeof(RectTransform));   // a Canvas and every UI graphic need their RectTransform (Unity swaps it in)
 			if (c is MonoBehaviour mb) Sim.Lifecycle.Created(mb);
 			return c;
 		}

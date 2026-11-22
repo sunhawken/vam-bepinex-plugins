@@ -137,3 +137,45 @@ namespace UnityEngine
 
 // the one DAZCharacterRun member FastMode drives (the generated stub leaves it out)
 public partial class DAZCharacterRun : UnityEngine.MonoBehaviour { public bool doUpdate = true; }
+
+// the members the real Rigify VR+ script uses (found with `vamsim --linkcheck`)
+namespace UnityEngine
+{
+	public partial struct RaycastHit { public float distance { get; set; } }
+	public static partial class Input { public static bool GetKey(string name) => false; }
+	public static partial class Mathf
+	{
+		public static float Acos(float f) => (float)Math.Acos(f);
+		public static float Tan(float f) => (float)Math.Tan(f);
+	}
+	public partial struct Vector3
+	{
+		public string ToString(string format) => "(" + x.ToString(format) + ", " + y.ToString(format) + ", " + z.ToString(format) + ")";
+	}
+	public partial struct Quaternion
+	{
+		public static Quaternion Slerp(Quaternion a, Quaternion b, float t)
+		{
+			t = t < 0f ? 0f : t > 1f ? 1f : t;
+			float dot = Dot(a, b); float s = dot < 0f ? -1f : 1f; dot = Math.Abs(dot);
+			if (dot > 0.9995f) return Lerp(a, b, t);
+			double th = Math.Acos(dot), sin = Math.Sin(th);
+			double wa = Math.Sin((1 - t) * th) / sin, wb = Math.Sin(t * th) / sin * s;
+			return new Quaternion((float)(a.x * wa + b.x * wb), (float)(a.y * wa + b.y * wb), (float)(a.z * wa + b.z * wb), (float)(a.w * wa + b.w * wb));
+		}
+		public static Quaternion FromToRotation(Vector3 from, Vector3 to)
+		{
+			Vector3 f = from.normalized, tt = to.normalized;
+			Vector3 axis = new Vector3(f.y * tt.z - f.z * tt.y, f.z * tt.x - f.x * tt.z, f.x * tt.y - f.y * tt.x);
+			float d = f.x * tt.x + f.y * tt.y + f.z * tt.z;
+			if (axis.magnitude < 1e-6f) return d > 0 ? identity : AngleAxis(180f, Math.Abs(f.x) < 0.9f ? new Vector3(1, 0, 0) : new Vector3(0, 1, 0));
+			return AngleAxis((float)(Math.Acos(Math.Max(-1f, Math.Min(1f, d))) * 57.29578), axis);
+		}
+		public void ToAngleAxis(out float angle, out Vector3 axis)
+		{
+			float w = Math.Max(-1f, Math.Min(1f, this.w)); angle = (float)(2.0 * Math.Acos(w) * 57.29578);
+			float s = (float)Math.Sqrt(Math.Max(0f, 1f - w * w));
+			axis = s < 1e-6f ? new Vector3(1, 0, 0) : new Vector3(x / s, y / s, z / s);
+		}
+	}
+}
