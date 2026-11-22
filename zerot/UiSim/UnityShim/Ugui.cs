@@ -37,7 +37,14 @@ namespace UnityEngine
 		}
 		public Rect rect
 		{
-			get { var w = WorldRect(); return new Rect(-pivot.x * w.width, -pivot.y * w.height, w.width, w.height); }
+			get { var w = WorldRect(); var k = AccScale(); float lw = w.width / k.x, lh = w.height / k.y; return new Rect(-pivot.x * lw, -pivot.y * lh, lw, lh); }
+		}
+		// product of the localScale of this transform and its parents (a root canvas counts 1): the factor local units -> canvas units
+		internal Vector2 AccScale()
+		{
+			if (parent == null) return new Vector2(1f, 1f);
+			var ps = parent is RectTransform pr ? pr.AccScale() : new Vector2(1f, 1f);
+			return new Vector2(ps.x * (localScale.x == 0f ? 1f : localScale.x), ps.y * (localScale.y == 0f ? 1f : localScale.y));
 		}
 		internal Rect CanvasRect()
 		{
@@ -51,10 +58,13 @@ namespace UnityEngine
 		{
 			if (parent == null) return CanvasRect();
 			Rect p = parent is RectTransform pr ? pr.WorldRect() : CanvasRect();
-			float aw = (anchorMax.x - anchorMin.x) * p.width, ah = (anchorMax.y - anchorMin.y) * p.height;
+			Vector2 ps = parent is RectTransform pr2 ? pr2.AccScale() : new Vector2(1f, 1f), me = AccScale();
+			float pw = p.width / ps.x, ph = p.height / ps.y;   // the parent's size in its own units: anchors and offsets are expressed in those
+			float aw = (anchorMax.x - anchorMin.x) * pw, ah = (anchorMax.y - anchorMin.y) * ph;
 			float w = aw + sizeDelta.x, h = ah + sizeDelta.y;
-			float cx = p.x + (anchorMin.x + (anchorMax.x - anchorMin.x) * pivot.x) * p.width + anchoredPosition.x;
-			float cy = p.y + (anchorMin.y + (anchorMax.y - anchorMin.y) * pivot.y) * p.height + anchoredPosition.y;
+			float cx = p.x + (anchorMin.x + (anchorMax.x - anchorMin.x) * pivot.x) * p.width + anchoredPosition.x * ps.x;
+			float cy = p.y + (anchorMin.y + (anchorMax.y - anchorMin.y) * pivot.y) * p.height + anchoredPosition.y * ps.y;
+			w *= me.x; h *= me.y;
 			return new Rect(cx - pivot.x * w, cy - pivot.y * h, w, h);
 		}
 	}
@@ -160,7 +170,7 @@ namespace UnityEngine.UI
 			}
 			var txt = go.GetComponent<Text>();
 			if (txt != null && rt != null && txt.enabled && !string.IsNullOrEmpty(txt.text))
-				DrawText(g, txt, screen, s, clip, issues);
+				DrawText(g, txt, screen, rt != null ? s * rt.AccScale().x : s, clip, issues);
 			RectangleF childClip = clip;
 			if (go.GetComponent<RectMask2D>() != null && rt != null) childClip = RectangleF.Intersect(clip, screen);
 			foreach (var ch in t.children.ToArray()) DrawNode(g, ch, s, screenH, childClip, issues, depth + 1);

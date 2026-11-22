@@ -14,11 +14,51 @@ public static class BrowserAssistScenario
 {
 	private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
+	// drawing helpers for the stand-in's two screens (top-left origin inside the parent)
+	internal static RectTransform Box(Transform parent, string name, float x, float y, float w, float h, Color col, bool bottom = false)
+	{
+		var g = new GameObject(name); g.transform.SetParent(parent, false);
+		var rt = g.AddComponent<RectTransform>();
+		float ay = bottom ? 0f : 1f;
+		rt.anchorMin = rt.anchorMax = new Vector2(0f, ay); rt.pivot = new Vector2(0f, ay);
+		rt.sizeDelta = new Vector2(w, h); rt.anchoredPosition = new Vector2(x, bottom ? y : -y);
+		if (col.a > 0f) g.AddComponent<Image>().color = col;
+		return rt;
+	}
+
+	internal static Text Label(Transform parent, string s, float x, float y, float w, float h, int size, Color col, TextAnchor al = TextAnchor.MiddleLeft, bool bottom = false)
+	{
+		var rt = Box(parent, "T " + s, x, y, w, h, new Color(0, 0, 0, 0), bottom);
+		var t = rt.gameObject.AddComponent<Text>();
+		t.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+		t.fontSize = size; t.alignment = al; t.color = col; t.text = s; t.raycastTarget = false;
+		t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Truncate;
+		return t;
+	}
+
+	internal static void Field(Transform parent, string label, string value, float x, float y, float w)
+	{
+		Label(parent, label, x, y, w, 14f, 11, new Color(0.15f, 0.15f, 0.2f));
+		var f = Box(parent, "Field " + label, x, y + 15f, w, 24f, new Color(0.93f, 0.93f, 0.96f));
+		Label(f, value, 6f, 0f, w - 24f, 24f, 12, new Color(0.1f, 0.1f, 0.15f));
+		Label(f, "v", w - 20f, 0f, 16f, 24f, 11, new Color(0.3f, 0.3f, 0.4f), TextAnchor.MiddleCenter);
+	}
+
+	internal static void Btn(Transform parent, string label, float x, float y, float w, float h, Color col, bool bottom = false)
+	{
+		var b = Box(parent, "Btn " + label, x, y, w, h, col, bottom);
+		Label(b, label, 0f, 0f, w, h, 12, Color.white, TextAnchor.MiddleCenter);
+	}
+
+	// like BrowserAssist's real one: a screen-space overlay canvas, the resource browser docked to the right (650 units) with the tag column beside it
 	public sealed class FakeBrowserUi
 	{
 		public Canvas mainCanvas;
 		public bool isActive { get; private set; }
 		public float browserScreenWidth { get { return 650f; } }
+
+		private static readonly string[] Names = { "Beach Day", "City Night", "Studio A", "Loft Party", "Forest Walk", "Poolside", "Penthouse", "Rooftop", "Desert Road", "Cabin", "Dojo", "Garage",
+			"Hotel Suite", "Gallery", "Library", "Snow Lodge", "Harbor", "Neon Alley", "Greenhouse", "Subway", "Ballroom", "Lighthouse", "Casino", "Spa" };
 
 		public FakeBrowserUi()
 		{
@@ -27,23 +67,75 @@ public static class BrowserAssistScenario
 			mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
 			var crt = (RectTransform)go.transform;
 			crt.sizeDelta = new Vector2(1440f, 810f);
-			Panel(go.transform, "Panel", 650f, 0f);
-			Panel(go.transform, "SideTags", 150f, -655f);
+			var panel = Dock(go.transform, "Panel", 650f, 0f, new Color(0.78f, 0.79f, 0.84f, 0.97f));
+			var tags = Dock(go.transform, "SideTags", 150f, -655f, new Color(0.78f, 0.79f, 0.84f, 0.97f));
+			var dark = new Color(0.12f, 0.13f, 0.2f);
+			var chip = new Color(0.35f, 0.38f, 0.55f);
+			Field(panel, "Resource Type", "Scenes", 8f, 6f, 200f); Field(panel, "Tags", "All", 216f, 6f, 200f); Field(panel, "Creator", "All", 424f, 6f, 218f);
+			Field(panel, "Package License", "All", 8f, 50f, 200f); Field(panel, "Select Mode", "Single", 216f, 50f, 200f); Field(panel, "Order by", "Newest", 424f, 50f, 218f);
+			Field(panel, "Search", "", 8f, 94f, 408f);
+			Btn(panel, "Show Hidden", 424f, 109f, 104f, 24f, chip);
+			Btn(panel, "Only Favorites", 536f, 109f, 106f, 24f, chip);
+			Label(panel, "1 - 400 of 725", 8f, 140f, 300f, 20f, 13, dark);
+			Btn(panel, "<", 560f, 140f, 36f, 20f, chip); Btn(panel, ">", 600f, 140f, 36f, 20f, chip);
+			for (int r = 0; r < 4; r++)
+				for (int c = 0; c < 6; c++)
+				{
+					int i = r * 6 + c;
+					float x = 8f + c * 106f, y = 166f + r * 138f;
+					var tile = Box(panel, "Tile " + i, x, y, 100f, 100f, Color.HSVToRGB((i * 0.071f) % 1f, 0.45f, 0.75f));
+					Box(tile, "Shade", 0f, 62f, 100f, 38f, new Color(0f, 0f, 0f, 0.25f));
+					if (i % 5 == 0) Label(tile, "*", 80f, 2f, 18f, 18f, 16, new Color(1f, 0.85f, 0.2f), TextAnchor.MiddleCenter);
+					Label(panel, Names[i % Names.Length], x, y + 102f, 100f, 28f, 11, dark, TextAnchor.UpperCenter);
+				}
+			Btn(panel, "Action", 8f, 100f, 100f, 26f, new Color(0.25f, 0.28f, 0.5f), true);
+			Btn(panel, "Tags", 112f, 100f, 100f, 26f, new Color(0.45f, 0.47f, 0.6f), true);
+			Btn(panel, "Load Scene", 8f, 66f, 200f, 28f, new Color(0.2f, 0.5f, 0.3f), true);
+			Btn(panel, "Merge Load", 216f, 66f, 200f, 28f, chip, true);
+			Label(panel, "Beach Day  -  Creator.BeachDay.3  -  Scene  -  Free", 8f, 30f, 630f, 28f, 11, dark, TextAnchor.UpperLeft, true);
+			Label(tags, "Tags", 8f, 6f, 134f, 20f, 13, dark);
+			string[] tg = { "outdoor", "indoor", "night", "party", "bedroom", "beach", "city", "studio", "dance", "water", "cinematic", "pose" };
+			for (int i = 0; i < tg.Length; i++) Btn(tags, tg[i], 8f, 30f + i * 30f, 134f, 24f, new Color(0.4f + 0.02f * i, 0.42f, 0.58f));
 			SetInactive();
 		}
 
-		private static void Panel(Transform parent, string name, float w, float x)
+		private static RectTransform Dock(Transform parent, string name, float w, float x, Color col)
 		{
 			var g = new GameObject(name); g.transform.SetParent(parent, false);
 			var rt = g.AddComponent<RectTransform>();
-			rt.anchorMin = new Vector2(1f, 0f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 0.5f);
+			rt.anchorMin = new Vector2(1f, 0f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 1f);
 			rt.sizeDelta = new Vector2(w, 0f); rt.anchoredPosition = new Vector2(x, 0f);
-			g.AddComponent<Image>().color = new Color(0.5f, 0.5f, 0.55f, 0.95f);
+			g.AddComponent<Image>().color = col;
+			return rt;
 		}
 
 		public void ToggleActive() { if (isActive) SetInactive(); else SetActive(); }
 		public void SetActive() { mainCanvas.enabled = true; isActive = true; }
 		public void SetInactive() { mainCanvas.enabled = false; isActive = false; }
+	}
+
+	// BrowserAssist's own settings page (the plugin UI VaM shows in the session plugin's window): labelled rows, 700 x 900 units
+	internal static void BuildSettingsUi(RectTransform ui)
+	{
+		var dark = new Color(0.1f, 0.1f, 0.15f);
+		Box(ui, "Bg", 0f, 0f, 700f, 900f, new Color(0.82f, 0.83f, 0.88f));
+		Label(ui, "BrowserAssist v1.43", 12f, 8f, 676f, 28f, 18, dark);
+		string[][] rows =
+		{
+			new[] { "Enable Desktop Browser", "on" }, new[] { "Dock side", "Right" }, new[] { "Browser width", "650" }, new[] { "Thumbnail size", "100" },
+			new[] { "Thumbnails per page", "400" }, new[] { "Show hidden packages", "off" }, new[] { "Only favorites", "off" }, new[] { "Remember last filters", "on" },
+			new[] { "Auto-scan on startup", "on" }, new[] { "Lock import target", "off" }, new[] { "Default resource type", "Scenes" }, new[] { "Language", "English" },
+		};
+		for (int i = 0; i < rows.Length; i++)
+		{
+			float y = 48f + i * 40f;
+			Label(ui, rows[i][0], 16f, y, 340f, 28f, 14, dark);
+			var f = Box(ui, "Val " + i, 380f, y, 220f, 28f, new Color(0.93f, 0.93f, 0.96f));
+			Label(f, rows[i][1], 8f, 0f, 200f, 28f, 13, dark);
+		}
+		Btn(ui, "Rescan packages", 16f, 548f, 200f, 32f, new Color(0.25f, 0.28f, 0.5f));
+		Btn(ui, "Clear thumbnail cache", 230f, 548f, 200f, 32f, new Color(0.35f, 0.38f, 0.55f));
+		Label(ui, "Packages indexed: 725   Cache: 1.2 GB", 16f, 596f, 600f, 24f, 12, dark);
 	}
 
 	public sealed class FakeBrowserAssist : MVRScript
@@ -77,6 +169,8 @@ public static class BrowserAssistScenario
 		s.containingAtom = null;
 		var uiGo = new GameObject("PluginUI"); var ui = uiGo.AddComponent<RectTransform>(); ui.SetParent(go.transform, false);
 		ui.sizeDelta = new Vector2(700f, 900f);
+		ui.anchorMin = ui.anchorMax = new Vector2(0.5f, 0.5f);
+		BuildSettingsUi(ui);
 		if (withUi) s.UITransform = ui;
 		FakeBrowserAssist.mainBrowserUI = new FakeBrowserUi();
 		foreach (var a in Actions) { var name = a; s.RegisterAction(new JSONStorableAction(name, () => FakeBrowserAssist.Ran.Add(name))); }
@@ -123,7 +217,7 @@ public static class BrowserAssistScenario
 		var winObj = h.Plugin.GetType().GetField("win", All).GetValue(h.Plugin);
 		float wW = (float)winObj.GetType().GetField("W", All).GetValue(winObj), wH = (float)winObj.GetType().GetField("H", All).GetValue(winObj);
 		h.Check(Math.Abs(crt.sizeDelta.x - 810f) < 0.5f && crt.sizeDelta.y >= 800f, "laid out in its own units (650 panel + 160 tag column x the canvas height it had) (" + crt.sizeDelta + ")");
-		h.Check(crt.localScale.x > 0.5f && crt.localScale.x <= 1.001f && wW >= 820f, "shown as large as the screen allows (1:1 when it fits), window sized to it (" + wW + " x " + wH + ", scale " + crt.localScale.x + ")");
+		h.Check(crt.localScale.x > 0.5f && crt.localScale.x <= 1.001f && Math.Abs(wW - (810f * crt.localScale.x + 2f * 8f + 4f)) < 40f, "shown as large as the screen allows (1:1 when it fits), window sized to it (" + wW + " x " + wH + ", scale " + crt.localScale.x + ")");
 		SimSnapshot.Png(Path.Combine(Harness.CoresDir, "..", "..", "out", "BrowserAssist_browser.png"), Screen.width, Screen.height);
 		winObj.GetType().GetField("W", All).SetValue(winObj, 415f); winObj.GetType().GetField("H", All).SetValue(winObj, 495f);
 		winObj.GetType().GetMethod("Apply", All).Invoke(winObj, null);

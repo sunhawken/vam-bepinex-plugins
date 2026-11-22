@@ -650,7 +650,7 @@ namespace ZeroT.BrowserAssistStandalone
 			float k = cfgBrowserScale.Value > 0f ? cfgBrowserScale.Value : Mathf.Clamp(Mathf.Min(availW / w, availH / h), 0.25f, 4f);
 			mirrorRt.sizeDelta = new Vector2(w, h);
 			mirrorRt.localScale = new Vector3(k, k, 1f);
-			mirrorRt.anchoredPosition = Vector2.zero;
+			mirrorRt.anchoredPosition = new Vector2(Mathf.Max(0f, (availW - w * k) * 0.5f), 0f);   // centred when the window is wider than the browser
 		}
 
 		// once per mirror: make the window as large as the browser at 1:1 (as far as the screen allows)
@@ -664,6 +664,11 @@ namespace ZeroT.BrowserAssistStandalone
 			float sw = Mathf.Max(400f, Screen.width / Mathf.Max(0.5f, win.Scale) - 40f);
 			float sh = Mathf.Max(300f, Screen.height / Mathf.Max(0.5f, win.Scale) - 60f);
 			float k = cfgBrowserScale.Value > 0f ? cfgBrowserScale.Value : 1f;
+			float maxH = Mathf.Min(1400f, sh) - HeaderH - RlUguiWindow.Margin;
+			if (cfgBrowserScale.Value <= 0f && mirrorOriginal.y * k > maxH)
+			{
+				k = Mathf.Max(0.25f, maxH / mirrorOriginal.y);     // the screen is shorter than the browser: shrink it and make the window just as wide as it needs
+			}
 			win.W = Mathf.Clamp(PanelUnitsWidth() * k + 2f * RlUguiWindow.Margin + 4f, 380f, Mathf.Min(1700f, sw));
 			win.H = Mathf.Clamp(mirrorOriginal.y * k + HeaderH + RlUguiWindow.Margin, 300f, Mathf.Min(1400f, sh));
 			win.Apply();
