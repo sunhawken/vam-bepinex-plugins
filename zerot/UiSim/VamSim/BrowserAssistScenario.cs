@@ -106,6 +106,7 @@ public static class BrowserAssistScenario
 		string created = null;
 		MVRPluginManager.SimLoader = (m, plugin, url) => { created = url; return SpawnFake(m, pc, plugin.uid).gameObject; };
 		BepInEx.Configuration.ConfigFile.Overrides["General.StartupDelaySeconds"] = "2";
+		BepInEx.Configuration.ConfigFile.Overrides["General.AutoLoadSessionPlugin"] = "true";
 		h.Start();
 		h.Step(1f);
 		h.Check(created == null, "before the start-up delay nothing is created");
@@ -192,6 +193,7 @@ public static class BrowserAssistScenario
 		MVRPluginManager.SimLoader = (m, plugin, url) => { created++; return SpawnFake(m, pc, plugin.uid).gameObject; };
 		SpawnFake(mgr, pc, "plugin#0");   // VaM restored its saved session plugins: BrowserAssist is already running
 		BepInEx.Configuration.ConfigFile.Overrides["General.StartupDelaySeconds"] = "1";
+		BepInEx.Configuration.ConfigFile.Overrides["General.AutoLoadSessionPlugin"] = "true";
 		h.Start();
 		h.Step(10f);
 		h.Check(created == 0 && BaCount(pc) == 1, "a BrowserAssist VaM already loaded is used, no second one is created (created " + created + ")");
@@ -212,6 +214,7 @@ public static class BrowserAssistScenario
 		int created = 0;
 		MVRPluginManager.SimLoader = (m, plugin, url) => { created++; return SpawnFake(m, pc, plugin.uid).gameObject; };
 		BepInEx.Configuration.ConfigFile.Overrides["General.StartupDelaySeconds"] = "1";
+		BepInEx.Configuration.ConfigFile.Overrides["General.AutoLoadSessionPlugin"] = "true";
 		h.Start();
 		h.Step(8f);
 		h.Check(created == 0 && StatusText(h).Contains("not installed"), "no BrowserAssist .var installed: nothing is created and the status says so (" + StatusText(h) + ")");
@@ -219,6 +222,26 @@ public static class BrowserAssistScenario
 		Packages(root, "JayJayWon.BrowserAssist.96.var");
 		h.Step(5f);
 		h.Check(created == 0, "AutoLoadSessionPlugin=false: never created");
+		h.Check(!Sim.Errors.Any(e => e.Contains("BrowserAssist")), "the plugin threw nothing");
+	}
+
+	[Scenario("browserassist_ondemand", "ZeroT.BrowserAssistStandalone")]
+	public static void OnDemand(Harness h)
+	{
+		if (UnityEngine.EventSystems.EventSystem.current == null) UnityEngine.EventSystems.EventSystem.current = new GameObject("EventSystem").AddComponent<UnityEngine.EventSystems.EventSystem>();
+		string root = Path.Combine(Path.GetTempPath(), "vamsim_browserassist5_" + Environment.ProcessId);
+		Packages(root, "JayJayWon.BrowserAssist.96.var");
+		MVRPluginManager mgr; Transform pc;
+		BuildSession(out mgr, out pc);
+		int created = 0;
+		MVRPluginManager.SimLoader = (m, plugin, url) => { created++; return SpawnFake(m, pc, plugin.uid).gameObject; };
+		BepInEx.Configuration.ConfigFile.Overrides["General.StartupDelaySeconds"] = "1";
+		h.Start();
+		h.Step(8f);
+		h.Check(created == 0 && StatusText(h).Contains("auto-load is off"), "default: nothing is created at startup (" + StatusText(h) + ")");
+		h.Plugin.GetType().GetMethod("ToggleBrowser", All).Invoke(h.Plugin, null);
+		h.Step(5f);
+		h.Check(created == 1 && BaCount(pc) == 1, "pressing the browser button loads BrowserAssist once, on demand");
 		h.Check(!Sim.Errors.Any(e => e.Contains("BrowserAssist")), "the plugin threw nothing");
 	}
 }

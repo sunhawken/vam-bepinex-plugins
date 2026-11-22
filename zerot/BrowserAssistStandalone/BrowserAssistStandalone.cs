@@ -70,6 +70,7 @@ namespace ZeroT.BrowserAssistStandalone
 		private bool created;
 		private string createdUid = "";
 		private int creationAttempts;
+		private bool loadRequested;      // the user pressed Open browser while BrowserAssist is not loaded
 		private bool loadingSeen;
 
 		private RectTransform detached;
@@ -260,12 +261,12 @@ namespace ZeroT.BrowserAssistStandalone
 			}
 			if (script == null)
 			{
-				if (!cfgAutoLoad.Value)
+				if (!cfgAutoLoad.Value && !loadRequested)
 				{
-					SetStatus("BrowserAssist is not loaded (auto-load is off).");
+					SetStatus("BrowserAssist is not loaded (auto-load is off). Press \"Load / open browser\" to load it - it scans your packages first, so VaM may freeze for a few minutes.");
 					return;
 				}
-				if (Time.unscaledTime < readyAt)
+				if (!loadRequested && Time.unscaledTime < readyAt)
 				{
 					SetStatus("Starting BrowserAssist shortly...");
 					return;
@@ -558,6 +559,14 @@ namespace ZeroT.BrowserAssistStandalone
 
 		private void ToggleBrowser()
 		{
+			if (script == null && !loadRequested)
+			{
+				loadRequested = true;
+				creationAttempts = 0;
+				nextTick = 0f;
+				SetStatus("Loading BrowserAssist... it scans your packages first, VaM may freeze for a few minutes.");
+				return;
+			}
 			if (BrowserUi() == null)
 			{
 				SetStatus("BrowserAssist's browser is not ready yet (it is still scanning, or it failed to start - see its settings).");
@@ -664,7 +673,7 @@ namespace ZeroT.BrowserAssistStandalone
 		{
 			if (browserToggleButton != null)
 			{
-				RlUguiWindow.SetLabel(browserToggleButton, BrowserIsOpen() ? "Close browser" : "Open browser");
+				RlUguiWindow.SetLabel(browserToggleButton, script == null ? "Load / open browser" : (BrowserIsOpen() ? "Close browser" : "Open browser"));
 			}
 		}
 
