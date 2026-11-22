@@ -91,6 +91,15 @@ public static class BrowserAssistScenario
 		var native = ((Component)h.Plugin.GetType().GetField("nativeHost", All).GetValue(h.Plugin)).transform;
 		h.Check(native.childCount == 1 && native.GetChild(0).name == "PluginUI", "BrowserAssist's own settings UI is shown inside the window");
 
+		// the interface opens first, exactly as BrowserAssist draws it: scale 1:1 and the window as large as the UI (700 x 900 here)
+		var winObj = h.Plugin.GetType().GetField("win", All).GetValue(h.Plugin);
+		float wW = (float)winObj.GetType().GetField("W", All).GetValue(winObj), wH = (float)winObj.GetType().GetField("H", All).GetValue(winObj);
+		var nativeUi = native.GetChild(0);
+		h.Check(Math.Abs(nativeUi.localScale.x - 1f) < 1e-4f, "the interface is shown at its own size, scale 1:1 (" + nativeUi.localScale.x + ")");
+		h.Check(wW >= 700f && wH >= 900f && wW < 800f, "the window was sized to the interface (" + wW + " x " + wH + ")");
+		h.Check(((RectTransform)h.Plugin.GetType().GetField("viewport", All).GetValue(h.Plugin)).gameObject.activeSelf, "the interface page is the one shown first");
+		SimSnapshot.Png(Path.Combine(Harness.CoresDir, "..", "..", "out", "BrowserAssist_interface.png"), Screen.width, Screen.height);
+
 		// Controls: the actions the script registers, grouped by name
 		h.Plugin.GetType().GetMethod("SetMode", All).Invoke(h.Plugin, new object[] { 0 });
 		var totals = (int[])h.Plugin.GetType().GetField("catTotals", All).GetValue(h.Plugin);

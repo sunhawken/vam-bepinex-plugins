@@ -31,6 +31,9 @@ namespace ZeroT.BrowserAssistStandalone
 		private ConfigEntry<bool> cfgAutoLoad;
 		private ConfigEntry<float> cfgStartupDelay;
 		private ConfigEntry<bool> cfgUnloadOnOff;
+		private ConfigEntry<float> cfgNativeScale;
+		private ConfigEntry<bool> cfgAutoSize;
+		private bool sizedToNative;
 
 		private RlUguiWindow win;
 		private Text status;
@@ -83,6 +86,8 @@ namespace ZeroT.BrowserAssistStandalone
 			cfgAutoLoad = Config.Bind<bool>("General", "AutoLoadSessionPlugin", true, "Create the BrowserAssist session plugin automatically at startup when VaM has not loaded it already.");
 			cfgStartupDelay = Config.Bind<float>("General", "StartupDelaySeconds", 8f, "Wait this long after VaM finishes loading before adding BrowserAssist (VaM restores its saved session plugins first, so it is not added twice).");
 			cfgUnloadOnOff = Config.Bind<bool>("General", "UnloadWhenSwitchedOff", false, "Switching this plugin Off also removes the BrowserAssist session plugin (off = only the window and auto-load stop; BrowserAssist keeps running).");
+			cfgNativeScale = Config.Bind<float>("Window", "NativeUiScale", 1f, new ConfigDescription("Size of BrowserAssist's own settings UI inside the window: 1 = exactly as it looks in VaM (1:1, the window scrolls if it is smaller); 0 = shrink it to fit the window width.", new AcceptableValueRange<float>(0f, 3f)));
+			cfgAutoSize = Config.Bind<bool>("Window", "SizeToNativeUi", true, "When BrowserAssist's UI first appears, size the window to show it at its original size (as far as the screen allows).");
 			win = new RlUguiWindow(this, "Browser Assist", "Window", 40f, 60f, 620f, 680f, 380f, 300f, 1700f, 1400f);
 		}
 
@@ -437,6 +442,22 @@ namespace ZeroT.BrowserAssistStandalone
 			}
 		}
 
+		// the 1:1 view: the window is made as large as BrowserAssist's own UI (limited by the screen), once per start
+		private void SizeWindowToNative()
+		{
+			if (sizedToNative || !cfgAutoSize.Value || win == null || detached == null)
+			{
+				return;
+			}
+			sizedToNative = true;
+			float scale = cfgNativeScale.Value > 0f ? cfgNativeScale.Value : 1f;
+			float sw = Mathf.Max(400f, Screen.width / Mathf.Max(0.5f, win.Scale) - 40f);
+			float sh = Mathf.Max(300f, Screen.height / Mathf.Max(0.5f, win.Scale) - 60f);
+			win.W = Mathf.Clamp(detachedWidth * scale + 2f * RlUguiWindow.Margin + 4f, 380f, Mathf.Min(1700f, sw));
+			win.H = Mathf.Clamp(detachedHeight * scale + HeaderH + RlUguiWindow.Margin, 300f, Mathf.Min(1400f, sh));
+			win.Apply();
+		}
+
 		private void SetMode(int m)
 		{
 			mode = m;
@@ -523,10 +544,11 @@ namespace ZeroT.BrowserAssistStandalone
 			win.Build("Browser Assist Standalone Desktop");
 			status = RlUguiWindow.NewText("Status", win.Body, "Starting...", TextAnchor.MiddleLeft);
 			modeControls = RlUguiWindow.NewButton("Mode controls", win.Body, "Controls", delegate { SetMode(0); });
-			modeSettings = RlUguiWindow.NewButton("Mode settings", win.Body, "Settings", delegate { SetMode(1); });
-			reattachButton = RlUguiWindow.NewButton("Reattach UI", win.Body, "Reload settings UI", delegate
+			modeSettings = RlUguiWindow.NewButton("Mode settings", win.Body, "Interface", delegate { SetMode(1); });
+			reattachButton = RlUguiWindow.NewButton("Reattach UI", win.Body, "Reload interface", delegate
 			{
 				Restore();
+				sizedToNative = false;
 				nextTick = 0f;
 			});
 			for (int i = 0; i < CatCount; i++)
@@ -548,7 +570,7 @@ namespace ZeroT.BrowserAssistStandalone
 			viewport.gameObject.AddComponent<RectMask2D>();
 			nativeScroll = viewport.gameObject.AddComponent<ScrollRect>();
 			nativeScroll.viewport = viewport;
-			nativeScroll.horizontal = false;
+			nativeScroll.horizontal = true;
 			nativeScroll.vertical = true;
 			nativeScroll.movementType = ScrollRect.MovementType.Clamped;
 			nativeScroll.scrollSensitivity = 40f;
@@ -565,7 +587,7 @@ namespace ZeroT.BrowserAssistStandalone
 			nativeHost.anchoredPosition = Vector2.zero;
 			win.AddResizeHandle();
 			win.Apply();
-			SetMode(0);
+			SetMode(1);
 		}
 
 		private void LayoutBody(float w, float h)
@@ -619,7 +641,7 @@ namespace ZeroT.BrowserAssistStandalone
 			}
 			float vw = Mathf.Max(1f, win.W - 2f * RlUguiWindow.Margin);
 			float vh = Mathf.Max(1f, win.H - HeaderH - RlUguiWindow.Margin);
-			float fit = Mathf.Min(1f, vw / detachedWidth);
+			float fit = cfgNativeScale.Value > 0f ? cfgNativeScale.Value : Mathf.Min(1f, vw / detachedWidth);
 			nativeHost.sizeDelta = new Vector2(detachedWidth * fit, detachedHeight * fit);
 			scrollContent.sizeDelta = new Vector2(Mathf.Max(vw, detachedWidth * fit), Mathf.Max(vh, detachedHeight * fit));
 			detached.localScale = Vector3.one * fit;
@@ -658,6 +680,7 @@ namespace ZeroT.BrowserAssistStandalone
 			target.gameObject.SetActive(true);
 			nativeScroll.verticalNormalizedPosition = 1f;
 			UpdateNativePresentation();
+			SizeWindowToNative();
 		}
 
 		private void Restore()
