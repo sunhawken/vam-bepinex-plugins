@@ -93,6 +93,11 @@ namespace ZeroT.BrowserAssistStandalone
 		private static readonly string[] CatNames = { "Browser", "Types", "Filters", "Browse", "Tabs", "Random" };
 		private float HeaderH = 86f;
 		private bool mirrorSized;
+		private bool mirrorLaidOut;
+		private RectTransform mirrorLastRt;
+		private Vector2 mirrorLastSize, mirrorLastPos;
+		private float mirrorLastK;
+		private string lastBrowserLabel;
 
 		private void Awake()
 		{
@@ -320,7 +325,10 @@ namespace ZeroT.BrowserAssistStandalone
 			}
 			SetStatus("BrowserAssist is running" + (created ? " (loaded by this plugin)" : " (already loaded by VaM)") + ".   Browser: " + (BrowserIsOpen() ? "open" : "closed") + (mirrorCanvas != null ? " (shown in this window)" : ""));
 			RefreshModeButtons();
-			RefreshControls();
+			if (mode == 0)
+			{
+				RefreshControls();     // the action lists are only visible on the Controls page: not rebuilt every second while the browser is shown
+			}
 		}
 
 		// ------------------------------------------------------------------ the browser (BrowserAssist's own launch action)
@@ -636,6 +644,7 @@ namespace ZeroT.BrowserAssistStandalone
 			mirrorRt = null;
 			mirrorUi = null;
 			mirrorSized = false;
+			mirrorLaidOut = false;
 		}
 
 		// the browser fills the window's content area: one factor for both directions, so the proportions never change
@@ -648,9 +657,17 @@ namespace ZeroT.BrowserAssistStandalone
 			float w = PanelUnitsWidth(), h = mirrorOriginal.y;
 			float availW = Mathf.Max(50f, win.W - 2f * RlUguiWindow.Margin), availH = Mathf.Max(50f, win.H - HeaderH - RlUguiWindow.Margin);
 			float k = cfgBrowserScale.Value > 0f ? cfgBrowserScale.Value : Mathf.Clamp(Mathf.Min(availW / w, availH / h), 0.25f, 4f);
-			mirrorRt.sizeDelta = new Vector2(w, h);
+			Vector2 size = new Vector2(w, h);
+			Vector2 pos = new Vector2(Mathf.Max(0f, (availW - w * k) * 0.5f), 0f);   // centred when the window is wider than the browser
+			// FPS: writing the same values again still makes Unity re-batch the whole browser canvas (hundreds of thumbnails), so only write real changes
+			if (mirrorLaidOut && mirrorLastRt == mirrorRt && (mirrorLastSize - size).sqrMagnitude < 0.0001f && Mathf.Abs(mirrorLastK - k) < 0.0001f && (mirrorLastPos - pos).sqrMagnitude < 0.0001f)
+			{
+				return;
+			}
+			mirrorLaidOut = true; mirrorLastRt = mirrorRt; mirrorLastSize = size; mirrorLastK = k; mirrorLastPos = pos;
+			mirrorRt.sizeDelta = size;
 			mirrorRt.localScale = new Vector3(k, k, 1f);
-			mirrorRt.anchoredPosition = new Vector2(Mathf.Max(0f, (availW - w * k) * 0.5f), 0f);   // centred when the window is wider than the browser
+			mirrorRt.anchoredPosition = pos;
 		}
 
 		// once per mirror: make the window as large as the browser at 1:1 (as far as the screen allows)
@@ -678,7 +695,12 @@ namespace ZeroT.BrowserAssistStandalone
 		{
 			if (browserToggleButton != null)
 			{
-				RlUguiWindow.SetLabel(browserToggleButton, script == null ? "Load / open browser" : (BrowserIsOpen() ? "Close browser" : "Open browser"));
+				string label = script == null ? "Load / open browser" : (BrowserIsOpen() ? "Close browser" : "Open browser");
+				if (label != lastBrowserLabel)
+				{
+					lastBrowserLabel = label;
+					RlUguiWindow.SetLabel(browserToggleButton, label);
+				}
 			}
 		}
 
