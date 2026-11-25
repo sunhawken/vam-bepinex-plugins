@@ -29,7 +29,8 @@ namespace ZeroT.HudDock
 			public bool FakeActive = true;
 			public BaseUnityPlugin Owner;
 			public FieldInfo VisibleField;
-			public float NextResolve;
+			public float NextResolve, FoundAt = -1f;
+			public bool RestoredV, RestoredA, RestoredC;
 			public bool Fake, FakeVisible, FakeCollapsed;
 
 			public bool Found { get { return Fake || Show != null || VisibleField != null; } }
@@ -154,8 +155,55 @@ namespace ZeroT.HudDock
 			catch (Exception ex) { Logger.LogWarning("HUD Dock: " + t.Label + ": " + ex.Message); }
 		}
 
+		// ------------------------------------------------------------------ remembered button states (State.Memory: 'label=V,A,C;...' with 1 / 0 / -)
+		private readonly Dictionary<string, string> _mem = new Dictionary<string, string>();
+		private bool _noRemember;
+
+		private void LoadMemory()
+		{
+			string[] items = (_memory.Value ?? "").Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+			for (int i = 0; i < items.Length; i++)
+			{
+				int eq = items[i].LastIndexOf('=');
+				if (eq > 0 && items[i].Length - eq - 1 == 5) _mem[items[i].Substring(0, eq)] = items[i].Substring(eq + 1);
+			}
+		}
+
+		private void Remember(Target t, int slot, bool v)
+		{
+			if (_noRemember || t.Fake || _memory == null) return;
+			string cur; if (!_mem.TryGetValue(t.Label, out cur)) cur = "-,-,-";
+			string[] p = cur.Split(',');
+			p[slot] = v ? "1" : "0";
+			_mem[t.Label] = string.Join(",", p);
+			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			foreach (KeyValuePair<string, string> kv in _mem) { if (sb.Length > 0) sb.Append(';'); sb.Append(kv.Key).Append('=').Append(kv.Value); }
+			_memory.Value = sb.ToString();
+			Config.Save();
+		}
+
+		// puts a row back the way you left it once its plugin is up (each part when its handle exists; Hide all keeps the visibility parts off)
+		private void Restore(Target t)
+		{
+			if (t.Fake || (t.RestoredV && t.RestoredA && t.RestoredC)) return;
+			string cur; if (!_mem.TryGetValue(t.Label, out cur)) { t.RestoredV = t.RestoredA = t.RestoredC = true; return; }
+			if (t.Found && t.FoundAt < 0f) t.FoundAt = Time.realtimeSinceStartup;
+			if (t.FoundAt < 0f || Time.realtimeSinceStartup < t.FoundAt + 1.5f) return;   // let the plugin finish its own start-up first
+			string[] p = cur.Split(',');
+			bool was = _noRemember; _noRemember = true;
+			try
+			{
+				if (!t.RestoredV) { t.RestoredV = true; if (!_hidden && p[0] != "-" && t.Visible != (p[0] == "1")) SetVisible(t, p[0] == "1"); }
+				if (!t.RestoredA && (t.ActiveEntry != null || t.Owner != null)) { t.RestoredA = true; if (p[1] != "-" && t.IsActive != (p[1] == "1")) SetActive(t, p[1] == "1"); }
+				if (!t.RestoredC && t.Collapse != null) { t.RestoredC = true; if (p[2] != "-" && t.Collapsed != (p[2] == "1")) SetCollapsed(t, p[2] == "1"); }
+				if (!t.RestoredC && t.CollapseKey.Length == 0) t.RestoredC = true;
+			}
+			finally { _noRemember = was; }
+		}
+
 		private void SetVisible(Target t, bool v)
 		{
+			Remember(t, 0, v);
 			try
 			{
 				if (t.Fake) { t.FakeVisible = v; return; }
@@ -172,6 +220,7 @@ namespace ZeroT.HudDock
 
 		private void SetActive(Target t, bool v)
 		{
+			Remember(t, 1, v);
 			try
 			{
 				if (t.Fake) { t.FakeActive = v; return; }
@@ -184,6 +233,7 @@ namespace ZeroT.HudDock
 
 		private void SetCollapsed(Target t, bool v)
 		{
+			Remember(t, 2, v);
 			try { if (t.Fake) t.FakeCollapsed = v; else if (t.Collapse != null) t.Collapse.Value = v; }
 			catch (Exception ex) { Logger.LogWarning("HUD Dock: could not collapse " + t.Label + ": " + ex.Message); }
 		}
@@ -201,7 +251,7 @@ namespace ZeroT.HudDock
 				if (!t.Found) continue;
 				if (sb.Length > 0) sb.Append(';');
 				sb.Append(t.Label).Append('=').Append(t.Visible ? '1' : '0');
-				SetVisible(t, false);
+				_noRemember = true; SetVisible(t, false); _noRemember = false;
 			}
 			_saved = sb.ToString();
 			_hidden = true;
@@ -225,6 +275,7 @@ namespace ZeroT.HudDock
 
 		// ------------------------------------------------------------------ config + window state
 		private ConfigEntry<bool> _showWindow, _collapsed, _dpiAware, _hiddenCfg;
+		private ConfigEntry<string> _memory;
 		private ConfigEntry<float> _scale, _winX, _winY, _winW, _winH;
 		private ConfigEntry<string> _extra, _previewRows, _state;
 		private ConfigEntry<KeyCode> _hotkey;
@@ -251,6 +302,8 @@ namespace ZeroT.HudDock
 			_previewRows = Config.Bind("Window", "PreviewRows", "", "For screenshots: fake rows 'Label:visible:collapsed,...' (1 / 0). Empty = the real plugins.");
 			_state = Config.Bind("State", "Saved", "", "What was showing when Hide all was pressed.");
 			_hiddenCfg = Config.Bind("State", "Hidden", false, "Hide all is active.");
+			_memory = Config.Bind("State", "Memory", "", "Remembered On / Off, shown and collapsed state of every row (label=shown,on,collapsed with 1 / 0 / -), put back when the plugin loads.");
+			LoadMemory();
 			_saved = _state.Value ?? "";
 			_hidden = _hiddenCfg.Value;
 			_win = new Rect(_winX.Value, _winY.Value, Mathf.Clamp(_winW.Value, MinW, MaxW), Mathf.Clamp(_winH.Value, MinH, MaxH));
@@ -260,7 +313,7 @@ namespace ZeroT.HudDock
 		private void Update()
 		{
 			if (_hotkey != null && _hotkey.Value != KeyCode.None && Input.GetKeyDown(_hotkey.Value)) { _showWindow.Value = !_showWindow.Value; Config.Save(); }
-			if (Time.frameCount % 30 == 0) for (int i = 0; i < _targets.Count; i++) Resolve(_targets[i]);
+			if (Time.frameCount % 30 == 0) for (int i = 0; i < _targets.Count; i++) { Resolve(_targets[i]); Restore(_targets[i]); }
 		}
 
 		// ------------------------------------------------------------------ DPI
