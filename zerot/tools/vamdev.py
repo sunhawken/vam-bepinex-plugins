@@ -53,6 +53,7 @@ P = {
     'shakeit': ('ShakeItStandalone/ZeroT.ShakeItStandalone.csproj', 'ZeroT.ShakeItStandalone.dll', None),
     'autoflutterhip': ('AutoFlutterHipStandalone/ZeroT.AutoFlutterHipStandalone.csproj', 'ZeroT.AutoFlutterHipStandalone.dll', None),
     'clothingbackface': ('ClothingBackfaceStandalone/ZeroT.ClothingBackfaceStandalone.csproj', 'ZeroT.ClothingBackfaceStandalone.dll', None),
+    'stockingpresetkeeper': ('StockingPresetKeeper/ZeroT.StockingPresetKeeper.csproj', 'ZeroT.StockingPresetKeeper.dll', None),
     'forcepersoncache': ('ForcePersonCacheStandalone/ZeroT.ForcePersonCacheStandalone.csproj', 'ZeroT.ForcePersonCacheStandalone.dll', None),
     'uxplushelper': ('UXPlusHelper/ZeroT.UXPlusHelper.csproj', 'ZeroT.UXPlusHelper.dll', None),
     'personguard': ('PersonGuard/ZeroT.PersonGuard.csproj', 'ZeroT.PersonGuard.dll', None),
